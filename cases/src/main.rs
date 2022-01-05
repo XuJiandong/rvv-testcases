@@ -44,25 +44,27 @@ fn add(lhs: u64, rhs: u64) -> u64 {
 fn add_array(lhs: &[u64], rhs: &[u64], result: &mut [u64]) {
     let len = lhs.len();
     unsafe {
-        asm!(
-        "mv t5, {0}
-        mv t0, {1}
-        mv t1, {2}
-        mv t6, {3}
-        1: 
-        ld t2, 0(t0)
-        ld t3, 0(t1)
-        add t2, t2, t3
-        sd t2, 0(t6)
-        addi t0, t0, 8
-        addi t1, t1, 8
-        addi t6, t6, 8
-        addi t5, t5, -1
-        bnez t5, 1b",
-        in(reg) len,
-        in(reg) lhs.as_ref().as_ptr(),
-        in(reg) rhs.as_ref().as_ptr(),
-        in(reg) result.as_ref().as_ptr());
+        // make it easily spotted
+        asm!("nop");
+        asm!("nop");
+        asm!("nop");
+        asm!("mv t5, {0}",  in(reg) len);
+        asm!("mv t0, {0}", in(reg) lhs.as_ref().as_ptr());
+        asm!("mv t1, {0}", in(reg) rhs.as_ref().as_ptr());
+        asm!("mv t6, {0}", in(reg) result.as_ref().as_ptr());
+        asm!("1: ld t2, 0(t0)");
+        asm!("ld t3, 0(t1)");
+        asm!("add t2, t2, t3");
+        asm!("sd t2, 0(t6)");
+        asm!("addi t0, t0, 8");
+        asm!("addi t1, t1, 8");
+        asm!("addi t6, t6, 8");
+        asm!("addi t5, t5, -1");
+        asm!("bnez t5, 1b");
+        // make it easily spotted
+        asm!("nop");
+        asm!("nop");
+        asm!("nop");
     }
 }
 
