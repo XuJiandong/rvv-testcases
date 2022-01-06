@@ -7,31 +7,30 @@
 
 use ckb_std::debug;
 use ckb_std::default_alloc;
+use rvv_encoder::rvv_asm;
 
 ckb_std::entry!(program_entry);
 default_alloc!();
 
-// can't work, should work with library 'rvv'
-// fn vadd_vv(lhs: &[u8], rhs: &[u8], result: &mut [u8]) {
-//     unsafe {
-//         asm!("mv a0, {0}\n" , in (reg) lhs.as_ref().as_ptr());
-//         asm!("mv a1, {0}\n", in (reg) rhs.as_ref().as_ptr());
-//         asm!("mv a2, {0}\n", in (reg) result.as_ref().as_ptr());
-
-//         asm!("1:");
-//         asm!("vsetvli t0, a0, e8, m1, ta, ma");
-//         asm!("vle8.v v0, (a1)");
-//         asm!("sub a0, a0, t0");
-//         asm!("slli t0, t0, 5");
-//         asm!("add a1, a1, t0");
-//         asm!("vle8.v v1, (a2)");
-//         asm!("add a2, a2, t0");
-//         asm!("vadd.vv v2, v0, v1");
-//         asm!("vse8.v v2, (a3)");
-//         asm!("add a3, a3, t0");
-//         asm!("bnez a0, 1b");
-//     }
-// }
+fn vadd_vv(lhs: &[u8], rhs: &[u8], result: &mut [u8]) {
+    unsafe {
+        rvv_asm!("mv a0, {0}" , in (reg) lhs.as_ref().as_ptr());
+        rvv_asm!("mv a1, {0}", in (reg) rhs.as_ref().as_ptr());
+        rvv_asm!("mv a2, {0}", in (reg) result.as_ref().as_ptr());
+        rvv_asm!("1:");
+        rvv_asm!("vsetvli t0, a0, e8, m1, ta, ma");
+        rvv_asm!("vle8.v v0, (a1)");
+        rvv_asm!("sub a0, a0, t0");
+        rvv_asm!("slli t0, t0, 5");
+        rvv_asm!("add a1, a1, t0");
+        rvv_asm!("vle8.v v1, (a2)");
+        rvv_asm!("add a2, a2, t0");
+        rvv_asm!("vadd.vv v2, v0, v1");
+        rvv_asm!("vse8.v v2, (a3)");
+        rvv_asm!("add a3, a3, t0");
+        rvv_asm!("bnez a0, 1b");
+    }
+}
 
 fn add(lhs: u64, rhs: u64) -> u64 {
     let mut result: u64;
