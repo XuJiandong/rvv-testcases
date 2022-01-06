@@ -12,13 +12,18 @@ use rvv_encoder::rvv_asm;
 ckb_std::entry!(program_entry);
 default_alloc!();
 
-fn vadd_vv(lhs: &[u8], rhs: &[u8], result: &mut [u8]) {
+fn vadd_vv(lhs: &[u8], rhs: &[u8], result: &mut [u8], avl: u64, vtype: u64) {    
     unsafe {
         rvv_asm!("mv a0, {0}" , in (reg) lhs.as_ref().as_ptr());
         rvv_asm!("mv a1, {0}", in (reg) rhs.as_ref().as_ptr());
         rvv_asm!("mv a2, {0}", in (reg) result.as_ref().as_ptr());
+        rvv_asm!("mv a4, {0}", in (reg) avl);
+        rvv_asm!("mv a5, {0}", in (reg) vtype);
+
         rvv_asm!("1:");
-        rvv_asm!("vsetvli t0, a0, e8, m1, ta, ma");
+
+        rvv_asm!("vsetvl t0, a4, a5");
+
         rvv_asm!("vle8.v v0, (a1)");
         rvv_asm!("sub a0, a0, t0");
         rvv_asm!("slli t0, t0, 5");

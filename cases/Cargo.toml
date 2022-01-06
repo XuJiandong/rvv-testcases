@@ -12,7 +12,7 @@ lto = "fat"
 
 [dependencies]
 ckb-std = "0.9.0"
-rvv-encoder = { git="https://github.com/TheWaWaR/rvv-encoder.git", rev="e7d8044"}
+rvv-encoder = { git="https://github.com/TheWaWaR/rvv-encoder.git", rev="4b2ae1c"}
 
 
 [[bin]]
