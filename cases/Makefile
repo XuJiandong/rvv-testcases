@@ -20,3 +20,6 @@ expand:
 
 disasm:
 	riscv64-unknown-elf-objdump -d target/riscv64imac-unknown-none-elf/${BUILD}/rvv-testcases
+
+install-tools:
+	cargo install --branch rvv --git https://github.com/mohanson/ckb-standalone-debugger.git

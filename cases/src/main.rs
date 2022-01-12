@@ -7,33 +7,34 @@
 
 use ckb_std::debug;
 use ckb_std::default_alloc;
-use rvv_encoder::rvv_asm;
+use rvv_asm::rvv_asm;
+use rvv_testcases::misc::create_vtype;
 
 ckb_std::entry!(program_entry);
 default_alloc!();
 
-fn vadd_vv(lhs: &[u8], rhs: &[u8], result: &mut [u8], avl: u64, vtype: u64) {    
+fn vadd_vv(lhs: &[u8], rhs: &[u8], result: &mut [u8], avl: u64, vtype: u64) {
     unsafe {
-        rvv_asm!("mv a0, {0}" , in (reg) lhs.as_ref().as_ptr());
-        rvv_asm!("mv a1, {0}", in (reg) rhs.as_ref().as_ptr());
-        rvv_asm!("mv a2, {0}", in (reg) result.as_ref().as_ptr());
-        rvv_asm!("mv a4, {0}", in (reg) avl);
-        rvv_asm!("mv a5, {0}", in (reg) vtype);
+        rvv_asm!("mv t0, {0}" , in (reg) lhs.as_ref().as_ptr());
+        rvv_asm!("mv t1, {0}", in (reg) rhs.as_ref().as_ptr());
+        rvv_asm!("mv t2, {0}", in (reg) result.as_ref().as_ptr());
+        rvv_asm!("mv t3, {0}", in (reg) avl);
+        rvv_asm!("mv t4, {0}", in (reg) vtype);
 
         rvv_asm!("1:");
+        rvv_asm!("vsetvl t5, t3, t4");
+        // convert 'vl' to bytes: for U256, it's 32 bytes, which is `t5 << 5`
+        // rvv_asm!("slli t5, t5, 5");
+        rvv_asm!("sub t3, t3, t5"); // decrease avl
 
-        rvv_asm!("vsetvl t0, a4, a5");
-
-        rvv_asm!("vle8.v v0, (a1)");
-        rvv_asm!("sub a0, a0, t0");
-        rvv_asm!("slli t0, t0, 5");
-        rvv_asm!("add a1, a1, t0");
-        rvv_asm!("vle8.v v1, (a2)");
-        rvv_asm!("add a2, a2, t0");
-        rvv_asm!("vadd.vv v2, v0, v1");
-        rvv_asm!("vse8.v v2, (a3)");
-        rvv_asm!("add a3, a3, t0");
-        rvv_asm!("bnez a0, 1b");
+        rvv_asm!("vle8.v v0, (t0)"); // load lhs to v0
+        rvv_asm!("add t0, t0, t5"); // increase lhs
+        rvv_asm!("vle8.v v1, (t1)"); // load rhs to v1
+        rvv_asm!("add t1, t1, t5"); // increase rhs
+        rvv_asm!("vadd.vv v2, v0, v1"); // ADD
+        rvv_asm!("vse8.v v2, (t2)"); // store v2 to result
+        rvv_asm!("add t2, t2, t5"); // increase result
+        rvv_asm!("bnez t3, 1b"); // finished?
     }
 }
 
@@ -92,8 +93,39 @@ fn test_add() {
     assert_eq!(result, lhs + rhs);
 }
 
+fn test_vadd_vv() {
+    debug!("test_vadd_vv, start ...");
+    let avl = 100;
+    let mut lhs = [0u8; 100];
+    let mut rhs = [0u8; 100];
+    let mut expected = [0u8; 100];
+    for i in 0..lhs.len() {
+        let v = i as u8 + 1;
+        lhs[i] = v;
+        rhs[i] = v;
+        expected[i] = lhs[i].wrapping_add(rhs[i]);
+    }
+    let mut result = [0u8; 100];
+
+    let vtype = create_vtype(8, 2);
+    debug!("setting vtype to {}", vtype);
+    vadd_vv(&lhs, &rhs, &mut result, avl, vtype);
+
+    for i in 0..avl as usize {
+        if result[i] != expected[i] {
+            debug!(
+                "unexpected values found at index {}: {} {}(expected)",
+                i, result[i], expected[i]
+            );
+        }
+        assert_eq!(result[i], expected[i]);
+    }
+    debug!("test_vadd_vv, done");
+}
+
 fn program_entry() -> i8 {
     test_add();
     test_add_array();
+    test_vadd_vv();
     0
 }

@@ -210,16 +210,27 @@ dependencies = [
 ]
 
 [[package]]
-name = "rvv-encoder"
-version = "0.1.0"
-source = "git+https://github.com/TheWaWaR/rvv-encoder.git?rev=4b2ae1c#4b2ae1c9be733d1f99d0580c8b05361b8108af62"
+name = "rvv-asm"
+version = "0.1.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a3a3d85cba9c6a22c6d7190097dac991210a9029084e67f431b9ae25be2cb1ca"
+dependencies = [
+ "anyhow",
+ "proc-macro2",
+ "quote",
+ "rvv-encode",
+ "syn",
+]
+
+[[package]]
+name = "rvv-encode"
+version = "0.1.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e7c9d15052087d41f51cd10585bb4e627d27fc3c230ce198be53827b6ae71896"
 dependencies = [
  "anyhow",
  "pest",
  "pest_derive",
- "proc-macro2",
- "quote",
- "syn",
 ]
 
 [[package]]
@@ -227,7 +238,7 @@ name = "rvv-testcases"
 version = "0.1.0"
 dependencies = [
  "ckb-std",
- "rvv-encoder",
+ "rvv-asm",
 ]
 
 [[package]]
