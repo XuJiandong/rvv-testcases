@@ -13,7 +13,12 @@ use rvv_testcases::misc::create_vtype;
 ckb_std::entry!(program_entry);
 default_alloc!();
 
-fn vadd_vv(lhs: &[u8], rhs: &[u8], result: &mut [u8], avl: u64, vtype: u64) {
+enum VInstructionsOp {
+    Add,
+    Sub,
+}
+
+fn vop_vv(lhs: &[u8], rhs: &[u8], result: &mut [u8], avl: u64, vtype: u64, t: VInstructionsOp) {
     unsafe {
         rvv_asm!("mv t0, {0}" , in (reg) lhs.as_ref().as_ptr());
         rvv_asm!("mv t1, {0}", in (reg) rhs.as_ref().as_ptr());
@@ -27,12 +32,22 @@ fn vadd_vv(lhs: &[u8], rhs: &[u8], result: &mut [u8], avl: u64, vtype: u64) {
         // rvv_asm!("slli t5, t5, 5");
         rvv_asm!("sub t3, t3, t5"); // decrease avl
 
-        rvv_asm!("vle8.v v0, (t0)"); // load lhs to v0
+        rvv_asm!("vle8.v v1, (t0)"); // load lhs to v1
         rvv_asm!("add t0, t0, t5"); // increase lhs
-        rvv_asm!("vle8.v v1, (t1)"); // load rhs to v1
+        rvv_asm!("vle8.v v2, (t1)"); // load rhs to v2
         rvv_asm!("add t1, t1, t5"); // increase rhs
-        rvv_asm!("vadd.vv v2, v0, v1"); // ADD
-        rvv_asm!("vse8.v v2, (t2)"); // store v2 to result
+
+        // be careful while using this
+        match t {
+            VInstructionsOp::Add => {
+                rvv_asm!("vadd.vv v3, v1, v2"); // ADD
+            }
+            VInstructionsOp::Sub => {
+                rvv_asm!("vsub.vv v3, v1, v2"); // SUB
+            }
+        }
+
+        rvv_asm!("vse8.v v3, (t2)"); // store v3 to result
         rvv_asm!("add t2, t2, t5"); // increase result
         rvv_asm!("bnez t3, 1b"); // finished?
     }
@@ -93,25 +108,27 @@ fn test_add() {
     assert_eq!(result, lhs + rhs);
 }
 
-fn test_vadd_vv() {
-    debug!("test_vadd_vv, start ...");
-    let avl = 100;
+fn test_vop_vv_by_avl(avl: usize, lmul: i64, t: VInstructionsOp) {
     let mut lhs = [0u8; 100];
     let mut rhs = [0u8; 100];
     let mut expected = [0u8; 100];
     for i in 0..lhs.len() {
         let v = i as u8 + 1;
-        lhs[i] = v;
+        lhs[i] = v + 1;
         rhs[i] = v;
-        expected[i] = lhs[i].wrapping_add(rhs[i]);
+
+        expected[i] = match t {
+            VInstructionsOp::Add => lhs[i].wrapping_add(rhs[i]),
+            VInstructionsOp::Sub => lhs[i].wrapping_sub(rhs[i]),
+        };
     }
     let mut result = [0u8; 100];
 
-    let vtype = create_vtype(8, 2);
-    debug!("setting vtype to {}", vtype);
-    vadd_vv(&lhs, &rhs, &mut result, avl, vtype);
+    let vtype = create_vtype(8, lmul);
+    // debug!("setting vtype to {}", vtype);
+    vop_vv(&lhs, &rhs, &mut result, avl as u64, vtype, t);
 
-    for i in 0..avl as usize {
+    for i in 0..avl {
         if result[i] != expected[i] {
             debug!(
                 "unexpected values found at index {}: {} {}(expected)",
@@ -120,12 +137,23 @@ fn test_vadd_vv() {
         }
         assert_eq!(result[i], expected[i]);
     }
-    debug!("test_vadd_vv, done");
+}
+
+fn test_vop_vv() {
+    debug!("test_vop_vv, start ...");
+    for i in 80..100 {
+        if i % 2 == 0 {
+            test_vop_vv_by_avl(i, 2, VInstructionsOp::Add);
+        } else {
+            test_vop_vv_by_avl(i, 2, VInstructionsOp::Sub);
+        }
+    }
+    debug!("test_vop_vv, done");
 }
 
 fn program_entry() -> i8 {
     test_add();
     test_add_array();
-    test_vadd_vv();
+    test_vop_vv();
     0
 }
