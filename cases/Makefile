@@ -1,9 +1,11 @@
 
 CKB_DEBUGGER ?= ckb-debugger-rvv
 BUILD ?= debug
+PORT:=9999
+BUILDER_DOCKER := thewawar/ckb-capsule:2021-08-16
 
 all-via-docker:
-	docker run --rm -eOWNER=`id -u`:`id -g` -v `pwd`:/code -v ${HOME}/.cargo/git:/root/.cargo/git -v ${HOME}/.cargo/registry:/root/.cargo/registry -w/code thewawar/ckb-capsule:2021-08-16 bash -c 'make all'
+	docker run --rm -eOWNER=`id -u`:`id -g` -v `pwd`:/code -v ${HOME}/.cargo/git:/root/.cargo/git -v ${HOME}/.cargo/registry:/root/.cargo/registry -w/code ${BUILDER_DOCKER} bash -c 'make all'
 
 all:
 	if test "${BUILD}" = "release"; then\
@@ -20,6 +22,15 @@ expand:
 
 disasm:
 	riscv64-unknown-elf-objdump -d target/riscv64imac-unknown-none-elf/${BUILD}/rvv-testcases | rustfilt
+
+start-gdb-server:
+	${CKB_DEBUGGER} --mode gdb --gdb-listen 127.0.0.1:${PORT} --bin ./target/riscv64imac-unknown-none-elf/${BUILD}/rvv-testcases
+
+start-docker:
+	docker run --rm -it -eOWNER=`id -u`:`id -g` -v `pwd`:/code -v ${HOME}/.cargo/git:/root/.cargo/git -v ${HOME}/.cargo/registry:/root/.cargo/registry -w/code ${BUILDER_DOCKER} bash
+
+run-gdb-rust:
+	riscv64-unknown-elf-gdb -ex "target remote host.docker.internal:${PORT}" ./target/riscv64imac-unknown-none-elf/${BUILD}/rvv-testcases
 
 install-tools:
 	cargo install --branch rvv --git https://github.com/mohanson/ckb-standalone-debugger.git

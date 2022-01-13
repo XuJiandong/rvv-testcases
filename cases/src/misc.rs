@@ -24,3 +24,22 @@ pub fn create_vtype(sew: u64, lmul: i64) -> u64 {
     assert!(lmul_bits < 8);
     sew_bits << 3 | lmul_bits
 }
+
+pub fn log2(n: usize) -> usize {
+    match n {
+        1 => 0,
+        2 => 1,
+        4 => 2,
+        8 => 3,
+        16 => 4,
+        32 => 5,
+        64 => 6,
+        128 => 7,
+        256 => 8,
+        512 => 9,
+        1024 => 10,
+        2048 => 11,
+        4096 => 12,
+        _ => panic!("not supported"),
+    }
+}
