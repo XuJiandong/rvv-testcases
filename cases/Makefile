@@ -1,7 +1,7 @@
 
 CKB_DEBUGGER ?= ckb-debugger-rvv
-BUILD ?= debug
-PORT:=9999
+BUILD ?= release
+PORT := 9999
 BUILDER_DOCKER := thewawar/ckb-capsule:2021-08-16
 
 all-via-docker:

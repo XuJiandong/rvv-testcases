@@ -247,9 +247,9 @@ dependencies = [
 
 [[package]]
 name = "rvv-asm"
-version = "0.1.2"
+version = "0.1.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a3a3d85cba9c6a22c6d7190097dac991210a9029084e67f431b9ae25be2cb1ca"
+checksum = "b99e99dddd1c57298191e158fee41c0d7bb5ff7e412fe37d0c3241c6483fb2cf"
 dependencies = [
  "anyhow",
  "proc-macro2",
@@ -260,9 +260,9 @@ dependencies = [
 
 [[package]]
 name = "rvv-encode"
-version = "0.1.2"
+version = "0.1.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e7c9d15052087d41f51cd10585bb4e627d27fc3c230ce198be53827b6ae71896"
+checksum = "24d8d4971aa70ec2f26115a66467d0c16d0c8f3a5a1271099f8f1f45dd1fa9b7"
 dependencies = [
  "anyhow",
  "pest",

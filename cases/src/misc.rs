@@ -1,3 +1,5 @@
+use ckb_std::syscalls::debug;
+
 pub fn create_vtype(sew: u64, lmul: i64) -> u64 {
     let lmul_bits = match lmul {
         1 => 0b000,
@@ -42,4 +44,16 @@ pub fn log2(n: usize) -> usize {
         4096 => 12,
         _ => panic!("not supported"),
     }
+}
+
+pub const VLEN: usize = 2048;
+
+#[macro_export]
+macro_rules! log {
+    ($fmt:literal) => {
+        debug(alloc::format!($fmt));
+    };
+    ($fmt:literal, $($args:expr),+) => {
+        debug(alloc::format!($fmt, $($args), +));
+    };
 }

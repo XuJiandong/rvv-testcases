@@ -8,13 +8,12 @@
 
 use alloc::vec::Vec;
 
-use ckb_std::debug;
 use ckb_std::default_alloc;
+use ckb_std::syscalls::debug;
 use num_bigint::BigUint;
-use num_traits::FromPrimitive;
-use num_traits::{One, Zero};
 use rvv_asm::rvv_asm;
-use rvv_testcases::misc::{create_vtype, log2};
+use rvv_testcases::log;
+use rvv_testcases::misc::{create_vtype, log2, VLEN};
 
 ckb_std::entry!(program_entry);
 default_alloc!();
@@ -32,6 +31,7 @@ enum VInstructionOp {
     Invalid,
 }
 
+#[inline(never)]
 fn vop_vv(
     lhs: &[u8],
     rhs: &[u8],
@@ -203,7 +203,7 @@ fn test_add_array() {
     let lhs = [1, 2, 3, 4];
     let rhs = [2, 3, 4, 5];
     add_array(&lhs, &rhs, &mut result);
-    debug!("test_add_array, result = {}", result[0]);
+    log!("test_add_array, result = {}", result[0]);
     assert_eq!(result[0], 3);
     assert_eq!(result[1], 5);
     assert_eq!(result[2], 7);
@@ -214,7 +214,7 @@ fn test_add() {
     let lhs = 1u64;
     let rhs = 0u64;
     let result = add(lhs, rhs);
-    debug!("test_add, result = {}", result);
+    log!("test_add, result = {}", result);
     assert_eq!(result, lhs + rhs);
 }
 
@@ -223,7 +223,7 @@ fn copy_biguint(u: &BigUint, buf: &mut [u8]) {
     buf[0..bytes.len()].copy_from_slice(bytes.as_ref());
 }
 
-fn test_vop_vv_by_avl(avl: usize, lmul: i64, t: VInstructionOp, sew: u64) {
+fn test_vop_vv_by_inputs(avl: usize, lmul: i64, t: VInstructionOp, sew: u64) {
     let modulus = BigUint::from(1u32) << sew;
     let shift_amount = log2(sew as usize / 8) as u64;
 
@@ -240,9 +240,9 @@ fn test_vop_vv_by_avl(avl: usize, lmul: i64, t: VInstructionOp, sew: u64) {
 
     for i in 0..avl {
         // TODO: randomize it
-        let operand1 = BigUint::from(i);
-        let operand2 = BigUint::from(i);
-
+        //
+        let operand1 = BigUint::from(i) % &modulus;
+        let operand2 = BigUint::from(i) % &modulus;
         copy_biguint(&operand1, &mut lhs[i * sew_bytes..(i + 1) * sew_bytes]);
         copy_biguint(&operand2, &mut rhs[i * sew_bytes..(i + 1) * sew_bytes]);
 
@@ -260,7 +260,7 @@ fn test_vop_vv_by_avl(avl: usize, lmul: i64, t: VInstructionOp, sew: u64) {
             VInstructionOp::Xor => operand1 ^ operand2,
             _ => panic!("Invalid"),
         };
-        // debug!("expected_result = {:?}", &expected_result);
+        // log!("expected_result = {:?}", &expected_result);
         copy_biguint(
             &expected_result,
             &mut expected[i * sew_bytes..(i + 1) * sew_bytes],
@@ -268,8 +268,8 @@ fn test_vop_vv_by_avl(avl: usize, lmul: i64, t: VInstructionOp, sew: u64) {
     }
 
     let vtype = create_vtype(sew, lmul);
-    // debug!("setting vtype to {}", vtype);
-    // debug!("shift_amount = {}", shift_amount);
+    // log!("setting vtype to {}", vtype);
+    // log!("shift_amount = {}", shift_amount);
     vop_vv(&lhs, &rhs, &mut result, avl as u64, vtype, t, shift_amount);
 
     for i in 0..avl {
@@ -279,13 +279,17 @@ fn test_vop_vv_by_avl(avl: usize, lmul: i64, t: VInstructionOp, sew: u64) {
         let res = &result[i * sew_bytes..(i + 1) * sew_bytes];
         let exp = &expected[i * sew_bytes..(i + 1) * sew_bytes];
         if res != exp {
-            debug!(
+            log!(
                 "[sew = {}, op = {:?}] unexpected values found at index {} (nth-element): {:?} (result) {:?} (expected)",
                 sew, &t, i, res, exp
             );
-            debug!(
+            log!(
                 "more information, lhs = {:?}, rhs = {:?}, shift_amount = {}, lmul = {}, avl = {}",
-                left, right, shift_amount, lmul, avl
+                left,
+                right,
+                shift_amount,
+                lmul,
+                avl
             );
             panic!("Abort");
         }
@@ -293,38 +297,19 @@ fn test_vop_vv_by_avl(avl: usize, lmul: i64, t: VInstructionOp, sew: u64) {
 }
 
 fn test_vop_vv() {
-    debug!("test_vop_vv, start ...");
-    debug!("add, sub ...");
-    for i in 80..100 {
-        let op = match i % 2 {
-            0 => VInstructionOp::Add,
-            1 => VInstructionOp::Sub,
-            _ => VInstructionOp::Invalid,
-        };
-        let sew = 1 << (i % 8 + 3); // 8, 16, ..., 1024
-        test_vop_vv_by_avl(i, 2, op, sew);
+    log!("test_vop_vv, start ...");
+    log!("add, sub ...");
+
+    for lmul in [1, 2, 4] {
+        for sew in [8, 16, 32, 64, 128, 256, 512, 1024] {
+            let avl = VLEN * lmul / (sew / 8);
+            log!("test lmul = {}, sew = {}", lmul, sew);
+            test_vop_vv_by_inputs(avl, lmul as i64, VInstructionOp::Add, sew as u64);
+            test_vop_vv_by_inputs(avl, lmul as i64, VInstructionOp::Sub, sew as u64);
+        }
     }
-    // debug!("bit and, or, xor ...");
-    // for i in 80..100 {
-    //     let op = match i % 3 {
-    //         0 => VInstructionOp::And,
-    //         1 => VInstructionOp::Or,
-    //         2 => VInstructionOp::Xor,
-    //         _ => VInstructionOp::Invalid,
-    //     };
-    //     test_vop_vv_by_avl(i, 2, op, 8);
-    // }
-    // debug!("Shift left, shift right ...");
-    // for i in 80..100 {
-    //     let op = match i % 3 {
-    //         0 => VInstructionOp::ShiftLeft,
-    //         1 => VInstructionOp::ShiftRight,
-    //         2 => VInstructionOp::ShiftRightArithmetic,
-    //         _ => VInstructionOp::Invalid,
-    //     };
-    //     test_vop_vv_by_avl(i, 2, op, 8);
-    // }
-    debug!("test_vop_vv, done");
+
+    log!("test_vop_vv, done");
 }
 
 fn program_entry() -> i8 {
