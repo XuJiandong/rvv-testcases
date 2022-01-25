@@ -11,165 +11,12 @@ use alloc::vec::Vec;
 use ckb_std::default_alloc;
 use ckb_std::syscalls::debug;
 use num_bigint::BigUint;
-use rvv_asm::rvv_asm;
+use rvv_testcases::intrinsic::{vop_vv, VInstructionOp};
 use rvv_testcases::log;
-use rvv_testcases::misc::{create_vtype, log2, VLEN};
+use rvv_testcases::misc::{log2, VLEN};
 
 ckb_std::entry!(program_entry);
 default_alloc!();
-
-#[derive(Debug, Copy, Clone)]
-enum VInstructionOp {
-    Add,
-    Sub,
-    And,
-    Or,
-    Xor,
-    ShiftLeft,
-    ShiftRight,
-    ShiftRightArithmetic,
-    Invalid,
-}
-
-#[inline(never)]
-fn vop_vv(
-    lhs: &[u8],
-    rhs: &[u8],
-    result: &mut [u8],
-    avl: u64,
-    vtype: u64,
-    t: VInstructionOp,
-    shift_amount: u64,
-) {
-    unsafe {
-        rvv_asm!("mv t0, {0}" , in (reg) lhs.as_ref().as_ptr());
-        rvv_asm!("mv t1, {0}", in (reg) rhs.as_ref().as_ptr());
-        rvv_asm!("mv t2, {0}", in (reg) result.as_ref().as_ptr());
-        rvv_asm!("mv t3, {0}", in (reg) avl);
-        rvv_asm!("mv t4, {0}", in (reg) vtype);
-        rvv_asm!("mv t6, {0}", in (reg) shift_amount);
-
-        rvv_asm!("1:");
-        rvv_asm!("vsetvl t5, t3, t4");
-        rvv_asm!("sub t3, t3, t5"); // decrease avl
-
-        // convert 'vl' to bytes: vl << shift_amount
-        // E.G. U256, it's 32 bytes per element, which is `t5 << 5`
-        rvv_asm!("sll t5, t5, t6");
-
-        match shift_amount {
-            0 => {
-                rvv_asm!("vle8.v v1, (t0)"); // load lhs to v1
-                rvv_asm!("vle8.v v11, (t1)"); // load rhs to v11
-            }
-            1 => {
-                rvv_asm!("vle16.v v1, (t0)"); // load lhs to v1
-                rvv_asm!("vle16.v v11, (t1)"); // load rhs to v11
-            }
-            2 => {
-                rvv_asm!("vle32.v v1, (t0)"); // load lhs to v1
-                rvv_asm!("vle32.v v11, (t1)"); // load rhs to v11
-            }
-            3 => {
-                rvv_asm!("vle64.v v1, (t0)"); // load lhs to v1
-                rvv_asm!("vle64.v v11, (t1)"); // load rhs to v11
-            }
-            4 => {
-                rvv_asm!("vle128.v v1, (t0)"); // load lhs to v1
-                rvv_asm!("vle128.v v11, (t1)"); // load rhs to v11
-            }
-            5 => {
-                rvv_asm!("vle256.v v1, (t0)"); // load lhs to v1
-                rvv_asm!("vle256.v v11, (t1)"); // load rhs to v11
-            }
-            6 => {
-                rvv_asm!("vle512.v v1, (t0)"); // load lhs to v1
-                rvv_asm!("vle512.v v11, (t1)"); // load rhs to v11
-            }
-            7 => {
-                rvv_asm!("vle1024.v v1, (t0)"); // load lhs to v1
-                rvv_asm!("vle1024.v v11, (t1)"); // load rhs to v11
-            }
-            _ => {
-                panic!("Invalid shift_amount");
-            }
-        }
-
-        rvv_asm!("add t0, t0, t5"); // increase lhs
-        rvv_asm!("add t1, t1, t5"); // increase rhs
-
-        // be careful while using this
-        match t {
-            VInstructionOp::Add => {
-                rvv_asm!("vadd.vv v21, v1, v11"); // ADD
-            }
-            VInstructionOp::Sub => {
-                rvv_asm!("vsub.vv v21, v1, v11"); // SUB
-            }
-            VInstructionOp::And => {
-                rvv_asm!("vand.vv v21, v1, v11"); // AND
-            }
-            VInstructionOp::Or => {
-                rvv_asm!("vor.vv v21, v1, v11"); // OR
-            }
-            VInstructionOp::Xor => {
-                rvv_asm!("vxor.vv v21, v1, v11"); // XOR
-            }
-            VInstructionOp::ShiftLeft => {
-                rvv_asm!("vsll.vv v21, v1, v11"); // shift left
-            }
-            VInstructionOp::ShiftRight => {
-                rvv_asm!("vsrl.vv v21, v1, v11"); // shift right
-            }
-            VInstructionOp::ShiftRightArithmetic => {
-                rvv_asm!("vsra.vv v21, v1, v11"); // shift right arithmetic
-            }
-            VInstructionOp::Invalid => {
-                panic!("Invalid");
-            }
-        }
-        // store v21 to result
-        match shift_amount {
-            0 => {
-                rvv_asm!("vse8.v v21, (t2)");
-            }
-            1 => {
-                rvv_asm!("vse16.v v21, (t2)");
-            }
-            2 => {
-                rvv_asm!("vse32.v v21, (t2)");
-            }
-            3 => {
-                rvv_asm!("vse64.v v21, (t2)");
-            }
-            4 => {
-                rvv_asm!("vse128.v v21, (t2)");
-            }
-            5 => {
-                rvv_asm!("vse256.v v21, (t2)");
-            }
-            6 => {
-                rvv_asm!("vse512.v v21, (t2)");
-            }
-            7 => {
-                rvv_asm!("vse1024.v v21, (t2)");
-            }
-            _ => {
-                panic!("Invalid shift_amount");
-            }
-        }
-        rvv_asm!("add t2, t2, t5"); // increase result
-        rvv_asm!("bnez t3, 1b"); // finished?
-    }
-}
-
-fn add(lhs: u64, rhs: u64) -> u64 {
-    let mut result: u64;
-    unsafe {
-        asm!("add {0}, {1}, {2}", out(reg) result, in (reg) lhs, in (reg) rhs);
-    }
-    result
-}
 
 fn add_array(lhs: &[u64], rhs: &[u64], result: &mut [u64]) {
     let len = lhs.len();
@@ -210,6 +57,14 @@ fn test_add_array() {
     assert_eq!(result[3], 9);
 }
 
+fn add(lhs: u64, rhs: u64) -> u64 {
+    let mut result: u64;
+    unsafe {
+        asm!("add {0}, {1}, {2}", out(reg) result, in (reg) lhs, in (reg) rhs);
+    }
+    result
+}
+
 fn test_add() {
     let lhs = 1u64;
     let rhs = 0u64;
@@ -240,7 +95,7 @@ fn test_vop_vv_by_inputs(avl: usize, lmul: i64, t: VInstructionOp, sew: u64) {
 
     for i in 0..avl {
         // TODO: randomize it
-        //
+        // TODO: BigUint is very slow
         let operand1 = BigUint::from(i) % &modulus;
         let operand2 = BigUint::from(i) % &modulus;
         copy_biguint(&operand1, &mut lhs[i * sew_bytes..(i + 1) * sew_bytes]);
@@ -266,11 +121,9 @@ fn test_vop_vv_by_inputs(avl: usize, lmul: i64, t: VInstructionOp, sew: u64) {
             &mut expected[i * sew_bytes..(i + 1) * sew_bytes],
         );
     }
-
-    let vtype = create_vtype(sew, lmul);
     // log!("setting vtype to {}", vtype);
     // log!("shift_amount = {}", shift_amount);
-    vop_vv(&lhs, &rhs, &mut result, avl as u64, vtype, t, shift_amount);
+    vop_vv(&lhs, &rhs, &mut result, sew, avl as u64, lmul, t);
 
     for i in 0..avl {
         let left = &lhs[i * sew_bytes..(i + 1) * sew_bytes];

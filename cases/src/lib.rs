@@ -3,4 +3,5 @@
 
 extern crate alloc;
 
+pub mod intrinsic;
 pub mod misc;

@@ -1,5 +1,3 @@
-use ckb_std::syscalls::debug;
-
 pub fn create_vtype(sew: u64, lmul: i64) -> u64 {
     let lmul_bits = match lmul {
         1 => 0b000,
