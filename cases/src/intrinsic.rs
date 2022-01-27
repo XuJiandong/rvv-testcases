@@ -1,4 +1,5 @@
 use super::misc::create_vtype;
+use core::arch::asm;
 use rvv_asm::rvv_asm;
 
 #[allow(dead_code)]

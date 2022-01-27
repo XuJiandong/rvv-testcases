@@ -2,7 +2,7 @@
 CKB_DEBUGGER ?= ckb-debugger-rvv
 BUILD ?= release
 PORT := 9999
-BUILDER_DOCKER := thewawar/ckb-capsule:2021-08-16
+BUILDER_DOCKER := thewawar/ckb-capsule:2021-12-25
 
 all-via-docker:
 	docker run --rm -eOWNER=`id -u`:`id -g` -v `pwd`:/code -v ${HOME}/.cargo/git:/root/.cargo/git -v ${HOME}/.cargo/registry:/root/.cargo/registry -w/code ${BUILDER_DOCKER} bash -c 'make all'
