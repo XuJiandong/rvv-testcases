@@ -15,6 +15,9 @@ ckb-std = "0.9.0"
 rvv-asm = "0.1.3"
 num-bigint = { version = "0.4.3", default-features = false }
 num-traits = { version = "0.2.14", default-features = false }
+rand = { version = "0.8.4", default-features = false }
+# uint = { version = "0.9.1", default-features = false }
+rvv-simulator-runtime = { git = "https://github.com/TheWaWaR/rvv-prototype.git", rev="52a7a42" }
 
 
 [[bin]]

@@ -1,3 +1,40 @@
+use rvv_simulator_runtime::Uint;
+
+pub type U256 = Uint<4>;
+pub type U512 = Uint<8>;
+pub type U1024 = Uint<16>;
+
+pub trait Widening {
+    type WideningType;
+    fn sign_extend(&self) -> Self::WideningType;
+}
+
+impl Widening for U256 {
+    type WideningType = U512;
+    fn sign_extend(&self) -> Self::WideningType {
+        if self.bit(255) {
+            let r: U512 = U256::MAX.into();
+            let r2: U512 = self.clone().into();
+            (r << 256) + r2
+        } else {
+            self.clone().into()
+        }
+    }
+}
+
+impl Widening for U512 {
+    type WideningType = U1024;
+    fn sign_extend(&self) -> Self::WideningType {
+        if self.bit(511) {
+            let r: U1024 = U512::MAX.into();
+            let r2: U1024 = self.clone().into();
+            (r << 512) + r2
+        } else {
+            self.clone().into()
+        }
+    }
+}
+
 pub fn create_vtype(sew: u64, lmul: i64) -> u64 {
     let lmul_bits = match lmul {
         1 => 0b000,

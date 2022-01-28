@@ -166,15 +166,10 @@ fn vse_v21(sew: u64, buf: &[u8]) {
 }
 
 #[inline(never)]
-pub fn vop_vv(
-    lhs: &[u8],
-    rhs: &[u8],
-    result: &mut [u8],
-    sew: u64,
-    avl: u64,
-    lmul: i64,
-    t: VInstructionOp,
-) {
+pub fn vop_vv<F>(lhs: &[u8], rhs: &[u8], result: &mut [u8], sew: u64, avl: u64, lmul: i64, op: F)
+where
+    F: Fn(),
+{
     let mut avl = avl;
     let mut lhs = lhs;
     let mut rhs = rhs;
@@ -186,37 +181,8 @@ pub fn vop_vv(
         vle_v1(sew, lhs);
         vle_v11(sew, rhs);
 
-        unsafe {
-            match t {
-                VInstructionOp::Add => {
-                    rvv_asm!("vadd.vv v21, v1, v11"); // ADD
-                }
-                VInstructionOp::Sub => {
-                    rvv_asm!("vsub.vv v21, v1, v11"); // SUB
-                }
-                VInstructionOp::And => {
-                    rvv_asm!("vand.vv v21, v1, v11"); // AND
-                }
-                VInstructionOp::Or => {
-                    rvv_asm!("vor.vv v21, v1, v11"); // OR
-                }
-                VInstructionOp::Xor => {
-                    rvv_asm!("vxor.vv v21, v1, v11"); // XOR
-                }
-                VInstructionOp::ShiftLeft => {
-                    rvv_asm!("vsll.vv v21, v1, v11"); // shift left
-                }
-                VInstructionOp::ShiftRight => {
-                    rvv_asm!("vsrl.vv v21, v1, v11"); // shift right
-                }
-                VInstructionOp::ShiftRightArithmetic => {
-                    rvv_asm!("vsra.vv v21, v1, v11"); // shift right arithmetic
-                }
-                VInstructionOp::Invalid => {
-                    panic!("Invalid");
-                }
-            }
-        }
+        op();
+
         vse_v21(sew, result);
 
         avl -= vl;
