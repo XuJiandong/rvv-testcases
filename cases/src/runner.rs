@@ -82,13 +82,14 @@ where
 
     let mut rng = BestNumberRng::default();
     for i in 0..avl as usize {
-        rng.fill(&mut lhs[i * sew_bytes..(i + 1) * sew_bytes]);
-        rng.fill(&mut rhs[i * sew_bytes..(i + 1) * sew_bytes]);
+        let range = i * sew_bytes..(i + 1) * sew_bytes;
+        rng.fill(&mut lhs[range.clone()]);
+        rng.fill(&mut rhs[range.clone()]);
 
         expected_op(
-            &lhs[i * sew_bytes..(i + 1) * sew_bytes],
-            &rhs[i * sew_bytes..(i + 1) * sew_bytes],
-            &mut expected[i * sew_bytes..(i + 1) * sew_bytes],
+            &lhs[range.clone()],
+            &rhs[range.clone()],
+            &mut expected[range.clone()],
         );
     }
     v_op(
@@ -101,11 +102,13 @@ where
     );
 
     for i in 0..avl as usize {
-        let left = &lhs[i * sew_bytes..(i + 1) * sew_bytes];
-        let right = &rhs[i * sew_bytes..(i + 1) * sew_bytes];
+        let range = i * sew_bytes..(i + 1) * sew_bytes;
 
-        let res = &result[i * sew_bytes..(i + 1) * sew_bytes];
-        let exp = &expected[i * sew_bytes..(i + 1) * sew_bytes];
+        let left = &lhs[range.clone()];
+        let right = &rhs[range.clone()];
+
+        let res = &result[range.clone()];
+        let exp = &expected[range.clone()];
         if res != exp {
             log!(
                 "[sew = {}, describe = {}] unexpected values found at index {} (nth-element): {:?} (result) {:?} (expected)",

@@ -1,6 +1,4 @@
 use rand::prelude::*;
-
-use core::mem::transmute;
 pub struct BestNumberRng {
     data: [u64; 128],
     index: usize,
@@ -163,9 +161,9 @@ impl RngCore for BestNumberRng {
         if dest.len() < 4 {
             return;
         }
-        let dest2 = unsafe { transmute::<&mut [u8], &mut [u64]>(dest) };
-        for i in 0..dest.len() / 4 {
-            dest2[i] = self.next_u64();
+        for i in 0..dest.len() / 8 {
+            let next = self.next_u64();
+            dest[i * 8..(i + 1) * 8].copy_from_slice(&next.to_le_bytes());
         }
     }
     fn try_fill_bytes(&mut self, dest: &mut [u8]) -> Result<(), rand::Error> {
