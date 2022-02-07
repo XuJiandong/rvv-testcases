@@ -1,4 +1,5 @@
 use rand::prelude::*;
+
 pub struct BestNumberRng {
     data: [u64; 128],
     index: usize,
