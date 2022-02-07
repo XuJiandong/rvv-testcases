@@ -209,10 +209,10 @@ fn test_single_width_averaging_add_and_subtract() {
         let r = U256::from_little_endian(rhs);
         match lhs.len() {
             32 => {
-                let l : U512 = l.into();
-                let r : U512 = r.into();
+                let l: U512 = l.into();
+                let r: U512 = r.into();
                 let r = l.wrapping_sub(r);
-                let r2 : U256 = (r >> 1).into();
+                let r2: U256 = (r >> 1).into();
                 r2.to_little_endian(result);
             }
             _ => {
@@ -223,29 +223,29 @@ fn test_single_width_averaging_add_and_subtract() {
     run_vop_vv(256, 1, 100, expected_vasubu_vv, vasubu_vv, "vasubu.vv");
 
     // vasub.vv
-    // fn vasub_vv(lhs: &[u8], rhs: &[u8], result: &mut [u8], sew: u64, lmul: i64, avl: u64) {
-    //     vop_vv(lhs, rhs, result, sew, avl, lmul, || unsafe {
-    //         rvv_asm!("vasub.vv v21, v1, v11");
-    //     });
-    // }
-    // pub fn expected_vasub_vv(lhs: &[u8], rhs: &[u8], result: &mut [u8]) {
-    //     assert!(lhs.len() == rhs.len() && rhs.len() == result.len());
-    //     let l = U256::from_little_endian(lhs);
-    //     let r = U256::from_little_endian(rhs);
-    //     match lhs.len() {
-    //         32 => {
-    //             let l : U512 = l.sign_extend();
-    //             let r : U512 = r.sign_extend();
-    //             let (r, _) = l.overflowing_sub(r);
-    //             let r2: U256 = (r >> 1).into();
-    //             r2.to_little_endian(result)
-    //         }
-    //         _ => {
-    //             panic!("expected_op_asub");
-    //         }
-    //     }
-    // }
-    // run_vop_vv(256, 1, 100, expected_vasub_vv, vasub_vv, "vasub.vv");
+    fn vasub_vv(lhs: &[u8], rhs: &[u8], result: &mut [u8], sew: u64, lmul: i64, avl: u64) {
+        vop_vv(lhs, rhs, result, sew, avl, lmul, || unsafe {
+            rvv_asm!("vasub.vv v21, v1, v11");
+        });
+    }
+    pub fn expected_vasub_vv(lhs: &[u8], rhs: &[u8], result: &mut [u8]) {
+        assert!(lhs.len() == rhs.len() && rhs.len() == result.len());
+        let l = U256::from_little_endian(lhs);
+        let r = U256::from_little_endian(rhs);
+        match lhs.len() {
+            32 => {
+                let l: U512 = l.sign_extend();
+                let r: U512 = r.sign_extend();
+                let (r, _) = l.overflowing_sub(r);
+                let r2: U256 = (r >> 1).into();
+                r2.to_little_endian(result)
+            }
+            _ => {
+                panic!("expected_op_asub");
+            }
+        }
+    }
+    run_vop_vv(256, 1, 100, expected_vasub_vv, vasub_vv, "vasub.vv");
 }
 
 pub fn test_vop_vv() {
