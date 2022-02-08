@@ -1,11 +1,14 @@
 
 CKB_DEBUGGER ?= ckb-debugger-rvv
-BUILD ?= release
+BUILD ?= debug
 PORT := 9999
 BUILDER_DOCKER := thewawar/ckb-capsule:2021-12-25
 
 all-via-docker:
 	docker run --rm -eOWNER=`id -u`:`id -g` -v `pwd`:/code -v ${HOME}/.cargo/git:/root/.cargo/git -v ${HOME}/.cargo/registry:/root/.cargo/registry -w/code ${BUILDER_DOCKER} bash -c 'make all'
+
+check-via-docker:
+	docker run --rm -eOWNER=`id -u`:`id -g` -v `pwd`:/code -v ${HOME}/.cargo/git:/root/.cargo/git -v ${HOME}/.cargo/registry:/root/.cargo/registry -w/code ${BUILDER_DOCKER} bash -c 'make check'
 
 shell:
 	docker run -it --rm -eOWNER=`id -u`:`id -g` -v `pwd`:/code -v ${HOME}/.cargo/git:/root/.cargo/git -v ${HOME}/.cargo/registry:/root/.cargo/registry -w/code ${BUILDER_DOCKER} bash
@@ -17,8 +20,11 @@ all:
 		cargo build --bin rvv-testcases;\
 	fi
 
+check:
+	cargo check
+
 run:
-	RUST_LOG=debug ${CKB_DEBUGGER} --max-cycles 1000000000 --bin ./target/riscv64imac-unknown-none-elf/${BUILD}/rvv-testcases
+	RUST_LOG=debug ${CKB_DEBUGGER} --max-cycles 1000000000 --bin ./target/riscv64imac-unknown-none-elf/${BUILD}/rvv-testcases -- $(args)
 
 expand:
 	cargo expand --bin rvv-testcases --color never

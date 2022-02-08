@@ -1,14 +1,12 @@
-use ckb_std::syscalls::debug;
 use core::arch::asm;
 use core::convert::TryInto;
 use rvv_asm::rvv_asm;
 use rvv_testcases::intrinsic::vop_vx;
-use rvv_testcases::log;
 use rvv_testcases::misc::{U1024, U256, U512};
-use rvv_testcases::runner::run_vop_vx;
+use rvv_testcases::runner::{run_vop_vx, WideningCategory};
 
 fn expected_op_add(lhs: &[u8], x: u64, result: &mut [u8]) {
-    assert!(lhs.len() == result.len());
+    assert_eq!(lhs.len(), result.len());
     match lhs.len() {
         1 => {
             result[0] = lhs[0] + x as u8;
@@ -48,7 +46,6 @@ fn expected_op_add(lhs: &[u8], x: u64, result: &mut [u8]) {
 }
 
 pub fn test_vop_vx() {
-    log!("test_vop_vx, start ...");
     // test combinations of lmul, sew, avl, etc
     fn add(lhs: &[u8], x: u64, result: &mut [u8], sew: u64, lmul: i64, avl: u64) {
         vop_vx(lhs, x, result, sew, avl, lmul, |x: u64| unsafe {
@@ -59,9 +56,15 @@ pub fn test_vop_vx() {
     }
     for lmul in [1, 2, 4, 8] {
         for avl in 99..=100 {
-            run_vop_vx(256, lmul, avl, expected_op_add, add, "vadd.vx");
+            run_vop_vx(
+                256,
+                lmul,
+                avl,
+                expected_op_add,
+                add,
+                WideningCategory::None,
+                "vadd.vx",
+            );
         }
     }
-
-    log!("test_vop_vx, done");
 }

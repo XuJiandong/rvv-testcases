@@ -9,6 +9,19 @@ pub trait Widening {
     fn sign_extend(&self) -> Self::WideningType;
 }
 
+impl Widening for u64 {
+    type WideningType = U256;
+    fn sign_extend(&self) -> Self::WideningType {
+        if (self & 0x8000000000000000) != 0 {
+            let r: U256 = u128::MAX.into();
+            let r2: U256 = self.clone().into();
+            (r << 128) + r2
+        } else {
+            self.clone().into()
+        }
+    }
+}
+
 impl Widening for U256 {
     type WideningType = U512;
     fn sign_extend(&self) -> Self::WideningType {
@@ -91,4 +104,26 @@ macro_rules! log {
     ($fmt:literal, $($args:expr),+) => {
         debug(alloc::format!($fmt, $($args), +));
     };
+}
+
+#[macro_export]
+macro_rules! test_case {
+    ($fun:path, $test_pattern:ident) => {{
+        let fun_name = stringify!($fun);
+        if $test_pattern.is_none() || fun_name.contains($test_pattern.unwrap()) {
+            log!("test {} ...", fun_name);
+            $fun();
+            log!("test {}, OK", fun_name);
+        }
+    }};
+}
+
+// -16 to 15
+pub fn shrink_to_imm(x: u64) -> i8 {
+    let x2 = (x & 0b11111) as u64;
+    if x2 < 16 {
+        x2 as i8
+    } else {
+        x2 as i8 - 32
+    }
 }

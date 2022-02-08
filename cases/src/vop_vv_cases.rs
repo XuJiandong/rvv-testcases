@@ -8,8 +8,9 @@ use rvv_testcases::intrinsic::{vop_vv, VInstructionOp};
 use rvv_testcases::log;
 use rvv_testcases::misc::log2;
 use rvv_testcases::misc::{Widening, U1024, U256, U512};
-use rvv_testcases::runner::run_vop_vv;
+use rvv_testcases::runner::{run_vop_vv, WideningCategory};
 
+#[allow(dead_code)]
 fn copy_biguint(u: &BigUint, buf: &mut [u8]) {
     let bytes = u.to_bytes_le();
     buf[0..bytes.len()].copy_from_slice(bytes.as_ref());
@@ -62,6 +63,7 @@ fn expected_op_add(lhs: &[u8], rhs: &[u8], result: &mut [u8]) {
     }
 }
 
+#[allow(dead_code)]
 pub fn test_vop_vv_by_inputs(avl: usize, lmul: i64, t: VInstructionOp, sew: u64) {
     let modulus = BigUint::from(1u32) << sew;
     let shift_amount = log2(sew as usize / 8) as u64;
@@ -171,7 +173,15 @@ fn test_single_width_averaging_add_and_subtract() {
             }
         }
     }
-    run_vop_vv(256, 1, 100, expected_vaaddu_vv, vaaddu_vv, "vaaddu.vv");
+    run_vop_vv(
+        256,
+        1,
+        100,
+        expected_vaaddu_vv,
+        vaaddu_vv,
+        WideningCategory::None,
+        "vaaddu.vv",
+    );
 
     // vaadd.vv
     fn vaadd_vv(lhs: &[u8], rhs: &[u8], result: &mut [u8], sew: u64, lmul: i64, avl: u64) {
@@ -195,7 +205,15 @@ fn test_single_width_averaging_add_and_subtract() {
             }
         }
     }
-    run_vop_vv(256, 1, 100, expected_vaadd_vv, vaadd_vv, "vaadd.vv");
+    run_vop_vv(
+        256,
+        1,
+        100,
+        expected_vaadd_vv,
+        vaadd_vv,
+        WideningCategory::None,
+        "vaadd.vv",
+    );
 
     // vasubu.vv
     fn vasubu_vv(lhs: &[u8], rhs: &[u8], result: &mut [u8], sew: u64, lmul: i64, avl: u64) {
@@ -220,7 +238,15 @@ fn test_single_width_averaging_add_and_subtract() {
             }
         }
     }
-    run_vop_vv(256, 1, 100, expected_vasubu_vv, vasubu_vv, "vasubu.vv");
+    run_vop_vv(
+        256,
+        1,
+        100,
+        expected_vasubu_vv,
+        vasubu_vv,
+        WideningCategory::None,
+        "vasubu.vv",
+    );
 
     // vasub.vv
     fn vasub_vv(lhs: &[u8], rhs: &[u8], result: &mut [u8], sew: u64, lmul: i64, avl: u64) {
@@ -245,11 +271,18 @@ fn test_single_width_averaging_add_and_subtract() {
             }
         }
     }
-    run_vop_vv(256, 1, 100, expected_vasub_vv, vasub_vv, "vasub.vv");
+    run_vop_vv(
+        256,
+        1,
+        100,
+        expected_vasub_vv,
+        vasub_vv,
+        WideningCategory::None,
+        "vasub.vv",
+    );
 }
 
 pub fn test_vop_vv() {
-    log!("test_vop_vv, start ...");
     test_single_width_averaging_add_and_subtract();
 
     // test combinations of lmul, sew, avl, etc
@@ -260,9 +293,15 @@ pub fn test_vop_vv() {
     }
     for lmul in [1, 2, 4, 8] {
         for avl in 99..=100 {
-            run_vop_vv(256, lmul, avl, expected_op_add, add, "vadd.vv");
+            run_vop_vv(
+                256,
+                lmul,
+                avl,
+                expected_op_add,
+                add,
+                WideningCategory::None,
+                "vadd.vv",
+            );
         }
     }
-
-    log!("test_vop_vv, done");
 }

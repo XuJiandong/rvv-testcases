@@ -6,22 +6,47 @@
 #![feature(unchecked_math)]
 #![feature(asm_sym)]
 
+mod integer_extension_cases;
 mod misc_cases;
+mod vop_vi_cases;
 mod vop_vv_cases;
 mod vop_vx_cases;
+mod vwop_vv_cases;
+mod vwop_vx_cases;
+mod vwop_wv_cases;
+mod vwop_wx_cases;
+
+use ckb_std::cstr_core::CStr;
 use ckb_std::default_alloc;
+use ckb_std::syscalls::debug;
 use core::arch::asm;
-use rvv_testcases::intrinsic::VInstructionOp;
+use core::slice::from_raw_parts;
+use core::stringify;
+use rvv_testcases::{log, test_case};
 
 ckb_std::entry!(program_entry);
 default_alloc!();
 
-fn program_entry() -> i8 {
-    misc_cases::test_add();
-    misc_cases::test_add_array();
-    vop_vv_cases::test_vop_vv_by_inputs(100, 1, VInstructionOp::Add, 256);
-    vop_vv_cases::test_vop_vv_by_inputs(100, 1, VInstructionOp::Sub, 256);
-    vop_vv_cases::test_vop_vv();
-    vop_vx_cases::test_vop_vx();
+fn program_entry(argc: u64, argv: *const *const u8) -> i8 {
+    let test_pattern = if argc > 0 {
+        let args = unsafe { from_raw_parts(argv, argc as usize) };
+        let s = unsafe { CStr::from_ptr(args[0]) };
+        Some(s.to_str().unwrap())
+    } else {
+        None
+    };
+    test_case!(misc_cases::test_add, test_pattern);
+    test_case!(misc_cases::test_add_array, test_pattern);
+    test_case!(vop_vv_cases::test_vop_vv, test_pattern);
+    test_case!(vop_vx_cases::test_vop_vx, test_pattern);
+    test_case!(vop_vi_cases::test_vop_vi, test_pattern);
+    test_case!(vwop_vv_cases::test_vwop_vv, test_pattern);
+    test_case!(vwop_wv_cases::test_vwop_wv, test_pattern);
+    test_case!(vwop_vx_cases::test_vwop_vx, test_pattern);
+    test_case!(vwop_wx_cases::test_vwop_wx, test_pattern);
+    test_case!(
+        integer_extension_cases::test_integer_extension,
+        test_pattern
+    );
     0
 }

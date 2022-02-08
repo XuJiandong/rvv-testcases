@@ -1,4 +1,5 @@
 use super::misc::create_vtype;
+use super::runner::WideningCategory;
 use core::arch::asm;
 use rvv_asm::rvv_asm;
 
@@ -176,6 +177,7 @@ where
     let mut result = result;
 
     let sew_bytes = sew / 8;
+
     loop {
         let vl = vsetvl(avl as u64, sew, lmul);
         vle_v1(sew, lhs);
@@ -192,6 +194,51 @@ where
         let offset = (vl * sew_bytes) as usize;
         result = &mut result[offset..];
         lhs = &lhs[offset..];
+        rhs = &rhs[offset..];
+    }
+}
+
+#[inline(never)]
+pub fn vop_nv<F>(
+    lhs: &[u8],
+    rhs: &[u8],
+    result: &mut [u8],
+    sew: u64,
+    avl: u64,
+    lmul: i64,
+    op: F,
+    cat: WideningCategory,
+) where
+    F: Fn(),
+{
+    let mut avl = avl;
+    let mut lhs = lhs;
+    let mut rhs = rhs;
+    let mut result = result;
+
+    let sew_bytes = sew / 8;
+
+    let n = match cat {
+        WideningCategory::NarrowVs2(n) => n,
+        _ => 1,
+    };
+
+    loop {
+        let vl = vsetvl(avl as u64, sew, lmul);
+        vle_v1(sew, lhs);
+        vle_v11(sew / n as u64, rhs);
+
+        op();
+
+        vse_v21(sew, result);
+
+        avl -= vl;
+        if avl == 0 {
+            break;
+        }
+        let offset = (vl * sew_bytes) as usize;
+        result = &mut result[offset..];
+        lhs = &lhs[offset / n..];
         rhs = &rhs[offset..];
     }
 }
@@ -221,6 +268,131 @@ where
         let offset = (vl * sew_bytes) as usize;
         result = &mut result[offset..];
         lhs = &lhs[offset..];
+    }
+}
+
+#[inline(never)]
+pub fn vwop_vv<F>(lhs: &[u8], rhs: &[u8], result: &mut [u8], sew: u64, avl: u64, lmul: i64, op: F)
+where
+    F: Fn(),
+{
+    let mut avl = avl;
+    let mut lhs = lhs;
+    let mut rhs = rhs;
+    let mut result = result;
+
+    let sew_bytes = sew / 8;
+    loop {
+        let vl = vsetvl(avl as u64, sew, lmul);
+        vle_v1(sew, lhs);
+        vle_v11(sew, rhs);
+
+        op();
+
+        // different than `vop_vv`
+        vse_v21(sew * 2, result);
+
+        avl -= vl;
+        if avl == 0 {
+            break;
+        }
+        let offset = (vl * sew_bytes) as usize;
+        // different than `vop_vv`
+        result = &mut result[offset * 2..];
+        lhs = &lhs[offset..];
+        rhs = &rhs[offset..];
+    }
+}
+
+#[inline(never)]
+pub fn vwop_vx<F>(lhs: &[u8], x: u64, result: &mut [u8], sew: u64, avl: u64, lmul: i64, op: F)
+where
+    F: Fn(u64),
+{
+    let mut avl = avl;
+    let mut lhs = lhs;
+    let mut result = result;
+
+    let sew_bytes = sew / 8;
+    loop {
+        let vl = vsetvl(avl as u64, sew, lmul);
+        vle_v1(sew, lhs);
+
+        op(x);
+
+        // different than `vop_vv`
+        vse_v21(sew * 2, result);
+
+        avl -= vl;
+        if avl == 0 {
+            break;
+        }
+        let offset = (vl * sew_bytes) as usize;
+        // different than `vop_vv`
+        result = &mut result[offset * 2..];
+        lhs = &lhs[offset..];
+    }
+}
+
+#[inline(never)]
+pub fn vwop_wx<F>(lhs: &[u8], x: u64, result: &mut [u8], sew: u64, avl: u64, lmul: i64, op: F)
+where
+    F: Fn(u64),
+{
+    let mut avl = avl;
+    let mut lhs = lhs;
+    let mut result = result;
+
+    let sew_bytes = sew / 8;
+    loop {
+        let vl = vsetvl(avl as u64, sew, lmul);
+        vle_v1(sew * 2, lhs);
+
+        op(x);
+
+        vse_v21(sew * 2, result);
+
+        avl -= vl;
+        if avl == 0 {
+            break;
+        }
+        let offset = (vl * sew_bytes) as usize;
+        result = &mut result[offset * 2..];
+        lhs = &lhs[offset * 2..];
+    }
+}
+
+#[inline(never)]
+pub fn vwop_wv<F>(lhs: &[u8], rhs: &[u8], result: &mut [u8], sew: u64, avl: u64, lmul: i64, op: F)
+where
+    F: Fn(),
+{
+    let mut avl = avl;
+    let mut lhs = lhs;
+    let mut rhs = rhs;
+    let mut result = result;
+
+    let sew_bytes = sew / 8;
+    loop {
+        let vl = vsetvl(avl as u64, sew, lmul);
+        // different than `vop_vv`
+        vle_v1(sew * 2, lhs);
+        vle_v11(sew, rhs);
+
+        op();
+
+        // different than `vop_vv`
+        vse_v21(sew * 2, result);
+
+        avl -= vl;
+        if avl == 0 {
+            break;
+        }
+        let offset = (vl * sew_bytes) as usize;
+        // different than `vop_vv`
+        result = &mut result[offset * 2..];
+        lhs = &lhs[offset * 2..];
+        rhs = &rhs[offset..];
     }
 }
 
