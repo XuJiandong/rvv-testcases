@@ -147,9 +147,7 @@ pub fn test_vop_vi() {
                     rvv_asm!("vadd.vi v21, v1, -15");
                 }
                 -16 => {
-                    // TODO
-                    rvv_asm!("vadd.vi v21, v1, -15");
-                    rvv_asm!("vadd.vi v21, v1, -1");
+                    rvv_asm!("vadd.vi v21, v1, -16");
                 }
                 _ => {
                     panic!("can't support this immediate: {}", imm);
