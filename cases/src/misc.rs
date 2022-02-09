@@ -1,3 +1,5 @@
+use alloc::vec;
+use alloc::vec::Vec;
 use rvv_simulator_runtime::Uint;
 
 pub type U256 = Uint<4>;
@@ -126,4 +128,44 @@ pub fn shrink_to_imm(x: u64) -> i8 {
     } else {
         x2 as i8 - 32
     }
+}
+
+pub fn avl_iterator(sew: u64, target_lmul: i64) -> Vec<u64> {
+    if target_lmul > 0 {
+        let avl = target_lmul as u64 * VLEN as u64 / sew as u64;
+        vec![avl - 1, avl, avl + 1]
+    } else {
+        panic!("TODO")
+    }
+}
+
+pub fn ceiling(a: usize, b: usize) -> usize {
+    if a % b == 0 {
+        a / b
+    } else {
+        a / b + 1
+    }
+}
+
+pub fn get_bit(x: u8, index: usize) -> u8 {
+    (x >> index) & 1
+}
+
+pub fn get_bit_in_slice(x: &[u8], index: usize) -> u8 {
+    let byte_index = index / 8;
+    let bit_index = index - 8 * byte_index;
+    get_bit(x[byte_index], bit_index)
+}
+
+pub fn set_bit(x: &mut u8, index: usize, v: u8) {
+    assert!(v == 0 || v == 1);
+    let mask = !(1 << index);
+    let res: u8 = (*x & mask) | (v << index);
+    *x = res;
+}
+
+pub fn set_bit_in_slice(x: &mut [u8], index: usize, v: u8) {
+    let byte_index = index / 8;
+    let bit_index = index - 8 * byte_index;
+    set_bit(&mut x[byte_index], bit_index, v);
 }

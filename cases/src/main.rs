@@ -8,6 +8,11 @@
 
 mod integer_extension_cases;
 mod misc_cases;
+mod narrowing_integer_right_shift_cases;
+mod single_width_averaging_cases;
+mod single_width_shift_cases;
+mod vmsop_vv_cases;
+
 mod vop_vi_cases;
 mod vop_vv_cases;
 mod vop_vx_cases;
@@ -48,5 +53,18 @@ fn program_entry(argc: u64, argv: *const *const u8) -> i8 {
         integer_extension_cases::test_integer_extension,
         test_pattern
     );
+    test_case!(
+        single_width_averaging_cases::test_single_width_averaging_add_and_subtract,
+        test_pattern
+    );
+    test_case!(
+        single_width_shift_cases::test_single_width_shift,
+        test_pattern
+    );
+    test_case!(
+        narrowing_integer_right_shift_cases::test_narrowing_integer_right_shift,
+        test_pattern
+    );
+    test_case!(vmsop_vv_cases::test_vmsop_vv, test_pattern);
     0
 }

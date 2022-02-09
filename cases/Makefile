@@ -1,17 +1,21 @@
 
 CKB_DEBUGGER ?= ckb-debugger-rvv
-BUILD ?= debug
+BUILD ?= release
 PORT := 9999
 BUILDER_DOCKER := thewawar/ckb-capsule:2021-12-25
+DOCKER_ARGS = --rm -e BUILD=$(BUILD) -eOWNER=`id -u`:`id -g` -v `pwd`:/code -v ${HOME}/.cargo/git:/root/.cargo/git -v ${HOME}/.cargo/registry:/root/.cargo/registry -w/code ${BUILDER_DOCKER}
 
 all-via-docker:
-	docker run --rm -eOWNER=`id -u`:`id -g` -v `pwd`:/code -v ${HOME}/.cargo/git:/root/.cargo/git -v ${HOME}/.cargo/registry:/root/.cargo/registry -w/code ${BUILDER_DOCKER} bash -c 'make all'
+	docker run $(DOCKER_ARGS) bash -c 'make all'
 
 check-via-docker:
-	docker run --rm -eOWNER=`id -u`:`id -g` -v `pwd`:/code -v ${HOME}/.cargo/git:/root/.cargo/git -v ${HOME}/.cargo/registry:/root/.cargo/registry -w/code ${BUILDER_DOCKER} bash -c 'make check'
+	docker run $(DOCKER_ARGS) bash -c 'cargo check'
+
+fix-via-docker:
+	docker run $(DOCKER_ARGS) bash -c 'cargo fix --allow-no-vcs'
 
 shell:
-	docker run -it --rm -eOWNER=`id -u`:`id -g` -v `pwd`:/code -v ${HOME}/.cargo/git:/root/.cargo/git -v ${HOME}/.cargo/registry:/root/.cargo/registry -w/code ${BUILDER_DOCKER} bash
+	docker run $(DOCKER_ARGS) bash
 
 all:
 	if test "${BUILD}" = "release"; then\
@@ -19,9 +23,6 @@ all:
 	else\
 		cargo build --bin rvv-testcases;\
 	fi
-
-check:
-	cargo check
 
 run:
 	RUST_LOG=debug ${CKB_DEBUGGER} --max-cycles 1000000000 --bin ./target/riscv64imac-unknown-none-elf/${BUILD}/rvv-testcases -- $(args)

@@ -2,7 +2,7 @@ use core::arch::asm;
 use core::convert::TryInto;
 use rvv_asm::rvv_asm;
 use rvv_testcases::intrinsic::vop_vx;
-use rvv_testcases::misc::{shrink_to_imm, Widening, U256};
+use rvv_testcases::misc::{avl_iterator, shrink_to_imm, Widening, U256};
 use rvv_testcases::runner::{run_vop_vx, WideningCategory};
 
 fn expected_op_add(lhs: &[u8], x: u64, result: &mut [u8]) {
@@ -155,10 +155,11 @@ pub fn test_vop_vi() {
             }
         });
     }
-    for lmul in [1, 2, 4, 8] {
-        for avl in 99..=100 {
+    let sew = 256u64;
+    for lmul in [-2, 1, 4, 8] {
+        for avl in avl_iterator(sew, 4) {
             run_vop_vx(
-                256,
+                sew,
                 lmul,
                 avl,
                 expected_op_add,
