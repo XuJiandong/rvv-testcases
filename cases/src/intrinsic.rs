@@ -227,10 +227,8 @@ where
 
         let mut temp = [0u8; VLEN];
         vs1r_v21(&mut temp);
-        // log!("mask size = {}, vl = {}", mask_size, vl);
-        // log!("result.len() = {}", result.len());
-        for _ in 0..vl {
-            let bit = get_bit_in_slice(&temp[..], index);
+        for i in 0..vl {
+            let bit = get_bit_in_slice(&temp[..], i as usize);
             set_bit_in_slice(result, index, bit);
             index += 1;
         }
@@ -500,6 +498,37 @@ where
         let offset = (vl * sew_bytes) as usize;
         // different than `vop_vv`
         result = &mut result[offset * 2..];
+        lhs = &lhs[offset * 2..];
+        rhs = &rhs[offset..];
+    }
+}
+
+#[inline(never)]
+pub fn vop_wv<F>(lhs: &[u8], rhs: &[u8], result: &mut [u8], sew: u64, avl: u64, lmul: i64, op: F)
+where
+    F: Fn(),
+{
+    let mut avl = avl;
+    let mut lhs = lhs;
+    let mut rhs = rhs;
+    let mut result = result;
+
+    let sew_bytes = sew / 8;
+    loop {
+        let vl = vsetvl(avl as u64, sew, lmul);
+        vle_v1(sew * 2, lhs);
+        vle_v11(sew, rhs);
+
+        op();
+
+        vse_v21(sew, result);
+
+        avl -= vl;
+        if avl == 0 {
+            break;
+        }
+        let offset = (vl * sew_bytes) as usize;
+        result = &mut result[offset..];
         lhs = &lhs[offset * 2..];
         rhs = &rhs[offset..];
     }

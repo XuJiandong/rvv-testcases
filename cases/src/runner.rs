@@ -43,6 +43,9 @@ pub fn run_vop_vv<T1, T2>(
     rhs.resize(avl_bytes, 0u8);
 
     let mut lhs = Vec::<u8>::new();
+    // some destructive instructions, like vmacc.vv, require `expected` filled before executing.
+    // `expected_before` is the place to put random values.
+    let mut expected_before = Vec::<u8>::new();
     let mut expected = Vec::<u8>::new();
     let mut result = Vec::<u8>::new();
 
@@ -73,6 +76,7 @@ pub fn run_vop_vv<T1, T2>(
             lhs.resize(avl_bytes, 0);
         }
     }
+    expected_before.resize(expected.len(), 0);
 
     let mut rng = BestNumberRng::default();
     for i in 0..avl as usize {
@@ -91,6 +95,13 @@ pub fn run_vop_vv<T1, T2>(
 
         rng.fill(&mut lhs[lhs_range.clone()]);
         rng.fill(&mut rhs[range.clone()]);
+        rng.fill(&mut expected_before[expected_range.clone()]);
+        expected[expected_range.clone()].copy_from_slice(&expected_before[expected_range.clone()]);
+
+        if result.len() == expected_before.len() {
+            result[expected_range.clone()]
+                .copy_from_slice(&expected_before[expected_range.clone()]);
+        }
 
         expected_op(
             &lhs[lhs_range.clone()],
@@ -127,15 +138,21 @@ pub fn run_vop_vv<T1, T2>(
 
         let res = &result[expected_range.clone()];
         let exp = &expected[expected_range.clone()];
+        let exp_before = if result.len() == expected_before.len() {
+            &expected_before[expected_range.clone()]
+        } else {
+            &[]
+        };
         if res != exp {
             log!(
-                "[sew = {}, describe = {}] unexpected values found at index {} (nth-element): {:?} (result) {:?} (expected)",
+                "[sew = {}, describe = {}] unexpected values found at index {}: {:?} (result) {:?} (expected)",
                 sew, desc, i, res, exp
             );
             log!(
-                "more information, lhs = {:?}, rhs = {:?}, lmul = {}, avl = {}",
+                "more information, lhs = {:?}, rhs = {:?}, expected_before = {:?}, lmul = {}, avl = {}",
                 left,
                 right,
+                exp_before,
                 lmul,
                 avl
             );
