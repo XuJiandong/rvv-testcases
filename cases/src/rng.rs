@@ -1,5 +1,7 @@
 use rand::prelude::*;
 
+static mut SEED: usize = 0;
+
 pub struct BestNumberRng {
     data: [u64; 128],
     index: usize,
@@ -7,8 +9,15 @@ pub struct BestNumberRng {
 
 impl Default for BestNumberRng {
     fn default() -> Self {
+        let seed = unsafe {
+            SEED += 1;
+            if SEED >= 128 {
+                SEED = 0;
+            }
+            SEED
+        };
         BestNumberRng {
-            index: 0,
+            index: seed,
             // from https://github.com/mohanson/rvv-playground/blob/094ae03266ea73a891bc105f238dacfc22cb56e6/src/rvv_test_case.py#L4
             data: [
                 0x0000000000000000,

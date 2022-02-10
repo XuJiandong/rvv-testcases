@@ -10,8 +10,10 @@ fn expected_op(lhs: &[u8], x: u64, result: &mut [u8]) {
 
     match result.len() {
         32 => {
+            // The low lg2(2*SEW) bits of the shift-amount value are used
+            let shift_amount = x & 0b111111111;
             let l = U512::from_little_endian(lhs);
-            let r = l >> x;
+            let r = l >> shift_amount;
             let r2: U256 = r.into();
             r2.to_little_endian(result);
         }

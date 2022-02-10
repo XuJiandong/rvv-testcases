@@ -4,7 +4,7 @@ use ckb_std::syscalls::debug;
 use rand::{Rng, RngCore};
 
 use super::log;
-use super::misc::{ceiling, get_bit};
+use super::misc::{ceiling, get_bit_in_slice};
 use super::rng::BestNumberRng;
 
 pub enum WideningCategory {
@@ -203,11 +203,77 @@ pub fn run_vmsop_vv<T1, T2>(
         let left = &lhs[range.clone()];
         let right = &rhs[range.clone()];
 
-        let byte_index = i / 8;
-        let bit_index = i - byte_index * 8;
+        let res = get_bit_in_slice(result.as_slice(), i);
+        let exp = get_bit_in_slice(expected.as_slice(), i);
+        if res != exp {
+            log!(
+                "[sew = {}, describe = {}] unexpected values found at index {} (nth-element): {:?} (result) {:?} (expected)",
+                sew, desc, i, res, exp
+            );
+            log!(
+                "more information, lhs = {:?}, rhs = {:?}, lmul = {}, avl = {}",
+                left,
+                right,
+                lmul,
+                avl
+            );
+            panic!("Abort");
+        }
+    }
+    log!("finished");
+}
 
-        let res = get_bit(result[byte_index], bit_index);
-        let exp = get_bit(expected[byte_index], bit_index);
+pub fn run_vmsop_vx<T1, T2>(
+    sew: u64,
+    lmul: i64,
+    avl: u64,
+    mut expected_op: T1,
+    mut v_op: T2,
+    _: WideningCategory,
+    desc: &str,
+) where
+    T1: FnMut(&[u8], u64, &mut [u8], usize),
+    T2: FnMut(&[u8], u64, &mut [u8], u64, i64, u64),
+{
+    log!(
+        "run with sew = {}, lmul = {}, avl = {}, desc = {}",
+        sew,
+        lmul,
+        avl,
+        desc
+    );
+
+    let avl_bytes = (sew / 8 * avl) as usize;
+    let sew_bytes = (sew / 8) as usize;
+
+    let mut lhs = Vec::<u8>::new();
+    lhs.resize(avl_bytes, 0);
+
+    let mut expected = Vec::<u8>::new();
+    let mut result = Vec::<u8>::new();
+
+    let result_avl_bytes = ceiling(avl as usize, 8);
+    result.resize(result_avl_bytes, 0);
+    expected.resize(result_avl_bytes, 0);
+
+    let mut rng = BestNumberRng::default();
+    let x = rng.next_u64();
+    for i in 0..avl as usize {
+        let range = i * sew_bytes..(i + 1) * sew_bytes;
+
+        rng.fill(&mut lhs[range.clone()]);
+
+        expected_op(&lhs[range.clone()], x, &mut expected, i);
+    }
+    v_op(lhs.as_slice(), x, result.as_mut_slice(), sew, lmul, avl);
+
+    for i in 0..avl as usize {
+        let range = i * sew_bytes..(i + 1) * sew_bytes;
+        let left = &lhs[range.clone()];
+        let right = x;
+
+        let res = get_bit_in_slice(result.as_slice(), i);
+        let exp = get_bit_in_slice(expected.as_slice(), i);
         if res != exp {
             log!(
                 "[sew = {}, describe = {}] unexpected values found at index {} (nth-element): {:?} (result) {:?} (expected)",

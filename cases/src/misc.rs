@@ -15,9 +15,9 @@ impl Widening for u64 {
     type WideningType = U256;
     fn sign_extend(&self) -> Self::WideningType {
         if (self & 0x8000000000000000) != 0 {
-            let r: U256 = u128::MAX.into();
-            let r2: U256 = self.clone().into();
-            (r << 128) + r2
+            let r = u128::MAX;
+            let r2 = (*self as i64) as u128;
+            (U256::from(r) << 128) + U256::from(r2)
         } else {
             self.clone().into()
         }

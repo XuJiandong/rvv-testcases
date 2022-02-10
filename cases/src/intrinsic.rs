@@ -246,6 +246,40 @@ where
 }
 
 #[inline(never)]
+pub fn vmsop_vx<F>(lhs: &[u8], x: u64, result: &mut [u8], sew: u64, avl: u64, lmul: i64, op: F)
+where
+    F: Fn(u64),
+{
+    let mut avl = avl;
+    let mut lhs = lhs;
+
+    let sew_bytes = sew / 8;
+
+    let mut index = 0;
+    loop {
+        let vl = vsetvl(avl as u64, sew, lmul);
+        vle_v1(sew, lhs);
+
+        op(x);
+
+        let mut temp = [0u8; VLEN];
+        vs1r_v21(&mut temp);
+        for _ in 0..vl {
+            let bit = get_bit_in_slice(&temp[..], index);
+            set_bit_in_slice(result, index, bit);
+            index += 1;
+        }
+
+        avl -= vl;
+        if avl == 0 {
+            break;
+        }
+        let offset = (vl * sew_bytes) as usize;
+        lhs = &lhs[offset..];
+    }
+}
+
+#[inline(never)]
 pub fn vop_nv<F>(
     lhs: &[u8],
     rhs: &[u8],

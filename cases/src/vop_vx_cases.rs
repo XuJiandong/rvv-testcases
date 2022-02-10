@@ -2,7 +2,7 @@ use core::arch::asm;
 use core::convert::TryInto;
 use rvv_asm::rvv_asm;
 use rvv_testcases::intrinsic::vop_vx;
-use rvv_testcases::misc::{avl_iterator, U1024, U256, U512};
+use rvv_testcases::misc::{avl_iterator, Widening, U256};
 use rvv_testcases::runner::{run_vop_vx, WideningCategory};
 
 fn expected_op_add(lhs: &[u8], x: u64, result: &mut [u8]) {
@@ -28,15 +28,7 @@ fn expected_op_add(lhs: &[u8], x: u64, result: &mut [u8]) {
             result.copy_from_slice(&r.to_le_bytes());
         }
         32 => {
-            let (r, _) = U256::from_little_endian(lhs).overflowing_add(U256::from(x));
-            r.to_little_endian(result);
-        }
-        64 => {
-            let (r, _) = U512::from_little_endian(lhs).overflowing_add(U512::from(x));
-            r.to_little_endian(result);
-        }
-        128 => {
-            let (r, _) = U1024::from_little_endian(lhs).overflowing_add(U1024::from(x));
+            let (r, _) = U256::from_little_endian(lhs).overflowing_add(x.sign_extend());
             r.to_little_endian(result);
         }
         _ => {

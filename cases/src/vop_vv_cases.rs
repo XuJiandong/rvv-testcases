@@ -54,8 +54,23 @@ fn expected_op_add(lhs: &[u8], rhs: &[u8], result: &mut [u8]) {
     }
 }
 
+fn expected_op_mul(lhs: &[u8], rhs: &[u8], result: &mut [u8]) {
+    assert!(lhs.len() == rhs.len() && rhs.len() == result.len());
+    match lhs.len() {
+        32 => {
+            let l = U256::from_little_endian(lhs);
+            let r = U256::from_little_endian(rhs);
+            let (res, _) = l.overflowing_mul(r);
+            let res2: U256 = res.into();
+            res2.to_little_endian(result);
+        }
+        _ => {
+            panic!("Invalid sew");
+        }
+    }
+}
+
 pub fn test_vop_vv() {
-    // test combinations of lmul, sew, avl, etc
     fn add(lhs: &[u8], rhs: &[u8], result: &mut [u8], sew: u64, lmul: i64, avl: u64) {
         vop_vv(lhs, rhs, result, sew, avl, lmul, || unsafe {
             rvv_asm!("vadd.vv v21, v1, v11");
@@ -70,6 +85,26 @@ pub fn test_vop_vv() {
                 avl,
                 expected_op_add,
                 add,
+                WideningCategory::None,
+                "vadd.vv",
+            );
+        }
+    }
+
+    fn mul(lhs: &[u8], rhs: &[u8], result: &mut [u8], sew: u64, lmul: i64, avl: u64) {
+        vop_vv(lhs, rhs, result, sew, avl, lmul, || unsafe {
+            rvv_asm!("vmul.vv v21, v1, v11");
+        });
+    }
+    let sew = 256u64;
+    for lmul in [-8, 8] {
+        for avl in avl_iterator(sew, 4) {
+            run_vop_vv(
+                sew,
+                lmul,
+                avl,
+                expected_op_mul,
+                mul,
                 WideningCategory::None,
                 "vadd.vv",
             );
