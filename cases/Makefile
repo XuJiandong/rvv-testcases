@@ -24,8 +24,18 @@ all:
 		cargo build --bin rvv-testcases;\
 	fi
 
+# for example:
+# > make run 
+# run all test cases
+#
+# > make run args=test_vop_vv`
+# to run one test case including 'test_vop_vv'
+#
+# > make run args='"" verbose'
+# to run all test cases with verbose
 run:
 	RUST_LOG=debug ${CKB_DEBUGGER} --max-cycles 1000000000 --bin ./target/riscv64imac-unknown-none-elf/${BUILD}/rvv-testcases -- $(args)
+
 
 expand:
 	cargo expand --bin rvv-testcases --color never

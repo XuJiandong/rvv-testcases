@@ -5,7 +5,7 @@ use ckb_std::syscalls::debug;
 use rand::{Rng, RngCore};
 
 use super::log;
-use super::misc::{ceiling, get_bit_in_slice};
+use super::misc::{ceiling, get_bit_in_slice, is_verbose};
 use super::rng::BestNumberRng;
 
 pub enum WideningCategory {
@@ -33,13 +33,15 @@ pub fn run_vop_vv<T>(
 ) where
     T: FnMut(&[u8], &[u8], &mut [u8], u64, i64, u64),
 {
-    log!(
-        "run with sew = {}, lmul = {}, avl = {}, desc = {}",
-        sew,
-        lmul,
-        avl,
-        desc
-    );
+    if is_verbose() {
+        log!(
+            "run with sew = {}, lmul = {}, avl = {}, desc = {}",
+            sew,
+            lmul,
+            avl,
+            desc
+        );
+    }
 
     let avl_bytes = (sew / 8 * avl) as usize;
     let sew_bytes = (sew / 8) as usize;
@@ -187,7 +189,9 @@ pub fn run_vop_vv<T>(
             break;
         }
     }
-    log!("finished");
+    if is_verbose() {
+        log!("finished");
+    }
 }
 
 pub fn run_vmsop_vv<T1, T2>(
@@ -202,13 +206,15 @@ pub fn run_vmsop_vv<T1, T2>(
     T1: FnMut(&[u8], &[u8], &mut [u8], usize),
     T2: FnMut(&[u8], &[u8], &mut [u8], u64, i64, u64),
 {
-    log!(
-        "run with sew = {}, lmul = {}, avl = {}, desc = {}",
-        sew,
-        lmul,
-        avl,
-        desc
-    );
+    if is_verbose() {
+        log!(
+            "run with sew = {}, lmul = {}, avl = {}, desc = {}",
+            sew,
+            lmul,
+            avl,
+            desc
+        );
+    }
 
     let avl_bytes = (sew / 8 * avl) as usize;
     let sew_bytes = (sew / 8) as usize;
@@ -265,7 +271,9 @@ pub fn run_vmsop_vv<T1, T2>(
             panic!("Abort");
         }
     }
-    log!("finished");
+    if is_verbose() {
+        log!("finished");
+    }
 }
 
 pub fn run_vmsop_vx<T1, T2>(
@@ -280,13 +288,15 @@ pub fn run_vmsop_vx<T1, T2>(
     T1: FnMut(&[u8], u64, &mut [u8], usize),
     T2: FnMut(&[u8], u64, &mut [u8], u64, i64, u64),
 {
-    log!(
-        "run with sew = {}, lmul = {}, avl = {}, desc = {}",
-        sew,
-        lmul,
-        avl,
-        desc
-    );
+    if is_verbose() {
+        log!(
+            "run with sew = {}, lmul = {}, avl = {}, desc = {}",
+            sew,
+            lmul,
+            avl,
+            desc
+        );
+    }
 
     let avl_bytes = (sew / 8 * avl) as usize;
     let sew_bytes = (sew / 8) as usize;
@@ -334,7 +344,9 @@ pub fn run_vmsop_vx<T1, T2>(
             panic!("Abort");
         }
     }
-    log!("finished");
+    if is_verbose() {
+        log!("finished");
+    }
 }
 
 pub fn run_vop_vx<T1, T2>(
@@ -349,13 +361,15 @@ pub fn run_vop_vx<T1, T2>(
     T1: FnMut(&[u8], u64, &mut [u8]),
     T2: FnMut(&[u8], u64, &mut [u8], u64, i64, u64),
 {
-    log!(
-        "run with sew = {}, lmul = {}, avl = {}, desc = {}",
-        sew,
-        lmul,
-        avl,
-        desc
-    );
+    if is_verbose() {
+        log!(
+            "run with sew = {}, lmul = {}, avl = {}, desc = {}",
+            sew,
+            lmul,
+            avl,
+            desc
+        );
+    }
 
     let avl_bytes = (sew / 8 * avl) as usize;
     let sew_bytes = (sew / 8) as usize;
@@ -447,5 +461,7 @@ pub fn run_vop_vx<T1, T2>(
             panic!("Abort");
         }
     }
-    log!("finished");
+    if is_verbose() {
+        log!("finished");
+    }
 }

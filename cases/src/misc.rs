@@ -2,6 +2,8 @@ use alloc::vec;
 use alloc::vec::Vec;
 use rvv_simulator_runtime::Uint;
 
+static mut VERBOSE: bool = false;
+
 pub type U256 = Uint<4>;
 pub type U512 = Uint<8>;
 pub type U1024 = Uint<16>;
@@ -168,4 +170,14 @@ pub fn set_bit_in_slice(x: &mut [u8], index: usize, v: u8) {
     let byte_index = index / 8;
     let bit_index = index - 8 * byte_index;
     set_bit(&mut x[byte_index], bit_index, v);
+}
+
+pub fn is_verbose() -> bool {
+    unsafe { VERBOSE }
+}
+
+pub fn set_verbose(b: bool) {
+    unsafe {
+        VERBOSE = b;
+    }
 }

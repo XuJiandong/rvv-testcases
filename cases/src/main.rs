@@ -33,6 +33,7 @@ use ckb_std::syscalls::debug;
 use core::arch::asm;
 use core::slice::from_raw_parts;
 use core::stringify;
+use rvv_testcases::misc::set_verbose;
 use rvv_testcases::{log, test_case};
 
 ckb_std::entry!(program_entry);
@@ -46,6 +47,15 @@ fn program_entry(argc: u64, argv: *const *const u8) -> i8 {
     } else {
         None
     };
+    if argc > 1 {
+        let args = unsafe { from_raw_parts(argv, argc as usize) };
+        let s = unsafe { CStr::from_ptr(args[1]) };
+        if s.to_str().unwrap() == "verbose" {
+            log!("verbose on");
+            set_verbose(true)
+        }
+    }
+
     test_case!(misc_cases::test_add, test_pattern);
     test_case!(misc_cases::test_add_array, test_pattern);
     test_case!(vop_vv_cases::test_vop_vv, test_pattern);
