@@ -1,11 +1,12 @@
 use core::arch::asm;
 use core::convert::TryInto;
 
+use alloc::boxed::Box;
 use rvv_asm::rvv_asm;
 use rvv_testcases::intrinsic::vop_vv;
 
 use rvv_testcases::misc::{avl_iterator, U1024, U256, U512};
-use rvv_testcases::runner::{run_vop_vv, WideningCategory};
+use rvv_testcases::runner::{run_vop_vv, ExpectedOp, WideningCategory};
 
 fn expected_op_add(lhs: &[u8], rhs: &[u8], result: &mut [u8]) {
     assert!(lhs.len() == rhs.len() && rhs.len() == result.len());
@@ -83,7 +84,7 @@ pub fn test_vop_vv() {
                 sew,
                 lmul,
                 avl,
-                expected_op_add,
+                ExpectedOp::Normal(Box::new(expected_op_add)),
                 add,
                 WideningCategory::None,
                 "vadd.vv",
@@ -103,7 +104,7 @@ pub fn test_vop_vv() {
                 sew,
                 lmul,
                 avl,
-                expected_op_mul,
+                ExpectedOp::Normal(Box::new(expected_op_mul)),
                 mul,
                 WideningCategory::None,
                 "vadd.vv",

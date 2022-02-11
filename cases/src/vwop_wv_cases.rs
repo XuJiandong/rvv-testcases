@@ -1,8 +1,9 @@
+use alloc::boxed::Box;
 use core::arch::asm;
 use rvv_asm::rvv_asm;
 use rvv_testcases::intrinsic::vwop_wv;
 use rvv_testcases::misc::{avl_iterator, U256, U512};
-use rvv_testcases::runner::{run_vop_vv, WideningCategory};
+use rvv_testcases::runner::{run_vop_vv, ExpectedOp, WideningCategory};
 
 fn expected_op_add(lhs: &[u8], rhs: &[u8], result: &mut [u8]) {
     assert_eq!(lhs.len(), 2 * rhs.len());
@@ -35,7 +36,7 @@ pub fn test_vwop_wv() {
                 sew,
                 lmul,
                 avl,
-                expected_op_add,
+                ExpectedOp::Normal(Box::new(expected_op_add)),
                 add,
                 WideningCategory::VdVs2,
                 "vwaddu.wv",

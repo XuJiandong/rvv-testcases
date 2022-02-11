@@ -1,10 +1,11 @@
 use core::arch::asm;
 use core::convert::TryInto;
 
+use alloc::boxed::Box;
 use rvv_asm::rvv_asm;
 use rvv_testcases::intrinsic::vop_nv;
 use rvv_testcases::misc::{avl_iterator, U256};
-use rvv_testcases::runner::{run_vop_vv, WideningCategory};
+use rvv_testcases::runner::{run_vop_vv, ExpectedOp, WideningCategory};
 
 fn expected_op(lhs: &[u8], _: &[u8], result: &mut [u8]) {
     assert_eq!(lhs.len(), result.len() / 2);
@@ -43,7 +44,7 @@ pub fn test_integer_extension() {
                 256,
                 lmul,
                 avl,
-                expected_op,
+                ExpectedOp::Normal(Box::new(expected_op)),
                 add,
                 WideningCategory::NarrowVs2(2),
                 "vzext.vf2",

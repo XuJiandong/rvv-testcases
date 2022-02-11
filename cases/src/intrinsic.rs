@@ -122,6 +122,41 @@ fn vle_v11(sew: u64, buf: &[u8]) {
     }
 }
 
+fn vle_v21(sew: u64, buf: &[u8]) {
+    let p = buf.as_ptr();
+    unsafe {
+        match sew {
+            8 => {
+                rvv_asm!("mv t0, {0}", "vle8.v v21, (t0)", in (reg) p);
+            }
+            16 => {
+                rvv_asm!("mv t0, {0}", "vle16.v v21, (t0)", in (reg) p);
+            }
+            32 => {
+                rvv_asm!("mv t0, {0}", "vle32.v v21, (t0)", in (reg) p);
+            }
+            64 => {
+                rvv_asm!("mv t0, {0}", "vle64.v v21, (t0)", in (reg) p);
+            }
+            128 => {
+                rvv_asm!("mv t0, {0}", "vle128.v v21, (t0)", in (reg) p);
+            }
+            256 => {
+                rvv_asm!("mv t0, {0}", "vle256.v v21, (t0)", in (reg) p);
+            }
+            512 => {
+                rvv_asm!("mv t0, {0}", "vle512.v v21, (t0)", in (reg) p);
+            }
+            1024 => {
+                rvv_asm!("mv t0, {0}", "vle1024.v v21, (t0)", in (reg) p);
+            }
+            _ => {
+                panic!("Invalid sew");
+            }
+        }
+    }
+}
+
 fn vse_v21(sew: u64, buf: &[u8]) {
     let p = buf.as_ptr();
     unsafe {
@@ -203,6 +238,124 @@ where
         result = &mut result[offset..];
         lhs = &lhs[offset..];
         rhs = &rhs[offset..];
+    }
+}
+
+#[inline(never)]
+pub fn vop_vv_destructive<F>(
+    lhs: &[u8],
+    rhs: &[u8],
+    result: &mut [u8],
+    sew: u64,
+    avl: u64,
+    lmul: i64,
+    op: F,
+) where
+    F: Fn(),
+{
+    let mut avl = avl;
+    let mut lhs = lhs;
+    let mut rhs = rhs;
+    let mut result = result;
+
+    let sew_bytes = sew / 8;
+
+    loop {
+        let vl = vsetvl(avl as u64, sew, lmul);
+        vle_v1(sew, lhs);
+        vle_v11(sew, rhs);
+        vle_v21(sew, result);
+
+        op();
+
+        vse_v21(sew, result);
+
+        avl -= vl;
+        if avl == 0 {
+            break;
+        }
+        let offset = (vl * sew_bytes) as usize;
+        result = &mut result[offset..];
+        lhs = &lhs[offset..];
+        rhs = &rhs[offset..];
+    }
+}
+
+#[inline(never)]
+pub fn vredop_vs<F>(lhs: &[u8], rhs: &[u8], result: &mut [u8], sew: u64, avl: u64, lmul: i64, op: F)
+where
+    F: Fn(),
+{
+    let mut avl = avl;
+    let mut lhs = lhs;
+
+    let sew_bytes = sew / 8;
+
+    let mut index = 0;
+    loop {
+        // vd[0] =  sum(vs2[*], vs1[0])
+        let vl = vsetvl(avl as u64, sew, lmul);
+        vle_v1(sew, lhs); // vs2
+        if index == 0 {
+            vle_v11(sew, rhs); // vs1
+        }
+
+        op();
+
+        vse_v21(sew, result);
+        // copy back to vs1
+        unsafe {
+            rvv_asm!("vmv.v.v v11, v21");
+        }
+
+        avl -= vl;
+        if avl == 0 {
+            break;
+        }
+        let offset = (vl * sew_bytes) as usize;
+        // only advance vs2
+        lhs = &lhs[offset..];
+        index += 1;
+    }
+}
+
+#[inline(never)]
+pub fn vwredop_vs<F>(
+    lhs: &[u8],
+    rhs: &[u8],
+    result: &mut [u8],
+    sew: u64,
+    avl: u64,
+    lmul: i64,
+    op: F,
+) where
+    F: Fn(),
+{
+    let mut avl = avl;
+    let mut lhs = lhs;
+
+    let sew_bytes = sew / 8;
+
+    loop {
+        // vd[0] =  sum(vs2[*], vs1[0])
+        let vl = vsetvl(avl as u64, sew, lmul);
+        vle_v1(sew, lhs); // vs2
+        vle_v11(sew, rhs); // vs1
+
+        op();
+
+        vse_v21(sew, result);
+        // copy back to vs1
+        unsafe {
+            rvv_asm!("vmv.v.v v11, v21");
+        }
+
+        avl -= vl;
+        if avl == 0 {
+            break;
+        }
+        let offset = (vl * sew_bytes) as usize;
+        lhs = &lhs[offset * 2..];
     }
 }
 

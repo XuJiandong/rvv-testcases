@@ -1,3 +1,4 @@
+use alloc::boxed::Box;
 use alloc::vec::Vec;
 
 use ckb_std::syscalls::debug;
@@ -16,17 +17,21 @@ pub enum WideningCategory {
     NarrowVs2(usize),
 }
 
-pub fn run_vop_vv<T1, T2>(
+pub enum ExpectedOp {
+    Normal(Box<dyn FnMut(&[u8], &[u8], &mut [u8])>),
+    Reduction(Box<dyn FnMut(&[u8], &[u8], &mut [u8], usize)>),
+}
+
+pub fn run_vop_vv<T>(
     sew: u64,
     lmul: i64,
     avl: u64,
-    mut expected_op: T1,
-    mut v_op: T2,
+    mut expected_op: ExpectedOp,
+    mut v_op: T,
     cat: WideningCategory,
     desc: &str,
 ) where
-    T1: FnMut(&[u8], &[u8], &mut [u8]),
-    T2: FnMut(&[u8], &[u8], &mut [u8], u64, i64, u64),
+    T: FnMut(&[u8], &[u8], &mut [u8], u64, i64, u64),
 {
     log!(
         "run with sew = {}, lmul = {}, avl = {}, desc = {}",
@@ -103,11 +108,30 @@ pub fn run_vop_vv<T1, T2>(
                 .copy_from_slice(&expected_before[expected_range.clone()]);
         }
 
-        expected_op(
-            &lhs[lhs_range.clone()],
-            &rhs[range.clone()],
-            &mut expected[expected_range.clone()],
-        );
+        match expected_op {
+            ExpectedOp::Normal(ref mut op) => {
+                op(
+                    &lhs[lhs_range.clone()],
+                    &rhs[range.clone()],
+                    &mut expected[expected_range.clone()],
+                );
+            }
+            ExpectedOp::Reduction(ref mut op) => {
+                let expected_range = match cat {
+                    WideningCategory::VdVs2 => 0..sew_bytes * 2,
+                    WideningCategory::VdOnly => 0..sew_bytes * 2,
+                    _ => 0..sew_bytes,
+                };
+                // vs2: lhs, vs1: rhs
+                //  # vd[0] =  sum(vs2[*], vs1[0])
+                op(
+                    &lhs[lhs_range.clone()],
+                    &rhs[range.clone()],
+                    &mut expected[expected_range.clone()],
+                    i,
+                );
+            }
+        }
     }
     v_op(
         lhs.as_slice(),
@@ -157,6 +181,10 @@ pub fn run_vop_vv<T1, T2>(
                 avl
             );
             panic!("Abort");
+        }
+        // for reduction operations, it only checks the first element
+        if let ExpectedOp::Reduction(_) = expected_op {
+            break;
         }
     }
     log!("finished");

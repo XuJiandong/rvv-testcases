@@ -1,9 +1,10 @@
 use core::arch::asm;
 
+use alloc::boxed::Box;
 use rvv_asm::rvv_asm;
 use rvv_testcases::intrinsic::{vop_wv, vop_wx};
 use rvv_testcases::misc::{avl_iterator, U256, U512};
-use rvv_testcases::runner::{run_vop_vv, run_vop_vx, WideningCategory};
+use rvv_testcases::runner::{run_vop_vv, run_vop_vx, ExpectedOp, WideningCategory};
 
 fn expected_op(lhs: &[u8], x: u64, result: &mut [u8]) {
     assert_eq!(lhs.len(), result.len() * 2);
@@ -77,7 +78,7 @@ pub fn test_narrowing_integer_right_shift() {
                 256,
                 lmul,
                 avl,
-                expected_op2,
+                ExpectedOp::Normal(Box::new(expected_op2)),
                 srl2,
                 WideningCategory::Vs2Only,
                 "vnsrl.wv",

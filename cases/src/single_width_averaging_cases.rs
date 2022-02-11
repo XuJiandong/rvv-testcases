@@ -1,9 +1,10 @@
+use alloc::boxed::Box;
 use core::arch::asm;
 use rvv_asm::rvv_asm;
 use rvv_testcases::intrinsic::vop_vv;
 
 use rvv_testcases::misc::{Widening, U256, U512};
-use rvv_testcases::runner::{run_vop_vv, WideningCategory};
+use rvv_testcases::runner::{run_vop_vv, ExpectedOp, WideningCategory};
 
 pub fn test_single_width_averaging_add_and_subtract() {
     // vaaddu.vv
@@ -33,7 +34,7 @@ pub fn test_single_width_averaging_add_and_subtract() {
         256,
         1,
         100,
-        expected_vaaddu_vv,
+        ExpectedOp::Normal(Box::new(expected_vaaddu_vv)),
         vaaddu_vv,
         WideningCategory::None,
         "vaaddu.vv",
@@ -65,7 +66,7 @@ pub fn test_single_width_averaging_add_and_subtract() {
         256,
         1,
         100,
-        expected_vaadd_vv,
+        ExpectedOp::Normal(Box::new(expected_vaadd_vv)),
         vaadd_vv,
         WideningCategory::None,
         "vaadd.vv",
@@ -98,7 +99,7 @@ pub fn test_single_width_averaging_add_and_subtract() {
         256,
         1,
         100,
-        expected_vasubu_vv,
+        ExpectedOp::Normal(Box::new(expected_vasubu_vv)),
         vasubu_vv,
         WideningCategory::None,
         "vasubu.vv",
@@ -131,7 +132,7 @@ pub fn test_single_width_averaging_add_and_subtract() {
         256,
         1,
         100,
-        expected_vasub_vv,
+        ExpectedOp::Normal(Box::new(expected_vasub_vv)),
         vasub_vv,
         WideningCategory::None,
         "vasub.vv",
