@@ -4,6 +4,8 @@ use alloc::vec::Vec;
 use ckb_std::syscalls::debug;
 use rand::{Rng, RngCore};
 
+use crate::misc::VLEN;
+
 use super::log;
 use super::misc::{ceiling, get_bit_in_slice, is_verbose};
 use super::rng::BestNumberRng;
@@ -187,6 +189,76 @@ pub fn run_vop_vv<T>(
         // for reduction operations, it only checks the first element
         if let ExpectedOp::Reduction(_) = expected_op {
             break;
+        }
+    }
+    if is_verbose() {
+        log!("finished");
+    }
+}
+
+pub fn run_vmop_mm<T>(
+    sew: u64,
+    lmul: i64,
+    avl: u64,
+    mut expected_op: ExpectedOp,
+    mut v_op: T,
+    desc: &str,
+) where
+    T: FnMut(&[u8], &[u8], &mut [u8], u64, i64, u64),
+{
+    if is_verbose() {
+        log!(
+            "run with sew = {}, lmul = {}, avl = {}, desc = {}",
+            sew,
+            lmul,
+            avl,
+            desc
+        );
+    }
+    let avl_bytes = (avl / 8) as usize;
+    assert!(avl_bytes <= VLEN / 8);
+
+    let mut rhs = Vec::<u8>::new();
+    rhs.resize(avl_bytes, 0u8);
+
+    let mut lhs = Vec::<u8>::new();
+    let mut expected = Vec::<u8>::new();
+    let mut result = Vec::<u8>::new();
+
+    expected.resize(avl_bytes, 0);
+    result.resize(avl_bytes, 0);
+    lhs.resize(avl_bytes, 0);
+
+    let mut rng = BestNumberRng::default();
+    for i in 0..avl_bytes as usize {
+        rng.fill(&mut lhs[i..i + 1]);
+        rng.fill(&mut rhs[i..i + 1]);
+
+        if let ExpectedOp::Normal(ref mut op) = expected_op {
+            op(&lhs[i..i + 1], &rhs[i..i + 1], &mut expected[i..i + 1]);
+        } else {
+            panic!("Unexpected op")
+        }
+    }
+    v_op(
+        lhs.as_slice(),
+        rhs.as_slice(),
+        result.as_mut_slice(),
+        sew,
+        lmul,
+        avl,
+    );
+
+    for i in 0..avl_bytes as usize {
+        let res = result[i];
+        let exp = expected[i];
+
+        if res != exp {
+            log!(
+                "[sew = {}, describe = {}] unexpected values found at index {}: {:?} (result) {:?} (expected)",
+                sew, desc, i, res, exp
+            );
+            panic!("Abort");
         }
     }
     if is_verbose() {

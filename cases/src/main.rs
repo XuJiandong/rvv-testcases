@@ -8,6 +8,7 @@
 
 mod integer_extension_cases;
 mod integer_move_cases;
+mod mask_register_logical_cases;
 mod misc_cases;
 mod narrowing_integer_right_shift_cases;
 mod single_width_averaging_cases;
@@ -55,7 +56,6 @@ fn program_entry(argc: u64, argv: *const *const u8) -> i8 {
             set_verbose(true)
         }
     }
-
     test_case!(misc_cases::test_add, test_pattern);
     test_case!(misc_cases::test_add_array, test_pattern);
     test_case!(vop_vv_cases::test_vop_vv, test_pattern);
@@ -86,9 +86,15 @@ fn program_entry(argc: u64, argv: *const *const u8) -> i8 {
     test_case!(vmsop_vi_cases::test_vmsop_vi, test_pattern);
     test_case!(integer_move_cases::test_integer_move, test_pattern);
     test_case!(
+        mask_register_logical_cases::test_mask_register_logical,
+        test_pattern
+    );
+
+    test_case!(
         single_width_integer_reduction_cases::test_vredop_vv,
         test_pattern
     );
+
     test_case!(
         single_width_integer_multiply_add_cases::test_single_width_integer_multiply_add,
         test_pattern
