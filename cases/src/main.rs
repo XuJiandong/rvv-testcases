@@ -6,11 +6,13 @@
 #![feature(unchecked_math)]
 #![feature(asm_sym)]
 
+mod count_population_in_mask_cases;
 mod integer_extension_cases;
 mod integer_move_cases;
 mod mask_register_logical_cases;
 mod misc_cases;
 mod narrowing_integer_right_shift_cases;
+mod set_before_first_cases;
 mod single_width_averaging_cases;
 mod single_width_integer_multiply_add_cases;
 mod single_width_integer_reduction_cases;
@@ -99,5 +101,10 @@ fn program_entry(argc: u64, argv: *const *const u8) -> i8 {
         single_width_integer_multiply_add_cases::test_single_width_integer_multiply_add,
         test_pattern
     );
+    test_case!(
+        count_population_in_mask_cases::test_count_population_in_mask,
+        test_pattern
+    );
+    test_case!(set_before_first_cases::test_set_before_first, test_pattern);
     0
 }

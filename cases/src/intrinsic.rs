@@ -192,11 +192,36 @@ fn vse_v21(sew: u64, buf: &[u8]) {
     }
 }
 
-fn vs1r_v21(buf: &mut [u8]) {
-    assert_eq!(buf.len(), VLEN);
+pub fn vs1r_v21(buf: &mut [u8]) {
+    assert_eq!(buf.len(), VLEN / 8);
     let p = buf.as_ptr();
     unsafe {
         rvv_asm!("mv t0, {}", "vs1r.v v21, (t0)", in (reg) p);
+    }
+}
+
+pub fn vl1r_v21(buf: &[u8]) {
+    assert_eq!(buf.len(), VLEN / 8);
+    let p = buf.as_ptr();
+    unsafe {
+        rvv_asm!("mv t0, {}", "vl1re8.v v21, (t0)", in (reg) p);
+    }
+}
+
+
+pub fn vl1r_v1(buf: &[u8]) {
+    assert_eq!(buf.len(), VLEN / 8);
+    let p = buf.as_ptr();
+    unsafe {
+        rvv_asm!("mv t0, {}", "vl1re8.v v1, (t0)", in (reg) p);
+    }
+}
+
+pub fn vl1r_v0(buf: &[u8]) {
+    assert_eq!(buf.len(), VLEN / 8);
+    let p = buf.as_ptr();
+    unsafe {
+        rvv_asm!("mv t0, {}", "vl1re8.v v0, (t0)", in (reg) p);
     }
 }
 
@@ -378,7 +403,7 @@ where
 
         op();
 
-        let mut temp = [0u8; VLEN];
+        let mut temp = [0u8; VLEN / 8];
         vs1r_v21(&mut temp);
         for i in 0..vl {
             let bit = get_bit_in_slice(&temp[..], i as usize);
@@ -413,7 +438,7 @@ where
 
         op(x);
 
-        let mut temp = [0u8; VLEN];
+        let mut temp = [0u8; VLEN / 8];
         vs1r_v21(&mut temp);
         for _ in 0..vl {
             let bit = get_bit_in_slice(&temp[..], index);

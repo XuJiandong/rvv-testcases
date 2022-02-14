@@ -22,6 +22,7 @@ pub enum WideningCategory {
 pub enum ExpectedOp {
     Normal(Box<dyn FnMut(&[u8], &[u8], &mut [u8])>),
     Reduction(Box<dyn FnMut(&[u8], &[u8], &mut [u8], usize)>),
+    EnableMask(Box<dyn FnMut(&[u8], &[u8], &mut [u8], bool)>),
 }
 
 pub fn run_vop_vv<T>(
@@ -135,6 +136,9 @@ pub fn run_vop_vv<T>(
                     i,
                 );
             }
+            _ => {
+                panic!("unexpected op")
+            }
         }
     }
     v_op(
@@ -190,6 +194,51 @@ pub fn run_vop_vv<T>(
         if let ExpectedOp::Reduction(_) = expected_op {
             break;
         }
+    }
+    if is_verbose() {
+        log!("finished");
+    }
+}
+
+pub fn run_vxop_m<T>(mut expected_op: ExpectedOp, mut v_op: T, enable_mask: bool, desc: &str)
+where
+    T: FnMut(&[u8], &[u8], &mut [u8], bool),
+{
+    if is_verbose() {
+        log!("run with desc = {}", desc);
+    }
+    let mut mask_v0 = [0u8; VLEN / 8];
+    let mut vs2 = [0u8; VLEN / 8];
+
+    let mut rng = BestNumberRng::default();
+    rng.fill(&mut mask_v0[..]);
+    rng.fill(&mut vs2[..]);
+
+    let expected = if let ExpectedOp::EnableMask(ref mut op) = expected_op {
+        let mut temp = [0u8; 8];
+        op(&mask_v0[..], &vs2[..], &mut temp[..], enable_mask);
+        u64::from_le_bytes(temp)
+    } else {
+        panic!("Unexpected op")
+    };
+
+    let mut temp = [0u8; 8];
+    v_op(
+        mask_v0.as_slice(),
+        vs2.as_slice(),
+        temp.as_mut_slice(),
+        enable_mask,
+    );
+    let result = u64::from_le_bytes(temp);
+
+    if result != expected {
+        log!(
+            "[describe = {}] unexpected values found: {:?} (result) {:?} (expected)",
+            desc,
+            result,
+            expected
+        );
+        panic!("Abort");
     }
     if is_verbose() {
         log!("finished");
