@@ -9,6 +9,7 @@
 mod count_population_in_mask_cases;
 mod integer_extension_cases;
 mod integer_move_cases;
+mod load_store_cases;
 mod mask_register_logical_cases;
 mod misc_cases;
 mod narrowing_integer_right_shift_cases;
@@ -106,5 +107,7 @@ fn program_entry(argc: u64, argv: *const *const u8) -> i8 {
         test_pattern
     );
     test_case!(set_before_first_cases::test_set_before_first, test_pattern);
+    test_case!(load_store_cases::test_load_store, test_pattern);
+
     0
 }

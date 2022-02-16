@@ -1,3 +1,5 @@
+use core::convert::TryInto;
+
 use alloc::vec;
 use alloc::vec::Vec;
 use rvv_simulator_runtime::Uint;
@@ -179,5 +181,83 @@ pub fn is_verbose() -> bool {
 pub fn set_verbose(b: bool) {
     unsafe {
         VERBOSE = b;
+    }
+}
+
+pub trait SliceUtils<'a> {
+    fn get_element(&'a self, sew: usize, index: usize) -> &'a [u8];
+    fn read_u8(&self, eew: usize, index: usize) -> u8;
+    fn read_u16(&self, eew: usize, index: usize) -> u16;
+    fn read_u32(&self, eew: usize, index: usize) -> u32;
+    fn read_u64(&self, eew: usize, index: usize) -> u64;
+}
+
+pub trait MutSliceUtils<'a> {
+    fn get_mut_element(&'a mut self, sew: usize, index: usize) -> &'a mut [u8];
+    fn write_u8(&'a mut self, eew: usize, index: usize, v: u8);
+    fn write_u16(&'a mut self, eew: usize, index: usize, v: u16);
+    fn write_u32(&'a mut self, eew: usize, index: usize, v: u32);
+    fn write_u64(&'a mut self, eew: usize, index: usize, v: u64);
+}
+
+impl<'a> SliceUtils<'a> for &'a [u8] {
+    fn get_element(&'a self, eew: usize, index: usize) -> &'a [u8] {
+        let start = eew / 8 * index;
+        &self[start..start + eew / 8]
+    }
+
+    fn read_u8(&self, eew: usize, index: usize) -> u8 {
+        assert!(eew == 8);
+        let slice = self.get_element(eew, index);
+        u8::from_le_bytes(slice.try_into().unwrap())
+    }
+
+    fn read_u16(&self, eew: usize, index: usize) -> u16 {
+        assert!(eew == 16);
+        let slice = self.get_element(eew, index);
+        u16::from_le_bytes(slice.try_into().unwrap())
+    }
+
+    fn read_u32(&self, eew: usize, index: usize) -> u32 {
+        assert!(eew == 32);
+        let slice = self.get_element(eew, index);
+        u32::from_le_bytes(slice.try_into().unwrap())
+    }
+
+    fn read_u64(&self, eew: usize, index: usize) -> u64 {
+        assert!(eew == 64);
+        let slice = self.get_element(eew, index);
+        u64::from_le_bytes(slice.try_into().unwrap())
+    }
+}
+
+impl<'a> MutSliceUtils<'a> for &'a mut [u8] {
+    fn get_mut_element(&'a mut self, eew: usize, index: usize) -> &'a mut [u8] {
+        let start = eew / 8 * index;
+        &mut self[start..start + eew / 8]
+    }
+
+    fn write_u8(&'a mut self, eew: usize, index: usize, v: u8) {
+        assert!(eew == 8);
+        let slice = self.get_mut_element(eew, index);
+        slice.copy_from_slice(v.to_le_bytes().as_slice());
+    }
+
+    fn write_u16(&'a mut self, eew: usize, index: usize, v: u16) {
+        assert!(eew == 16);
+        let slice = self.get_mut_element(eew, index);
+        slice.copy_from_slice(v.to_le_bytes().as_slice());
+    }
+
+    fn write_u32(&'a mut self, eew: usize, index: usize, v: u32) {
+        assert!(eew == 32);
+        let slice = self.get_mut_element(eew, index);
+        slice.copy_from_slice(v.to_le_bytes().as_slice());
+    }
+
+    fn write_u64(&'a mut self, eew: usize, index: usize, v: u64) {
+        assert!(eew == 64);
+        let slice = self.get_mut_element(eew, index);
+        slice.copy_from_slice(v.to_le_bytes().as_slice());
     }
 }
