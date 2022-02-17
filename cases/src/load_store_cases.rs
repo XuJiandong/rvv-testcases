@@ -1,7 +1,7 @@
 use alloc::vec::Vec;
 use ckb_std::syscalls::debug;
 use rand::Rng;
-use rvv_testcases::intrinsic::{vle_v1, vlse_v1, vlxei_v1, vse_v1, vsse_v1, vsxei_v1};
+use rvv_testcases::intrinsic::{vle_v1, vlse_v1, vlxei_v1, vs1r_v1, vse_v1, vsse_v1, vsxei_v1};
 use rvv_testcases::log;
 use rvv_testcases::misc::{MutSliceUtils, SliceUtils};
 use rvv_testcases::{intrinsic::vsetvl, misc::VLEN, rng::BestNumberRng};
@@ -66,7 +66,7 @@ fn test_stride(sew: usize, stride: usize) {
 }
 
 #[allow(dead_code)]
-fn test_indexed(sew: usize, offset_sew: usize) {
+fn test_indexed_load(sew: usize, offset_sew: usize) {
     let lmul = 1i64;
     let vl = (lmul as usize * VLEN as usize) / sew as usize;
     let set_vl = vsetvl(vl as u64, sew as u64, lmul);
@@ -116,7 +116,9 @@ fn test_indexed(sew: usize, offset_sew: usize) {
     }
 
     vlxei_v1(offset_sew as u64, mem.as_slice(), offset.as_slice());
-    vsxei_v1(offset_sew as u64, result.as_mut_slice(), offset.as_slice());
+
+    assert!(result.len() >= VLEN / 8);
+    vs1r_v1(result.as_mut_slice());
 
     for i in 0..vl {
         let result = result.as_slice();
@@ -158,5 +160,5 @@ pub fn test_load_store() {
     for sew in [8, 16, 32, 64, 128, 256, 512, 1024] {
         test_stride(sew, sew + 16);
     }
-    // test_indexed(256, 8);
+    // test_indexed_load(256, 8);
 }

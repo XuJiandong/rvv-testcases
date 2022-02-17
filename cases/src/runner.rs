@@ -5,6 +5,7 @@ use ckb_std::syscalls::debug;
 use rand::{Rng, RngCore};
 
 use crate::misc::VLEN;
+use crate::rng::{new_random01_vec, new_random_vec};
 
 use super::log;
 use super::misc::{ceiling, get_bit_in_slice, is_verbose};
@@ -23,6 +24,7 @@ pub enum ExpectedOp {
     Normal(Box<dyn FnMut(&[u8], &[u8], &mut [u8])>),
     Reduction(Box<dyn FnMut(&[u8], &[u8], &mut [u8], usize)>),
     EnableMask(Box<dyn FnMut(&[u8], &[u8], &mut [u8], bool)>),
+    WithMask(Box<dyn FnMut(&[u8], &[u8], &mut [u8], u8)>),
 }
 
 pub fn run_vop_vv<T>(
@@ -193,6 +195,83 @@ pub fn run_vop_vv<T>(
         // for reduction operations, it only checks the first element
         if let ExpectedOp::Reduction(_) = expected_op {
             break;
+        }
+    }
+    if is_verbose() {
+        log!("finished");
+    }
+}
+
+pub fn run_vop_vvm<T>(
+    sew: u64,
+    lmul: i64,
+    avl: u64,
+    mut expected_op: ExpectedOp,
+    mut v_op: T,
+    desc: &str,
+) where
+    T: FnMut(&[u8], &[u8], &mut [u8], &[u8], u64, i64, u64),
+{
+    if is_verbose() {
+        log!(
+            "run with sew = {}, lmul = {}, avl = {}, desc = {}",
+            sew,
+            lmul,
+            avl,
+            desc
+        );
+    }
+
+    let avl_bytes = (sew / 8 * avl) as usize;
+    let sew_bytes = (sew / 8) as usize;
+
+    let lhs = new_random_vec(avl_bytes);
+    let rhs = new_random_vec(avl_bytes);
+    let mut expected = new_random_vec(avl_bytes);
+    let mut result = new_random_vec(avl_bytes);
+    let masks = new_random01_vec(avl as usize);
+
+    for i in 0..avl as usize {
+        let range = i * sew_bytes..(i + 1) * sew_bytes;
+        if let ExpectedOp::WithMask(ref mut op) = expected_op {
+            op(
+                &lhs[range.clone()],
+                &rhs[range.clone()],
+                &mut expected[range.clone()],
+                masks[i],
+            );
+        }
+    }
+    v_op(
+        lhs.as_slice(),
+        rhs.as_slice(),
+        result.as_mut_slice(),
+        masks.as_slice(),
+        sew,
+        lmul,
+        avl,
+    );
+
+    for i in 0..avl as usize {
+        let range = i * sew_bytes..(i + 1) * sew_bytes;
+        let left = &lhs[range.clone()];
+        let right = &rhs[range.clone()];
+
+        let res = &result[range.clone()];
+        let exp = &expected[range.clone()];
+        if res != exp {
+            log!(
+                "[sew = {}, describe = {}] unexpected values found at index {}: {:?} (result) {:?} (expected)",
+                sew, desc, i, res, exp
+            );
+            log!(
+                "more information, lhs = {:?}, rhs = {:?}, lmul = {}, avl = {}",
+                left,
+                right,
+                lmul,
+                avl
+            );
+            panic!("Abort");
         }
     }
     if is_verbose() {

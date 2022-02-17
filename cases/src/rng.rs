@@ -1,3 +1,5 @@
+use alloc::vec;
+use alloc::vec::Vec;
 use rand::prelude::*;
 
 static mut SEED: usize = 0;
@@ -179,4 +181,21 @@ impl RngCore for BestNumberRng {
     fn try_fill_bytes(&mut self, dest: &mut [u8]) -> Result<(), rand::Error> {
         Ok(self.fill_bytes(dest))
     }
+}
+
+pub fn new_random_vec(size: usize) -> Vec<u8> {
+    let mut vec = vec![0u8; size];
+    let mut rng = BestNumberRng::default();
+    rng.fill(&mut vec[..]);
+    vec
+}
+
+pub fn new_random01_vec(size: usize) -> Vec<u8> {
+    let mut res = vec![];
+    let mut rng = BestNumberRng::default();
+    for _ in 0..size {
+        let r: u8 = rng.gen_range(0..2);
+        res.push(r);
+    }
+    res
 }

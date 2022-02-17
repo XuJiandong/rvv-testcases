@@ -6,8 +6,10 @@
 #![feature(unchecked_math)]
 #![feature(asm_sym)]
 
+mod adc_sbc_cases;
 mod count_population_in_mask_cases;
 mod integer_extension_cases;
+mod integer_merge_cases;
 mod integer_move_cases;
 mod load_store_cases;
 mod mask_register_logical_cases;
@@ -108,6 +110,7 @@ fn program_entry(argc: u64, argv: *const *const u8) -> i8 {
     );
     test_case!(set_before_first_cases::test_set_before_first, test_pattern);
     test_case!(load_store_cases::test_load_store, test_pattern);
-
+    test_case!(integer_merge_cases::test_integer_merge, test_pattern);
+    test_case!(adc_sbc_cases::test_adc_sbc, test_pattern);
     0
 }

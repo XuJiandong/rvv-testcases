@@ -261,3 +261,11 @@ impl<'a> MutSliceUtils<'a> for &'a mut [u8] {
         slice.copy_from_slice(v.to_le_bytes().as_slice());
     }
 }
+
+pub fn compress_into_bits(data: &[u8]) -> [u8; 256] {
+    let mut res = [0u8; 256];
+    for i in 0..data.len() {
+        set_bit_in_slice(&mut res, i, data[i]);
+    }
+    res
+}

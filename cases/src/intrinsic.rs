@@ -1,4 +1,4 @@
-use crate::misc::{get_bit_in_slice, set_bit_in_slice};
+use crate::misc::{compress_into_bits, get_bit_in_slice, set_bit_in_slice};
 
 use super::misc::{create_vtype, VLEN};
 use super::runner::WideningCategory;
@@ -353,6 +353,14 @@ fn vse_v21(sew: u64, buf: &[u8]) {
     }
 }
 
+pub fn vs1r_v1(buf: &mut [u8]) {
+    assert_eq!(buf.len(), VLEN / 8);
+    let p = buf.as_ptr();
+    unsafe {
+        rvv_asm!("mv t0, {}", "vs1r.v v1, (t0)", in (reg) p);
+    }
+}
+
 pub fn vs1r_v21(buf: &mut [u8]) {
     assert_eq!(buf.len(), VLEN / 8);
     let p = buf.as_ptr();
@@ -423,6 +431,50 @@ where
         result = &mut result[offset..];
         lhs = &lhs[offset..];
         rhs = &rhs[offset..];
+    }
+}
+
+#[inline(never)]
+pub fn vop_vvm<F>(
+    lhs: &[u8],
+    rhs: &[u8],
+    result: &mut [u8],
+    v0: &[u8],
+    sew: u64,
+    avl: u64,
+    lmul: i64,
+    op: F,
+) where
+    F: Fn(),
+{
+    let mut avl = avl;
+    let mut lhs = lhs;
+    let mut rhs = rhs;
+    let mut result = result;
+    let mut v0 = v0;
+
+    let sew_bytes = sew / 8;
+
+    loop {
+        let vl = vsetvl(avl as u64, sew, lmul);
+        vle_v1(sew, lhs);
+        vle_v11(sew, rhs);
+        let v0_masks = compress_into_bits(&v0[0..vl as usize]);
+        vl1r_v0(v0_masks.as_slice());
+
+        op();
+
+        vse_v21(sew, result);
+
+        avl -= vl;
+        if avl == 0 {
+            break;
+        }
+        let offset = (vl * sew_bytes) as usize;
+        result = &mut result[offset..];
+        lhs = &lhs[offset..];
+        rhs = &rhs[offset..];
+        v0 = &v0[vl as usize..];
     }
 }
 
