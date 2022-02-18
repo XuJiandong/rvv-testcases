@@ -15,7 +15,7 @@ fix-via-docker:
 	docker run $(DOCKER_ARGS) bash -c 'cargo fix --allow-no-vcs'
 
 shell:
-	docker run $(DOCKER_ARGS) bash
+	docker run --rm -it $(DOCKER_ARGS) bash
 
 all:
 	if test "${BUILD}" = "release"; then\
@@ -23,7 +23,6 @@ all:
 	else\
 		cargo build --bin rvv-testcases;\
 	fi
-
 # for example:
 # > make run 
 # run all test cases
