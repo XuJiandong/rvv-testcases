@@ -7,13 +7,14 @@ use rvv_testcases::misc::get_bit_in_slice;
 use rvv_testcases::misc::VLEN;
 use rvv_testcases::runner::{run_vxop_m, ExpectedOp};
 
-fn expected_cpop_op(mask_v0: &[u8], vs2: &[u8], rd: &mut [u8], enable_mask: bool) {
+fn expected_cpop_op(mask_v0: &[u8], vs2: &[u8], rd: &mut [u8], enable_mask: bool, vl: usize) {
     assert_eq!(mask_v0.len(), VLEN / 8);
     assert_eq!(vs2.len(), VLEN / 8);
     assert_eq!(rd.len(), 8);
 
+    assert!(vl <= vs2.len() * 8);
     let mut population = 0u64;
-    for i in 0..vs2.len() * 8 {
+    for i in 0..vl {
         if get_bit_in_slice(vs2, i) == 1 {
             if enable_mask {
                 if get_bit_in_slice(mask_v0, i) == 1 {
@@ -27,13 +28,14 @@ fn expected_cpop_op(mask_v0: &[u8], vs2: &[u8], rd: &mut [u8], enable_mask: bool
     rd.copy_from_slice(&population.to_le_bytes());
 }
 
-fn expected_first_op(mask_v0: &[u8], vs2: &[u8], rd: &mut [u8], enable_mask: bool) {
+fn expected_first_op(mask_v0: &[u8], vs2: &[u8], rd: &mut [u8], enable_mask: bool, vl: usize) {
     assert_eq!(mask_v0.len(), VLEN / 8);
     assert_eq!(vs2.len(), VLEN / 8);
     assert_eq!(rd.len(), 8);
     let mut first: u64 = u64::MAX;
+    assert!(vl <= vs2.len() * 8);
 
-    for i in 0..vs2.len() * 8 {
+    for i in 0..vl {
         if get_bit_in_slice(vs2, i) == 1 {
             if enable_mask {
                 if get_bit_in_slice(mask_v0, i) == 1 {
@@ -51,8 +53,7 @@ fn expected_first_op(mask_v0: &[u8], vs2: &[u8], rd: &mut [u8], enable_mask: boo
 }
 
 fn cpop_op(mask_v0: &[u8], vs2: &[u8], rd: &mut [u8], enable_mask: bool) {
-    #[allow(unused_assignments)]
-    let mut res = 0u64;
+    let mut res: u64;
     unsafe {
         if enable_mask {
             vl1r_v0(mask_v0);
@@ -67,8 +68,7 @@ fn cpop_op(mask_v0: &[u8], vs2: &[u8], rd: &mut [u8], enable_mask: bool) {
 }
 
 fn first_op(mask_v0: &[u8], vs2: &[u8], rd: &mut [u8], enable_mask: bool) {
-    #[allow(unused_assignments)]
-    let mut res = 0u64;
+    let mut res: u64;
     unsafe {
         if enable_mask {
             vl1r_v0(mask_v0);

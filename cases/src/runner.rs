@@ -4,6 +4,7 @@ use alloc::vec::Vec;
 use ckb_std::syscalls::debug;
 use rand::{Rng, RngCore};
 
+use crate::intrinsic::vsetvl;
 use crate::misc::VLEN;
 use crate::rng::{new_random01_vec, new_random_vec};
 
@@ -23,7 +24,7 @@ pub enum WideningCategory {
 pub enum ExpectedOp {
     Normal(Box<dyn FnMut(&[u8], &[u8], &mut [u8])>),
     Reduction(Box<dyn FnMut(&[u8], &[u8], &mut [u8], usize)>),
-    EnableMask(Box<dyn FnMut(&[u8], &[u8], &mut [u8], bool)>),
+    EnableMask(Box<dyn FnMut(&[u8], &[u8], &mut [u8], bool, usize)>),
     WithMask(Box<dyn FnMut(&[u8], &[u8], &mut [u8], u8)>),
 }
 
@@ -293,9 +294,12 @@ where
     rng.fill(&mut mask_v0[..]);
     rng.fill(&mut vs2[..]);
 
+    let vl = vsetvl(8, 256, 1) as usize;
+    assert_eq!(vl, 8);
+
     let expected = if let ExpectedOp::EnableMask(ref mut op) = expected_op {
         let mut temp = [0u8; 8];
-        op(&mask_v0[..], &vs2[..], &mut temp[..], enable_mask);
+        op(&mask_v0[..], &vs2[..], &mut temp[..], enable_mask, vl);
         u64::from_le_bytes(temp)
     } else {
         panic!("Unexpected op")
