@@ -1,7 +1,7 @@
 use alloc::vec::Vec;
 use ckb_std::syscalls::debug;
 use rand::Rng;
-use rvv_testcases::intrinsic::{vle_v1, vlse_v1, vlxei_v1, vs1r_v1, vse_v1, vsse_v1, vsxei_v1};
+use rvv_testcases::intrinsic::{vle_v1, vlse_v1, vlxei_v1, vs1r_v1, vse_v1, vsse_v1};
 use rvv_testcases::log;
 use rvv_testcases::misc::{MutSliceUtils, SliceUtils};
 use rvv_testcases::{intrinsic::vsetvl, misc::VLEN, rng::BestNumberRng};

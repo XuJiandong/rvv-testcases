@@ -3,7 +3,7 @@ use rand::Rng;
 use rvv_asm::rvv_asm;
 
 use ckb_std::syscalls::debug;
-use rvv_testcases::intrinsic::{vl1r_v0, vl1r_v1, vl1r_v21, vs1r_v21};
+use rvv_testcases::intrinsic::{vl1r_v0, vl1r_v1, vl1r_v21, vs1r_v21, vsetvl};
 use rvv_testcases::log;
 use rvv_testcases::misc::{get_bit_in_slice, is_verbose, set_bit_in_slice, VLEN};
 use rvv_testcases::rng::BestNumberRng;
@@ -59,6 +59,9 @@ fn run(enable_mask: bool) {
             }
         }
     }
+
+    let vl = vsetvl(8, 256, 1) as usize;
+    assert_eq!(vl, 8);
 
     vl1r_v0(&mask[..]);
     vl1r_v1(&vs2[..]);
