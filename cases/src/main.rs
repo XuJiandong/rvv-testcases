@@ -16,6 +16,7 @@ mod mask_register_logical_cases;
 mod misc_cases;
 mod narrowing_integer_right_shift_cases;
 mod set_before_first_cases;
+mod set_including_first_cases;
 mod single_width_averaging_cases;
 mod single_width_integer_multiply_add_cases;
 mod single_width_integer_reduction_cases;
@@ -109,6 +110,10 @@ fn program_entry(argc: u64, argv: *const *const u8) -> i8 {
         test_pattern
     );
     test_case!(set_before_first_cases::test_set_before_first, test_pattern);
+    test_case!(
+        set_including_first_cases::test_set_including_first,
+        test_pattern
+    );
     test_case!(load_store_cases::test_load_store, test_pattern);
     test_case!(integer_merge_cases::test_integer_merge, test_pattern);
     test_case!(adc_sbc_cases::test_adc_sbc, test_pattern);
