@@ -74,19 +74,21 @@ fn run(enable_mask: bool) {
         }
         vs1r_v21(&mut result[..]);
     }
+
+    log!(
+        "[describe = vmsof.m] unexpected values found: {:?} (result) {:?} (expected) {:?} (befor)",
+        result,
+        expected,
+        expected_before
+    );
+    log!(
+        "more information, enable_mask = {}, index = {}, vs2 = {:?}, mask = {:?}",
+        enable_mask,
+        index,
+        vs2,
+        mask
+    );
     if result != expected {
-        log!(
-            "[describe = vmsof.m] unexpected values found: {:?} (result) {:?} (expected)",
-            result,
-            expected
-        );
-        log!(
-            "more information, enable_mask = {}, index = {}, vs2 = {:?}, mask = {:?}",
-            enable_mask,
-            index,
-            vs2,
-            mask
-        );
         panic!("Abort");
     }
     if is_verbose() {
@@ -96,5 +98,5 @@ fn run(enable_mask: bool) {
 
 pub fn test_set_only_first() {
     run(false);
-    //run(true);
+    run(true);
 }
