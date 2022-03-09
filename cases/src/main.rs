@@ -120,8 +120,14 @@ fn program_entry(argc: u64, argv: *const *const u8) -> i8 {
     );
     test_case!(set_only_first_cases::test_set_only_first, test_pattern);
     test_case!(vector_iota_cases::test_vector_iota, test_pattern);
-    test_case!(vector_element_index_cases::test_vector_element_index, test_pattern);
-    test_case!(integer_scalar_move_cases::test_integer_scalar_move, test_pattern);
+    test_case!(
+        vector_element_index_cases::test_vector_element_index,
+        test_pattern
+    );
+    test_case!(
+        integer_scalar_move_cases::test_integer_scalar_move,
+        test_pattern
+    );
     test_case!(load_store_cases::test_load_store, test_pattern);
     test_case!(integer_merge_cases::test_integer_merge, test_pattern);
     test_case!(adc_sbc_cases::test_adc_sbc, test_pattern);

@@ -26,10 +26,6 @@ pub fn vsetvl(avl: u64, sew: u64, lmul: i64) -> u64 {
     vl
 }
 
-pub fn dbg_get_vtype(sew:u64, lmul: i64) -> u64 {
-    create_vtype(sew, lmul)
-}
-
 // TODO: rvv_asm! doesn't support this
 #[allow(unused_macros)]
 macro_rules! vle_arm {
