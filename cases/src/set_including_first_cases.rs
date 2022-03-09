@@ -10,7 +10,7 @@ use rvv_testcases::rng::BestNumberRng;
 
 fn run(enable_mask: bool) {
     if is_verbose() {
-        log!("test vmsbf.m");
+        log!("test vmsif.m");
     }
     let mut mask = [0u8; VLEN / 8];
     let mut expected_before = [0u8; VLEN / 8];
@@ -41,7 +41,7 @@ fn run(enable_mask: bool) {
     }
 
     for i in 0..VLEN {
-        if i < index {
+        if i <= index {
             if enable_mask {
                 if get_bit_in_slice(&mask[..], i) == 1 {
                     set_bit_in_slice(&mut expected[..], i, 1);
@@ -68,15 +68,15 @@ fn run(enable_mask: bool) {
     vl1r_v21(&expected_before[..]);
     unsafe {
         if enable_mask {
-            rvv_asm!("vmsbf.m v21, v1, v0.t");
+            rvv_asm!("vmsif.m v21, v1, v0.t");
         } else {
-            rvv_asm!("vmsbf.m v21, v1");
+            rvv_asm!("vmsif.m v21, v1");
         }
         vs1r_v21(&mut result[..]);
     }
     if result != expected {
         log!(
-            "[describe = vmsbf.m] unexpected values found: {:?} (result) {:?} (expected)",
+            "[describe = vmsif.m] unexpected values found: {:?} (result) {:?} (expected)",
             result,
             expected
         );
@@ -94,7 +94,7 @@ fn run(enable_mask: bool) {
     }
 }
 
-pub fn test_set_before_first() {
+pub fn test_set_including_first() {
     run(false);
     run(true);
 }
