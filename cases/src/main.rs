@@ -27,6 +27,7 @@ mod vector_compress_cases;
 mod vector_element_index_cases;
 mod vector_iota_cases;
 
+mod vector_register_gather_cases;
 mod vector_slide_cases;
 
 mod vmsop_vi_cases;
@@ -137,5 +138,9 @@ fn program_entry(argc: u64, argv: *const *const u8) -> i8 {
     test_case!(vector_compress_cases::test_vector_compress, test_pattern);
     test_case!(vector_slide_cases::test_vector_slide_up, test_pattern);
     test_case!(vector_slide_cases::test_vector_slide_down, test_pattern);
+    test_case!(
+        vector_register_gather_cases::test_vector_register_gather,
+        test_pattern
+    );
     0
 }
