@@ -41,14 +41,14 @@ fn vmv_x_s() {
         );
     }
 
-    log!("more information, vs2 = {:?}", vs2);
-    log!(
-        "more information, index = {}, result = {}, result2 = {}",
-        index,
-        result,
-        result2
-    );
     if result != result2 {
+        log!("more information, vs2 = {:?}", vs2);
+        log!(
+            "more information, index = {}, result = {}, result2 = {}",
+            index,
+            result,
+            result2
+        );
         panic!("Abort");
     }
     if is_verbose() {
@@ -79,16 +79,16 @@ fn vmv_s_x() {
         d
     };
 
-    unsafe {
-        rvv_asm!(
-            "mv t1, {}",
-            "vmv.s.x v1, t1",
-            in (reg) result2,
-        );
-        vs1r_v1(&mut vs2);
-    }
-
     if data[0..8] != vs2[0..8] {
+        unsafe {
+            rvv_asm!(
+                "mv t1, {}",
+                "vmv.s.x v1, t1",
+                in (reg) result2,
+            );
+            vs1r_v1(&mut vs2);
+        }
+
         log!("more information, vs2 = {:?}, \n x = {}", vs2, result2);
         panic!("Abort");
     }
