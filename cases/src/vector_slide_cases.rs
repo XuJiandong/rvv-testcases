@@ -31,7 +31,7 @@ fn sideup(
 
     let wide = wide / 8;
     for i in offset..length as usize {
-        if get_bit_in_slice(mask, i) == 0 {
+        if get_bit_in_slice(mask, i) == 1 {
             continue;
         }
         for j in 0..wide {
@@ -203,7 +203,7 @@ fn sidedown(
 
     let wide = wide / 8;
     for i in 0..length - offset as usize {
-        if get_bit_in_slice(mask, i) == 0 {
+        if get_bit_in_slice(mask, i) == 1 {
             continue;
         }
         for j in 0..wide {
@@ -212,7 +212,7 @@ fn sidedown(
     }
 
     for i in length - offset..length as usize {
-        if get_bit_in_slice(mask, i) == 0 {
+        if get_bit_in_slice(mask, i) == 1 {
             continue;
         }
         for j in 0..wide {
