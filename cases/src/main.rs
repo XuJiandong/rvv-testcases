@@ -138,9 +138,8 @@ fn program_entry(argc: u64, argv: *const *const u8) -> i8 {
     test_case!(vector_compress_cases::test_vector_compress, test_pattern);
     test_case!(vector_slide_cases::test_vector_slide_up, test_pattern);
     test_case!(vector_slide_cases::test_vector_slide_down, test_pattern);
-    test_case!(
-        vector_register_gather_cases::test_vector_register_gather,
-        test_pattern
-    );
+    test_case!(vector_register_gather_cases::test_vrgather_vv,test_pattern);
+    test_case!(vector_register_gather_cases::test_vrgatherei16_vv,test_pattern);
+    test_case!(vector_register_gather_cases::test_vrgatherer_vx,test_pattern);
     0
 }
