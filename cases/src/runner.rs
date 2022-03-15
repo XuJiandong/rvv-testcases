@@ -180,11 +180,11 @@ pub fn run_vop_vv<T>(
         };
         if res != exp {
             log!(
-                "[sew = {}, describe = {}] unexpected values found at index {}: {:?} (result) {:?} (expected)",
+                "[sew = {}, describe = {}] unexpected values found at index {}: {:0>2X?} (result) {:0>2X?} (expected)",
                 sew, desc, i, res, exp
             );
             log!(
-                "more information, lhs = {:?}, rhs = {:?}, expected_before = {:?}, lmul = {}, avl = {}",
+                "more information, lhs = {:0>2X?}, rhs = {:0>2X?}, expected_before = {:0>2X?}, lmul = {}, avl = {}",
                 left,
                 right,
                 exp_before,

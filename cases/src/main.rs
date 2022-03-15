@@ -114,6 +114,10 @@ fn program_entry(argc: u64, argv: *const *const u8) -> i8 {
         test_pattern
     );
     test_case!(
+        single_width_integer_multiply_add_cases::test_widening_width_uinteger_multiply_add,
+        test_pattern
+    );
+    test_case!(
         count_population_in_mask_cases::test_count_population_in_mask,
         test_pattern
     );
