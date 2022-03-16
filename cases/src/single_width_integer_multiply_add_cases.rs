@@ -51,6 +51,14 @@ pub fn test_single_width_integer_multiply_add() {
 fn expected_op_wide_u(lhs: &[u8], rhs: &[u8], result: &mut [u8]) {
     assert!(lhs.len() == rhs.len() && rhs.len() * 2 == result.len());
     match lhs.len() {
+        2 => {
+            let l: u32 = u16::from_le_bytes(lhs.try_into().unwrap()).into();
+            let r: u32 = u16::from_le_bytes(rhs.try_into().unwrap()).into();
+
+            let extra: u32 = u32::from_le_bytes(result.try_into().unwrap());
+            let res2 = l * r + extra;
+            result.copy_from_slice(&res2.to_le_bytes());
+        }
         4 => {
             let l: u64 = u32::from_le_bytes(lhs.try_into().unwrap()).into();
             let r: u64 = u32::from_le_bytes(rhs.try_into().unwrap()).into();
