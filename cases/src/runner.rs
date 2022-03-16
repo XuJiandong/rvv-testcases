@@ -652,11 +652,11 @@ pub fn run_vop_vx<T1, T2>(
         let exp = &expected[expected_range.clone()];
         if res != exp {
             log!(
-                "[sew = {}, describe = {}] unexpected values found at index {} (nth-element): {:?} (result) {:?} (expected)",
+                "[sew = {}, describe = {}] unexpected values found at index {} (nth-element): {:0>2X?} (result) {:0>2X?} (expected)",
                 sew, desc, i, res, exp
             );
             log!(
-                "more information, lhs = {:?}, rhs = {:?}, lmul = {}, avl = {}",
+                "more information, lhs = {:0>2X?}, rhs = {:0>2X?}, lmul = {}, avl = {}",
                 left,
                 right,
                 lmul,

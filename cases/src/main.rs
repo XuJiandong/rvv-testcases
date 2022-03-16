@@ -26,6 +26,8 @@ mod single_width_shift_cases;
 mod vector_compress_cases;
 mod vector_element_index_cases;
 mod vector_iota_cases;
+mod vmsleu_vv_cases;
+mod vsub_cases;
 
 mod vector_register_gather_cases;
 mod vector_slide_cases;
@@ -95,6 +97,10 @@ fn program_entry(argc: u64, argv: *const *const u8) -> i8 {
         narrowing_integer_right_shift_cases::test_narrowing_integer_right_shift,
         test_pattern
     );
+    test_case!(
+        narrowing_integer_right_shift_cases::test_narrowing_integer_right_shift_arithmetic,
+        test_pattern
+    );
     test_case!(vmsop_vv_cases::test_vmsop_vv, test_pattern);
     test_case!(vmsop_vx_cases::test_vmsop_vx, test_pattern);
     test_case!(vmsop_vi_cases::test_vmsop_vi, test_pattern);
@@ -117,6 +123,8 @@ fn program_entry(argc: u64, argv: *const *const u8) -> i8 {
         single_width_integer_multiply_add_cases::test_widening_width_uinteger_multiply_add,
         test_pattern
     );
+    test_case!(vsub_cases::test_vsub, test_pattern);
+    test_case!(vmsleu_vv_cases::test_vmsleu_vv, test_pattern);
     test_case!(
         count_population_in_mask_cases::test_count_population_in_mask,
         test_pattern
@@ -142,8 +150,14 @@ fn program_entry(argc: u64, argv: *const *const u8) -> i8 {
     test_case!(vector_compress_cases::test_vector_compress, test_pattern);
     test_case!(vector_slide_cases::test_vector_slide_up, test_pattern);
     test_case!(vector_slide_cases::test_vector_slide_down, test_pattern);
-    test_case!(vector_register_gather_cases::test_vrgather_vv,test_pattern);
-    test_case!(vector_register_gather_cases::test_vrgatherei16_vv,test_pattern);
-    test_case!(vector_register_gather_cases::test_vrgatherer_vx,test_pattern);
+    test_case!(vector_register_gather_cases::test_vrgather_vv, test_pattern);
+    test_case!(
+        vector_register_gather_cases::test_vrgatherei16_vv,
+        test_pattern
+    );
+    test_case!(
+        vector_register_gather_cases::test_vrgatherer_vx,
+        test_pattern
+    );
     0
 }
