@@ -4,7 +4,7 @@ use core::convert::TryInto;
 
 use alloc::boxed::Box;
 use rvv_asm::rvv_asm;
-use rvv_testcases::intrinsic::vop_vv_destructive;
+use rvv_testcases::intrinsic::{vop_vv_destructive, vop_vv_destructive_wide};
 
 use rvv_testcases::misc::{avl_iterator, U256, U512};
 use rvv_testcases::runner::{run_vop_vv, ExpectedOp, WideningCategory};
@@ -67,6 +67,15 @@ fn expected_op_wide_u(lhs: &[u8], rhs: &[u8], result: &mut [u8]) {
             let res2 = l * r + extra;
             result.copy_from_slice(&res2.to_le_bytes());
         }
+        8 => {
+            let l: u128 = u64::from_le_bytes(lhs.try_into().unwrap()).into();
+            let r: u128 = u64::from_le_bytes(rhs.try_into().unwrap()).into();
+
+            let extra: u128 = u128::from_le_bytes(result.try_into().unwrap());
+
+            let res2 = l.wrapping_mul(r).wrapping_add(extra);
+            result.copy_from_slice(&res2.to_le_bytes());
+        }
         32 => {
             let l: U512 = U256::from_little_endian(lhs).into();
             let r: U512 = U256::from_little_endian(rhs).into();
@@ -83,7 +92,7 @@ fn expected_op_wide_u(lhs: &[u8], rhs: &[u8], result: &mut [u8]) {
 
 pub fn test_widening_width_uinteger_multiply_add() {
     fn wmaccu(lhs: &[u8], rhs: &[u8], result: &mut [u8], sew: u64, lmul: i64, avl: u64) {
-        vop_vv_destructive(lhs, rhs, result, sew, avl, lmul, || unsafe {
+        vop_vv_destructive_wide(lhs, rhs, result, sew, avl, lmul, || unsafe {
             rvv_asm!("vwmaccu.vv v21, v1, v11");
         });
     }
