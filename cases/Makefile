@@ -1,5 +1,6 @@
 
 CKB_DEBUGGER ?= ckb-debugger-rvv
+ASM64 ?= asm64
 BUILD ?= release
 PORT := 9999
 BUILDER_DOCKER := thewawar/ckb-capsule:2021-12-25
@@ -35,6 +36,9 @@ all:
 run:
 	RUST_LOG=debug ${CKB_DEBUGGER} --max-cycles 1000000000 --bin ./target/riscv64imac-unknown-none-elf/${BUILD}/rvv-testcases -- $(args)
 
+asm64-run:
+	${ASM64} ./target/riscv64imac-unknown-none-elf/${BUILD}/rvv-testcases $(args)
+
 
 expand:
 	cargo expand --bin rvv-testcases --color never
@@ -51,5 +55,8 @@ start-docker:
 run-gdb-rust:
 	riscv64-unknown-elf-gdb -ex "target remote host.docker.internal:${PORT}" ./target/riscv64imac-unknown-none-elf/${BUILD}/rvv-testcases
 
-install-tools:
+install-tool:
 	cargo install --branch rvv --git https://github.com/mohanson/ckb-standalone-debugger.git
+
+install-tool2:
+	cargo install --example asm64 --branch rvv --git https://github.com/nervosnetwork/ckb-vm.git --features asm ckb-vm
