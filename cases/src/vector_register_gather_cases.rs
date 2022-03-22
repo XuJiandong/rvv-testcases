@@ -98,7 +98,7 @@ fn rgather_vv(
             continue;
         }
 
-        let index = if i >= v1.len() { 0 } else { v1[i] };
+        let index = v1[i];
         if index as usize >= (vd.len() / wide) {
             for j in 0..wide {
                 result[i * wide + j] = 0;
@@ -117,7 +117,7 @@ fn rgather_vv(
 fn vrgather_vv(wide: usize, enable_mask: bool, enable_ei16: bool) {
     let mut mask = [0u8; VLEN / 8];
     let mut expected_before = [0u8; VLEN / 8];
-    let mut vs1 = [0u8; VLEN / 8];
+    let mut vs1 = [0u8; VLEN / 4];
     let mut vs2 = [0u8; VLEN / 8];
     let mut result = [0u8; VLEN / 8];
 
@@ -146,10 +146,12 @@ fn vrgather_vv(wide: usize, enable_mask: bool, enable_ei16: bool) {
             "mv t0, {}", "vl1re8.v v0, (t0)",
             "mv t0, {}", "vl1re8.v v8, (t0)",
             "mv t0, {}", "vl1re8.v v4, (t0)",
+            "mv t0, {}", "vl1re8.v v5, (t0)",
             "mv t0, {}", "vl1re8.v v24, (t0)",
             in (reg) mask.as_ptr(),
             in (reg) vs2.as_ptr(),
             in (reg) vs1.as_ptr(),
+            in (reg) vs1[256..].as_ptr(),
             in (reg) expected_before.as_ptr());
 
         if enable_ei16 {
