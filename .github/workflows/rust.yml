@@ -1,0 +1,15 @@
+name: Rust
+
+on: [push, pull_request]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v1
+    - name: Install asm64
+      run: cd cases && make install-tool2
+    - name: Build cases
+      run: cd cases && make all-via-docker
+    - name: Run cases
+      run: cd cases && make asm64-run
