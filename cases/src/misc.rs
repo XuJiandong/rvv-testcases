@@ -269,3 +269,46 @@ pub fn compress_into_bits(data: &[u8]) -> [u8; 256] {
     }
     res
 }
+
+pub fn greater_i256(l: &[u8], r: &[u8]) -> bool {
+    if l == r {
+        return false;
+    }
+
+    let l_s = get_bit_in_slice(l, 255);
+    let r_s = get_bit_in_slice(r, 255);
+
+    if l_s != r_s {
+        if l_s == 0 {
+            true
+        } else {
+            false
+        }
+    } else {
+        let l = U256::from_little_endian(l);
+        let r = U256::from_little_endian(r);
+        l > r
+    }
+}
+
+
+pub fn less_i256(l: &[u8], r: &[u8]) -> bool {
+    if l == r {
+        return false;
+    }
+
+    let l_s = get_bit_in_slice(l, 255);
+    let r_s = get_bit_in_slice(r, 255);
+
+    if l_s != r_s {
+        if l_s == 0 {
+            false
+        } else {
+            true
+        }
+    } else {
+        let l = U256::from_little_endian(l);
+        let r = U256::from_little_endian(r);
+        l < r
+    }
+}

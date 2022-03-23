@@ -138,7 +138,7 @@ fn vrgather_vv(wide: usize, enable_mask: bool, enable_ei16: bool) {
     };
     let expected = expected.as_slice();
 
-    let vl = vsetvl((VLEN / wide) as u64, wide as u64, 2) as usize;
+    let vl = vsetvl((VLEN / wide) as u64, wide as u64, 1) as usize;
     assert_eq!(vl, VLEN / wide);
 
     unsafe {

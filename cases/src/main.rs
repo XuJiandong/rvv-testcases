@@ -114,6 +114,34 @@ fn program_entry(argc: u64, argv: *const *const u8) -> i8 {
         single_width_integer_reduction_cases::test_vredop_vv,
         test_pattern
     );
+    test_case!(
+        single_width_integer_reduction_cases::test_vredop_and_vv,
+        test_pattern
+    );
+    test_case!(
+        single_width_integer_reduction_cases::test_vredop_or_vv,
+        test_pattern
+    );
+    test_case!(
+        single_width_integer_reduction_cases::test_vredop_xor_vv,
+        test_pattern
+    );
+    test_case!(
+        single_width_integer_reduction_cases::test_vredop_minu_vv,
+        test_pattern
+    );
+    test_case!(
+        single_width_integer_reduction_cases::test_vredop_min_vv,
+        test_pattern
+    );
+    test_case!(
+        single_width_integer_reduction_cases::test_vredop_maxu_vv,
+        test_pattern
+    );
+    test_case!(
+        single_width_integer_reduction_cases::test_vredop_max_vv,
+        test_pattern
+    );
 
     test_case!(
         single_width_integer_multiply_add_cases::test_single_width_integer_multiply_add,
