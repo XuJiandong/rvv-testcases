@@ -28,6 +28,7 @@ mod vector_element_index_cases;
 mod vector_iota_cases;
 mod vmsleu_vv_cases;
 mod vsub_cases;
+mod widening_integer_reduction_cases;
 
 mod vector_register_gather_cases;
 mod vector_slide_cases;
@@ -140,6 +141,14 @@ fn program_entry(argc: u64, argv: *const *const u8) -> i8 {
     );
     test_case!(
         single_width_integer_reduction_cases::test_vredop_max_vv,
+        test_pattern
+    );
+    test_case!(
+        widening_integer_reduction_cases::test_vwredsumu_vs,
+        test_pattern
+    );
+    test_case!(
+        widening_integer_reduction_cases::test_vwredsum_vs,
         test_pattern
     );
 

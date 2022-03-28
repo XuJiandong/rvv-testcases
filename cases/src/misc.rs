@@ -291,7 +291,6 @@ pub fn greater_i256(l: &[u8], r: &[u8]) -> bool {
     }
 }
 
-
 pub fn less_i256(l: &[u8], r: &[u8]) -> bool {
     if l == r {
         return false;
@@ -311,4 +310,30 @@ pub fn less_i256(l: &[u8], r: &[u8]) -> bool {
         let r = U256::from_little_endian(r);
         l < r
     }
+}
+
+pub fn i256_to_i512(d: [u8; 32]) -> [u8; 64] {
+    let mut r: Vec<u8> = Vec::new();
+    r.resize(64, 0);
+
+    if get_bit_in_slice(d.as_slice(), 255) == 0 {
+        let (left, right) = r.split_at_mut(32);
+        left.copy_from_slice(d.as_slice());
+        right.copy_from_slice(&[0u8; 32]);
+    } else {
+        let (left, right) = r.split_at_mut(32);
+        left.copy_from_slice(d.as_slice());
+        right.copy_from_slice(&[0xFFu8; 32]);
+    }
+
+    r.as_slice().try_into().unwrap()
+}
+
+pub fn add_i512(a: &[u8; 64], b: &[u8; 64]) -> [u8; 64] {
+    let mut r = [0u8; 64];
+
+    let rr = U512::from_little_endian(a).wrapping_add(U512::from_little_endian(b));
+    rr.to_little_endian(&mut r);
+
+    r
 }

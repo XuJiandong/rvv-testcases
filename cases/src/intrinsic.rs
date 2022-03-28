@@ -613,15 +613,18 @@ pub fn vwredop_vs<F>(
 
     let sew_bytes = sew / 8;
 
+    let mut index = 0;
     loop {
         // vd[0] =  sum(vs2[*], vs1[0])
         let vl = vsetvl(avl as u64, sew, lmul);
         vle_v1(sew, lhs); // vs2
-        vle_v11(sew, rhs); // vs1
+        if index == 0 {
+            vle_v11(sew, rhs); // vs1
+        }
 
         op();
 
-        vse_v21(sew, result);
+        vse_v21(sew * 2, result);
         // copy back to vs1
         unsafe {
             rvv_asm!("vmv.v.v v11, v21");
@@ -632,7 +635,8 @@ pub fn vwredop_vs<F>(
             break;
         }
         let offset = (vl * sew_bytes) as usize;
-        lhs = &lhs[offset * 2..];
+        lhs = &lhs[offset..];
+        index += 1;
     }
 }
 

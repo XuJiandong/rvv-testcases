@@ -91,6 +91,8 @@ pub fn run_vop_vv<T>(
     }
     expected_before.resize(expected.len(), 0);
 
+    let vl = vsetvl(avl as u64, sew, lmul);
+
     let mut rng = BestNumberRng::default();
     for i in 0..avl as usize {
         let range = i * sew_bytes..(i + 1) * sew_bytes;
@@ -132,11 +134,15 @@ pub fn run_vop_vv<T>(
                 };
                 // vs2: lhs, vs1: rhs
                 //  # vd[0] =  sum(vs2[*], vs1[0])
+                let index = i % vl as usize;
+                if index == 0 {
+                    rhs[range.clone()].copy_from_slice(&expected[0..sew_bytes]);
+                }
                 op(
                     &lhs[lhs_range.clone()],
                     &rhs[range.clone()],
                     &mut expected[expected_range.clone()],
-                    i,
+                    index,
                 );
             }
             _ => {
@@ -372,6 +378,10 @@ pub fn run_vmop_mm<T>(
             panic!("Unexpected op")
         }
     }
+
+    // why?
+    let expected = expected.clone();
+
     v_op(
         lhs.as_slice(),
         rhs.as_slice(),
@@ -387,7 +397,7 @@ pub fn run_vmop_mm<T>(
 
         if res != exp {
             log!(
-                "[sew = {}, describe = {}] unexpected values found at index {}: {:?} (result) {:?} (expected)",
+                "[sew = {}, describe = {}] unexpected values found at index {}: {:0>2X?} (result) {:0>2X?} (expected)",
                 sew, desc, i, res, exp
             );
             panic!("Abort");
