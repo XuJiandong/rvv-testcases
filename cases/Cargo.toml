@@ -9,6 +9,7 @@ edition = "2018"
 # this configuration is very important to CKB-VM
 [profile.release]
 lto = "fat"
+debug = true
 
 [dependencies]
 ckb-std = "0.9.0"
