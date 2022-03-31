@@ -10,7 +10,7 @@ use rvv_testcases::rng::BestNumberRng;
 
 fn run(enable_mask: bool) {
     if is_verbose() {
-        log!("test viota.m");
+        log!("test vid.m");
     }
     let mut mask = [0u8; VLEN / 8];
     let mut expected_before = [0u8; VLEN / 8];
@@ -25,15 +25,13 @@ fn run(enable_mask: bool) {
     rng.fill(&mut expected_before[..]);
     expected.copy_from_slice(&expected_before[..]);
 
-    let mut index = 0;
     for i in 0..(VLEN / 16) as usize {
         if enable_mask && get_bit_in_slice(&mask, i) == 0 {
             continue;
         } else {
-            expected[i * 2] = index as u8;
+            expected[i * 2] = i as u8;
             expected[i * 2 + 1] = 0;
         }
-        index += 1;
     }
 
     let vl = vsetvl(128, 16, 1) as usize;
@@ -57,9 +55,8 @@ fn run(enable_mask: bool) {
             expected
         );
         log!(
-            "more information, enable_mask = {}, index = {}, vs2 = {:?}, mask = {:?}, expected_before = {:?}",
+            "more information, enable_mask = {}, vs2 = {:?}, mask = {:?}, expected_before = {:?}",
             enable_mask,
-            index,
             vs2,
             mask,
             expected_before
