@@ -26,7 +26,7 @@ fn expected_op_add(lhs: &[u8], rhs: &[u8], result: &mut [u8]) {
 pub fn test_vwop_wv() {
     fn add(lhs: &[u8], rhs: &[u8], result: &mut [u8], sew: u64, lmul: i64, avl: u64) {
         vwop_wv(lhs, rhs, result, sew, avl, lmul, || unsafe {
-            rvv_asm!("vwaddu.wv v24, v1, v11");
+            rvv_asm!("vwaddu.wv v21, v1, v11");
         });
     }
     let sew = 256u64;

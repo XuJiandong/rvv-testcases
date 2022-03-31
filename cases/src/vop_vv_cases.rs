@@ -74,7 +74,7 @@ fn expected_op_mul(lhs: &[u8], rhs: &[u8], result: &mut [u8]) {
 pub fn test_vop_vv() {
     fn add(lhs: &[u8], rhs: &[u8], result: &mut [u8], sew: u64, lmul: i64, avl: u64) {
         vop_vv(lhs, rhs, result, sew, avl, lmul, || unsafe {
-            rvv_asm!("vadd.vv v24, v1, v11");
+            rvv_asm!("vadd.vv v21, v1, v11");
         });
     }
     let sew = 256u64;
@@ -94,7 +94,7 @@ pub fn test_vop_vv() {
 
     fn mul(lhs: &[u8], rhs: &[u8], result: &mut [u8], sew: u64, lmul: i64, avl: u64) {
         vop_vv(lhs, rhs, result, sew, avl, lmul, || unsafe {
-            rvv_asm!("vmul.vv v24, v1, v11");
+            rvv_asm!("vmul.vv v21, v1, v11");
         });
     }
     let sew = 256u64;

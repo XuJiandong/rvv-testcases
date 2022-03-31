@@ -283,33 +283,33 @@ fn vle_v11(sew: u64, buf: &[u8]) {
     }
 }
 
-fn vle_v24(sew: u64, buf: &[u8]) {
+fn vle_v21(sew: u64, buf: &[u8]) {
     let p = buf.as_ptr();
     unsafe {
         match sew {
             8 => {
-                rvv_asm!("mv t0, {0}", "vle8.v v24, (t0)", in (reg) p);
+                rvv_asm!("mv t0, {0}", "vle8.v v21, (t0)", in (reg) p);
             }
             16 => {
-                rvv_asm!("mv t0, {0}", "vle16.v v24, (t0)", in (reg) p);
+                rvv_asm!("mv t0, {0}", "vle16.v v21, (t0)", in (reg) p);
             }
             32 => {
-                rvv_asm!("mv t0, {0}", "vle32.v v24, (t0)", in (reg) p);
+                rvv_asm!("mv t0, {0}", "vle32.v v21, (t0)", in (reg) p);
             }
             64 => {
-                rvv_asm!("mv t0, {0}", "vle64.v v24, (t0)", in (reg) p);
+                rvv_asm!("mv t0, {0}", "vle64.v v21, (t0)", in (reg) p);
             }
             128 => {
-                rvv_asm!("mv t0, {0}", "vle128.v v24, (t0)", in (reg) p);
+                rvv_asm!("mv t0, {0}", "vle128.v v21, (t0)", in (reg) p);
             }
             256 => {
-                rvv_asm!("mv t0, {0}", "vle256.v v24, (t0)", in (reg) p);
+                rvv_asm!("mv t0, {0}", "vle256.v v21, (t0)", in (reg) p);
             }
             512 => {
-                rvv_asm!("mv t0, {0}", "vle512.v v24, (t0)", in (reg) p);
+                rvv_asm!("mv t0, {0}", "vle512.v v21, (t0)", in (reg) p);
             }
             1024 => {
-                rvv_asm!("mv t0, {0}", "vle1024.v v24, (t0)", in (reg) p);
+                rvv_asm!("mv t0, {0}", "vle1024.v v21, (t0)", in (reg) p);
             }
             _ => {
                 panic!("Invalid sew");
@@ -318,33 +318,33 @@ fn vle_v24(sew: u64, buf: &[u8]) {
     }
 }
 
-fn vse_v24(sew: u64, buf: &[u8]) {
+fn vse_v21(sew: u64, buf: &[u8]) {
     let p = buf.as_ptr();
     unsafe {
         match sew {
             8 => {
-                rvv_asm!("mv t0, {0}", "vse8.v v24, (t0)", in (reg) p);
+                rvv_asm!("mv t0, {0}", "vse8.v v21, (t0)", in (reg) p);
             }
             16 => {
-                rvv_asm!("mv t0, {0}", "vse16.v v24, (t0)", in (reg) p);
+                rvv_asm!("mv t0, {0}", "vse16.v v21, (t0)", in (reg) p);
             }
             32 => {
-                rvv_asm!("mv t0, {0}", "vse32.v v24, (t0)", in (reg) p);
+                rvv_asm!("mv t0, {0}", "vse32.v v21, (t0)", in (reg) p);
             }
             64 => {
-                rvv_asm!("mv t0, {0}", "vse64.v v24, (t0)", in (reg) p);
+                rvv_asm!("mv t0, {0}", "vse64.v v21, (t0)", in (reg) p);
             }
             128 => {
-                rvv_asm!("mv t0, {0}", "vse128.v v24, (t0)", in (reg) p);
+                rvv_asm!("mv t0, {0}", "vse128.v v21, (t0)", in (reg) p);
             }
             256 => {
-                rvv_asm!("mv t0, {0}", "vse256.v v24, (t0)", in (reg) p);
+                rvv_asm!("mv t0, {0}", "vse256.v v21, (t0)", in (reg) p);
             }
             512 => {
-                rvv_asm!("mv t0, {0}", "vse512.v v24, (t0)", in (reg) p);
+                rvv_asm!("mv t0, {0}", "vse512.v v21, (t0)", in (reg) p);
             }
             1024 => {
-                rvv_asm!("mv t0, {0}", "vse1024.v v24, (t0)", in (reg) p);
+                rvv_asm!("mv t0, {0}", "vse1024.v v21, (t0)", in (reg) p);
             }
             _ => {
                 panic!("Invalid sew");
@@ -361,19 +361,19 @@ pub fn vs1r_v1(buf: &mut [u8]) {
     }
 }
 
-pub fn vs1r_v24(buf: &mut [u8]) {
+pub fn vs1r_v21(buf: &mut [u8]) {
     assert_eq!(buf.len(), VLEN / 8);
     let p = buf.as_ptr();
     unsafe {
-        rvv_asm!("mv t0, {}", "vs1r.v v24, (t0)", in (reg) p);
+        rvv_asm!("mv t0, {}", "vs1r.v v21, (t0)", in (reg) p);
     }
 }
 
-pub fn vl1r_v24(buf: &[u8]) {
+pub fn vl1r_v21(buf: &[u8]) {
     assert_eq!(buf.len(), VLEN / 8);
     let p = buf.as_ptr();
     unsafe {
-        rvv_asm!("mv t0, {}", "vl1re8.v v24, (t0)", in (reg) p);
+        rvv_asm!("mv t0, {}", "vl1re8.v v21, (t0)", in (reg) p);
     }
 }
 
@@ -421,7 +421,7 @@ where
 
         op();
 
-        vse_v24(sew, result);
+        vse_v21(sew, result);
 
         avl -= vl;
         if avl == 0 {
@@ -464,7 +464,7 @@ pub fn vop_vvm<F>(
 
         op();
 
-        vse_v24(sew, result);
+        vse_v21(sew, result);
 
         avl -= vl;
         if avl == 0 {
@@ -501,11 +501,11 @@ pub fn vop_vv_destructive<F>(
         let vl = vsetvl(avl as u64, sew, lmul);
         vle_v1(sew, lhs);
         vle_v11(sew, rhs);
-        vle_v24(sew, result);
+        vle_v21(sew, result);
 
         op();
 
-        vse_v24(sew, result);
+        vse_v21(sew, result);
 
         avl -= vl;
         if avl == 0 {
@@ -541,11 +541,11 @@ pub fn vop_vv_destructive_wide<F>(
         let vl = vsetvl(avl as u64, sew, lmul);
         vle_v1(sew, lhs);
         vle_v11(sew, rhs);
-        vle_v24(sew * 2, result);
+        vle_v21(sew * 2, result);
 
         op();
 
-        vse_v24(sew * 2, result);
+        vse_v21(sew * 2, result);
 
         avl -= vl;
         if avl == 0 {
@@ -579,10 +579,10 @@ where
 
         op();
 
-        vse_v24(sew, result);
+        vse_v21(sew, result);
         // copy back to vs1
         unsafe {
-            rvv_asm!("vmv.v.v v11, v24");
+            rvv_asm!("vmv.v.v v11, v21");
         }
 
         avl -= vl;
@@ -624,10 +624,10 @@ pub fn vwredop_vs<F>(
 
         op();
 
-        vse_v24(sew * 2, result);
+        vse_v21(sew * 2, result);
         // copy back to vs1
         unsafe {
-            rvv_asm!("vmv.v.v v11, v24");
+            rvv_asm!("vmv.v.v v11, v21");
         }
 
         avl -= vl;
@@ -660,7 +660,7 @@ where
         op();
 
         let mut temp = [0u8; VLEN / 8];
-        vs1r_v24(&mut temp);
+        vs1r_v21(&mut temp);
         for i in 0..vl {
             let bit = get_bit_in_slice(&temp[..], i as usize);
             set_bit_in_slice(result, index, bit);
@@ -695,7 +695,7 @@ where
         op(x);
 
         let mut temp = [0u8; VLEN / 8];
-        vs1r_v24(&mut temp);
+        vs1r_v21(&mut temp);
         for _ in 0..vl {
             let bit = get_bit_in_slice(&temp[..], index);
             set_bit_in_slice(result, index, bit);
@@ -743,7 +743,7 @@ pub fn vop_nv<F>(
 
         op();
 
-        vse_v24(sew, result);
+        vse_v21(sew, result);
 
         avl -= vl;
         if avl == 0 {
@@ -772,7 +772,7 @@ where
 
         op(x);
 
-        vse_v24(sew, result);
+        vse_v21(sew, result);
 
         avl -= vl;
         if avl == 0 {
@@ -800,7 +800,7 @@ where
 
         op(x);
 
-        vse_v24(sew, result);
+        vse_v21(sew, result);
 
         avl -= vl;
         if avl == 0 {
@@ -831,7 +831,7 @@ where
         op();
 
         // different than `vop_vv`
-        vse_v24(sew * 2, result);
+        vse_v21(sew * 2, result);
 
         avl -= vl;
         if avl == 0 {
@@ -862,7 +862,7 @@ where
         op(x);
 
         // different than `vop_vv`
-        vse_v24(sew * 2, result);
+        vse_v21(sew * 2, result);
 
         avl -= vl;
         if avl == 0 {
@@ -891,7 +891,7 @@ where
 
         op(x);
 
-        vse_v24(sew * 2, result);
+        vse_v21(sew * 2, result);
 
         avl -= vl;
         if avl == 0 {
@@ -923,7 +923,7 @@ where
         op();
 
         // different than `vop_vv`
-        vse_v24(sew * 2, result);
+        vse_v21(sew * 2, result);
 
         avl -= vl;
         if avl == 0 {
@@ -955,7 +955,7 @@ where
 
         op();
 
-        vse_v24(sew, result);
+        vse_v21(sew, result);
 
         avl -= vl;
         if avl == 0 {

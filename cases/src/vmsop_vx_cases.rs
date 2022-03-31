@@ -23,7 +23,7 @@ fn expected_op(lhs: &[u8], x: u64, result: &mut [u8], index: usize) {
 pub fn test_vmsop_vx() {
     fn eq(lhs: &[u8], x: u64, result: &mut [u8], sew: u64, lmul: i64, avl: u64) {
         vmsop_vx(lhs, x, result, sew, avl, lmul, |x| unsafe {
-            rvv_asm!("mv t0, {}", "vmseq.vx v24, v1, t0", in (reg) x);
+            rvv_asm!("mv t0, {}", "vmseq.vx v21, v1, t0", in (reg) x);
         });
     }
     let sew = 256u64;

@@ -54,100 +54,100 @@ pub fn test_vop_vi() {
             let imm = shrink_to_imm(x);
             match imm {
                 15 => {
-                    rvv_asm!("vadd.vi v24, v1, 15");
+                    rvv_asm!("vadd.vi v21, v1, 15");
                 }
                 14 => {
-                    rvv_asm!("vadd.vi v24, v1, 14");
+                    rvv_asm!("vadd.vi v21, v1, 14");
                 }
                 13 => {
-                    rvv_asm!("vadd.vi v24, v1, 13");
+                    rvv_asm!("vadd.vi v21, v1, 13");
                 }
                 12 => {
-                    rvv_asm!("vadd.vi v24, v1, 12");
+                    rvv_asm!("vadd.vi v21, v1, 12");
                 }
                 11 => {
-                    rvv_asm!("vadd.vi v24, v1, 11");
+                    rvv_asm!("vadd.vi v21, v1, 11");
                 }
                 10 => {
-                    rvv_asm!("vadd.vi v24, v1, 10");
+                    rvv_asm!("vadd.vi v21, v1, 10");
                 }
                 9 => {
-                    rvv_asm!("vadd.vi v24, v1, 9");
+                    rvv_asm!("vadd.vi v21, v1, 9");
                 }
                 8 => {
-                    rvv_asm!("vadd.vi v24, v1, 8");
+                    rvv_asm!("vadd.vi v21, v1, 8");
                 }
                 7 => {
-                    rvv_asm!("vadd.vi v24, v1, 7");
+                    rvv_asm!("vadd.vi v21, v1, 7");
                 }
                 6 => {
-                    rvv_asm!("vadd.vi v24, v1, 6");
+                    rvv_asm!("vadd.vi v21, v1, 6");
                 }
                 5 => {
-                    rvv_asm!("vadd.vi v24, v1, 5");
+                    rvv_asm!("vadd.vi v21, v1, 5");
                 }
                 4 => {
-                    rvv_asm!("vadd.vi v24, v1, 4");
+                    rvv_asm!("vadd.vi v21, v1, 4");
                 }
                 3 => {
-                    rvv_asm!("vadd.vi v24, v1, 3");
+                    rvv_asm!("vadd.vi v21, v1, 3");
                 }
                 2 => {
-                    rvv_asm!("vadd.vi v24, v1, 2");
+                    rvv_asm!("vadd.vi v21, v1, 2");
                 }
                 1 => {
-                    rvv_asm!("vadd.vi v24, v1, 1");
+                    rvv_asm!("vadd.vi v21, v1, 1");
                 }
                 0 => {
-                    rvv_asm!("vadd.vi v24, v1, 0");
+                    rvv_asm!("vadd.vi v21, v1, 0");
                 }
                 -1 => {
-                    rvv_asm!("vadd.vi v24, v1, -1");
+                    rvv_asm!("vadd.vi v21, v1, -1");
                 }
                 -2 => {
-                    rvv_asm!("vadd.vi v24, v1, -2");
+                    rvv_asm!("vadd.vi v21, v1, -2");
                 }
                 -3 => {
-                    rvv_asm!("vadd.vi v24, v1, -3");
+                    rvv_asm!("vadd.vi v21, v1, -3");
                 }
                 -4 => {
-                    rvv_asm!("vadd.vi v24, v1, -4");
+                    rvv_asm!("vadd.vi v21, v1, -4");
                 }
                 -5 => {
-                    rvv_asm!("vadd.vi v24, v1, -5");
+                    rvv_asm!("vadd.vi v21, v1, -5");
                 }
                 -6 => {
-                    rvv_asm!("vadd.vi v24, v1, -6");
+                    rvv_asm!("vadd.vi v21, v1, -6");
                 }
                 -7 => {
-                    rvv_asm!("vadd.vi v24, v1, -7");
+                    rvv_asm!("vadd.vi v21, v1, -7");
                 }
                 -8 => {
-                    rvv_asm!("vadd.vi v24, v1, -8");
+                    rvv_asm!("vadd.vi v21, v1, -8");
                 }
                 -9 => {
-                    rvv_asm!("vadd.vi v24, v1, -9");
+                    rvv_asm!("vadd.vi v21, v1, -9");
                 }
                 -10 => {
-                    rvv_asm!("vadd.vi v24, v1, -10");
+                    rvv_asm!("vadd.vi v21, v1, -10");
                 }
                 -11 => {
-                    rvv_asm!("vadd.vi v24, v1, -11");
+                    rvv_asm!("vadd.vi v21, v1, -11");
                 }
                 -12 => {
-                    rvv_asm!("vadd.vi v24, v1, -12");
+                    rvv_asm!("vadd.vi v21, v1, -12");
                 }
                 -13 => {
-                    rvv_asm!("vadd.vi v24, v1, -13");
+                    rvv_asm!("vadd.vi v21, v1, -13");
                 }
                 -14 => {
-                    rvv_asm!("vadd.vi v24, v1, -14");
+                    rvv_asm!("vadd.vi v21, v1, -14");
                 }
                 -15 => {
-                    rvv_asm!("vadd.vi v24, v1, -15");
+                    rvv_asm!("vadd.vi v21, v1, -15");
                 }
                 -16 => {
-                    rvv_asm!("vadd.vi v24, v1, -16");
+                    rvv_asm!("vadd.vi v21, v1, -16");
                 }
                 _ => {
                     panic!("can't support this immediate: {}", imm);

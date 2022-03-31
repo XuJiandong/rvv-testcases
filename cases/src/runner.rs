@@ -40,7 +40,6 @@ pub fn run_vop_vv<T>(
 ) where
     T: FnMut(&[u8], &[u8], &mut [u8], u64, i64, u64),
 {
-    log!("sew: {}, lmul: {}, avl: {}", sew, lmul, avl);
     if is_verbose() {
         log!(
             "run with sew = {}, lmul = {}, avl = {}, desc = {}",
@@ -101,7 +100,6 @@ pub fn run_vop_vv<T>(
 
     let vl = vsetvl(avl as u64, sew, lmul);
 
-    log!("--------------------------run0");
     let mut rng = BestNumberRng::default();
     for i in 0..avl as usize {
         let range = i * sew_bytes..(i + 1) * sew_bytes;
@@ -164,7 +162,6 @@ pub fn run_vop_vv<T>(
             }
         }
     }
-    log!("--------------------------run1");
     v_op(
         lhs.as_slice(),
         rhs.as_slice(),
@@ -173,8 +170,6 @@ pub fn run_vop_vv<T>(
         lmul,
         avl,
     );
-
-    log!("--------------------------run2");
 
     for i in 0..avl as usize {
         let range = i * sew_bytes..(i + 1) * sew_bytes;

@@ -5,7 +5,7 @@ use rand::Rng;
 use rvv_asm::rvv_asm;
 
 use ckb_std::syscalls::debug;
-use rvv_testcases::intrinsic::{vs1r_v24, vsetvl};
+use rvv_testcases::intrinsic::{vs1r_v21, vsetvl};
 use rvv_testcases::log;
 use rvv_testcases::misc::{get_bit_in_slice, is_verbose, U1024, U256, U512, VLEN};
 use rvv_testcases::rng::BestNumberRng;
@@ -281,7 +281,7 @@ fn vrgatherer_vx(wide: usize) {
             "mv t0, {}", "vl1re8.v v0, (t0)",
             "mv t0, {}", "vl1re8.v v1, (t0)",
             "mv t0, {}", "vl1re8.v v2, (t0)",
-            "mv t0, {}", "vl1re8.v v24, (t0)",
+            "mv t0, {}", "vl1re8.v v21, (t0)",
             in (reg) mask.as_ptr(),in (reg) vs1.as_ptr(),
             in (reg) vs2.as_ptr(),
             in (reg) expected_before.as_ptr()
@@ -289,12 +289,12 @@ fn vrgatherer_vx(wide: usize) {
 
         rvv_asm!(
             "mv t0, {}",
-            "vrgather.vx v24, v2, t0, v0.t",
+            "vrgather.vx v21, v2, t0, v0.t",
             in (reg) rs1
         );
     }
 
-    vs1r_v24(&mut result[..]);
+    vs1r_v21(&mut result[..]);
 
     if result != expected {
         log!(
