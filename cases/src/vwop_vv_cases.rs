@@ -5,6 +5,10 @@ use rvv_testcases::intrinsic::vwop_vv;
 use rvv_testcases::misc::{avl_iterator, U256, U512};
 use rvv_testcases::runner::{run_vop_vv, ExpectedOp, WideningCategory};
 
+use ckb_std::syscalls::debug;
+use rvv_testcases::log;
+
+
 fn expected_op_add(lhs: &[u8], rhs: &[u8], result: &mut [u8]) {
     assert!(lhs.len() == rhs.len() && rhs.len() * 2 == result.len());
     match lhs.len() {
@@ -41,12 +45,16 @@ fn expected_op_mulu(lhs: &[u8], rhs: &[u8], result: &mut [u8]) {
 pub fn test_vwop_vv() {
     fn add(lhs: &[u8], rhs: &[u8], result: &mut [u8], sew: u64, lmul: i64, avl: u64) {
         vwop_vv(lhs, rhs, result, sew, avl, lmul, || unsafe {
-            rvv_asm!("vwaddu.vv v21, v1, v11");
+            log!("-----ssss---------------");
+            log!("")
+            rvv_asm!("vwaddu.vv v24, v1, v11");
         });
     }
     let sew = 256u64;
-    for lmul in [-2, 1, 4, 8] {
-        for avl in avl_iterator(sew, 4) {
+    //for lmul in [-2, 1, 4, 8] {
+        //for avl in avl_iterator(sew, 4) {
+            let lmul = 8;
+            let avl = 33;
             run_vop_vv(
                 sew,
                 lmul,
@@ -56,12 +64,12 @@ pub fn test_vwop_vv() {
                 WideningCategory::VdOnly,
                 "vwaddu.vv",
             );
-        }
-    }
+        //}
+    //}
 
-    fn mulu(lhs: &[u8], rhs: &[u8], result: &mut [u8], sew: u64, lmul: i64, avl: u64) {
+    /* fn mulu(lhs: &[u8], rhs: &[u8], result: &mut [u8], sew: u64, lmul: i64, avl: u64) {
         vwop_vv(lhs, rhs, result, sew, avl, lmul, || unsafe {
-            rvv_asm!("vwmulu.vv v21, v1, v11");
+            rvv_asm!("vwmulu.vv v24, v1, v11");
         });
     }
     let sew = 256u64;
@@ -77,5 +85,5 @@ pub fn test_vwop_vv() {
                 "vwmulu.vv",
             );
         }
-    }
+    } */
 }

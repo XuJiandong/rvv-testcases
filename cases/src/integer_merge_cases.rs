@@ -16,7 +16,7 @@ fn expected_op(lhs: &[u8], rhs: &[u8], result: &mut [u8], mask: u8) {
 
 fn v_op(lhs: &[u8], rhs: &[u8], result: &mut [u8], masks: &[u8], sew: u64, lmul: i64, avl: u64) {
     vop_vvm(lhs, rhs, result, masks, sew, avl, lmul, || unsafe {
-        rvv_asm!("vmerge.vvm v21, v1, v11, v0");
+        rvv_asm!("vmerge.vvm v24, v1, v11, v0");
     })
 }
 

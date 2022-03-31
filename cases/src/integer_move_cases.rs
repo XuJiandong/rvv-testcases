@@ -22,7 +22,7 @@ fn expected_op(_: &[u8], rhs: &[u8], result: &mut [u8]) {
 pub fn test_integer_move() {
     fn mv(lhs: &[u8], rhs: &[u8], result: &mut [u8], sew: u64, lmul: i64, avl: u64) {
         vop_vv(lhs, rhs, result, sew, avl, lmul, || unsafe {
-            rvv_asm!("vmv.v.v v21, v11");
+            rvv_asm!("vmv.v.v v24, v11");
         });
     }
     let sew = 256u64;

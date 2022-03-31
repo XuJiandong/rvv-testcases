@@ -42,7 +42,7 @@ pub fn test_vop_vx() {
     fn add(lhs: &[u8], x: u64, result: &mut [u8], sew: u64, lmul: i64, avl: u64) {
         vop_vx(lhs, x, result, sew, avl, lmul, |x: u64| unsafe {
             rvv_asm!("mv t0, {}", 
-                     "vadd.vx v21, v1, t0",
+                     "vadd.vx v24, v1, t0",
                      in (reg) x);
         });
     }

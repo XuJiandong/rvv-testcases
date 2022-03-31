@@ -49,7 +49,7 @@ fn expected_op_sum(lhs: &[u8], rhs: &[u8], result: &mut [u8], index: usize) {
 pub fn test_vredop_vv() {
     fn sum(lhs: &[u8], rhs: &[u8], result: &mut [u8], sew: u64, lmul: i64, avl: u64) {
         vredop_vs(lhs, rhs, result, sew, avl, lmul, || unsafe {
-            rvv_asm!("vredsum.vs v21, v1, v11");
+            rvv_asm!("vredsum.vs v24, v1, v11");
         });
     }
     let sew = 256u64;
@@ -94,7 +94,7 @@ fn expected_op_and(lhs: &[u8], rhs: &[u8], result: &mut [u8], index: usize) {
 pub fn test_vredop_and_vv() {
     fn sum(lhs: &[u8], rhs: &[u8], result: &mut [u8], sew: u64, lmul: i64, avl: u64) {
         vredop_vs(lhs, rhs, result, sew, avl, lmul, || unsafe {
-            rvv_asm!("vredand.vs v21, v1, v11");
+            rvv_asm!("vredand.vs v24, v1, v11");
         });
     }
     let sew = 256u64;
@@ -139,7 +139,7 @@ fn expected_op_or(lhs: &[u8], rhs: &[u8], result: &mut [u8], index: usize) {
 pub fn test_vredop_or_vv() {
     fn sum(lhs: &[u8], rhs: &[u8], result: &mut [u8], sew: u64, lmul: i64, avl: u64) {
         vredop_vs(lhs, rhs, result, sew, avl, lmul, || unsafe {
-            rvv_asm!("vredor.vs v21, v1, v11");
+            rvv_asm!("vredor.vs v24, v1, v11");
         });
     }
     let sew = 256u64;
@@ -184,7 +184,7 @@ fn expected_op_xor(lhs: &[u8], rhs: &[u8], result: &mut [u8], index: usize) {
 pub fn test_vredop_xor_vv() {
     fn sum(lhs: &[u8], rhs: &[u8], result: &mut [u8], sew: u64, lmul: i64, avl: u64) {
         vredop_vs(lhs, rhs, result, sew, avl, lmul, || unsafe {
-            rvv_asm!("vredxor.vs v21, v1, v11");
+            rvv_asm!("vredxor.vs v24, v1, v11");
         });
     }
     let sew = 256u64;
@@ -253,7 +253,7 @@ fn expected_op_minu(lhs: &[u8], rhs: &[u8], result: &mut [u8], index: usize) {
 pub fn test_vredop_minu_vv() {
     fn sum(lhs: &[u8], rhs: &[u8], result: &mut [u8], sew: u64, lmul: i64, avl: u64) {
         vredop_vs(lhs, rhs, result, sew, avl, lmul, || unsafe {
-            rvv_asm!("vredminu.vs v21, v1, v11");
+            rvv_asm!("vredminu.vs v24, v1, v11");
         });
     }
     let sew = 256u64;
@@ -316,7 +316,7 @@ fn expected_op_min(lhs: &[u8], rhs: &[u8], result: &mut [u8], index: usize) {
 pub fn test_vredop_min_vv() {
     fn sum(lhs: &[u8], rhs: &[u8], result: &mut [u8], sew: u64, lmul: i64, avl: u64) {
         vredop_vs(lhs, rhs, result, sew, avl, lmul, || unsafe {
-            rvv_asm!("vredmin.vs v21, v1, v11");
+            rvv_asm!("vredmin.vs v24, v1, v11");
         });
     }
     let sew = 256u64;
@@ -385,7 +385,7 @@ fn expected_op_maxu(lhs: &[u8], rhs: &[u8], result: &mut [u8], index: usize) {
 pub fn test_vredop_maxu_vv() {
     fn sum(lhs: &[u8], rhs: &[u8], result: &mut [u8], sew: u64, lmul: i64, avl: u64) {
         vredop_vs(lhs, rhs, result, sew, avl, lmul, || unsafe {
-            rvv_asm!("vredmaxu.vs v21, v1, v11");
+            rvv_asm!("vredmaxu.vs v24, v1, v11");
         });
     }
     let sew = 256u64;
@@ -448,7 +448,7 @@ fn expected_op_max(lhs: &[u8], rhs: &[u8], result: &mut [u8], index: usize) {
 pub fn test_vredop_max_vv() {
     fn sum(lhs: &[u8], rhs: &[u8], result: &mut [u8], sew: u64, lmul: i64, avl: u64) {
         vredop_vs(lhs, rhs, result, sew, avl, lmul, || unsafe {
-            rvv_asm!("vredmax.vs v21, v1, v11");
+            rvv_asm!("vredmax.vs v24, v1, v11");
         });
     }
     let sew = 256u64;

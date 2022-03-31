@@ -24,7 +24,7 @@ pub fn test_single_width_shift() {
     fn sll(lhs: &[u8], x: u64, result: &mut [u8], sew: u64, lmul: i64, avl: u64) {
         vop_vx(lhs, x, result, sew, avl, lmul, |_| unsafe {
             // fixed: 10
-            rvv_asm!("vsll.vi v21, v1, 10");
+            rvv_asm!("vsll.vi v24, v1, 10");
         });
     }
     let sew = 256u64;

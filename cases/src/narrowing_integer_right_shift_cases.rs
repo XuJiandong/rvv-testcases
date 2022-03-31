@@ -49,7 +49,7 @@ fn expected_op2(lhs: &[u8], rhs: &[u8], result: &mut [u8]) {
 pub fn test_narrowing_integer_right_shift() {
     fn srl(lhs: &[u8], x: u64, result: &mut [u8], sew: u64, lmul: i64, avl: u64) {
         vop_wx(lhs, x, result, sew, avl, lmul, |_| unsafe {
-            rvv_asm!("mv t0, {}", "vnsrl.wx v21, v1, t0", in (reg) x);
+            rvv_asm!("mv t0, {}", "vnsrl.wx v24, v1, t0", in (reg) x);
         });
     }
     let sew = 256u64;
@@ -69,7 +69,7 @@ pub fn test_narrowing_integer_right_shift() {
 
     fn srl2(lhs: &[u8], rhs: &[u8], result: &mut [u8], sew: u64, lmul: i64, avl: u64) {
         vop_wv(lhs, rhs, result, sew, avl, lmul, || unsafe {
-            rvv_asm!("vnsrl.wv v21, v1, v11");
+            rvv_asm!("vnsrl.wv v24, v1, v11");
         });
     }
     let sew = 256u64;
@@ -144,7 +144,7 @@ fn expected_op_arithmetic2(lhs: &[u8], rhs: &[u8], result: &mut [u8]) {
 pub fn test_narrowing_integer_right_shift_arithmetic() {
     fn srl(lhs: &[u8], x: u64, result: &mut [u8], sew: u64, lmul: i64, avl: u64) {
         vop_wx(lhs, x, result, sew, avl, lmul, |_| unsafe {
-            rvv_asm!("mv t0, {}", "vnsra.wx v21, v1, t0", in (reg) x);
+            rvv_asm!("mv t0, {}", "vnsra.wx v24, v1, t0", in (reg) x);
         });
     }
     // TODO
@@ -165,7 +165,7 @@ pub fn test_narrowing_integer_right_shift_arithmetic() {
 
     fn srl2(lhs: &[u8], rhs: &[u8], result: &mut [u8], sew: u64, lmul: i64, avl: u64) {
         vop_wv(lhs, rhs, result, sew, avl, lmul, || unsafe {
-            rvv_asm!("vnsra.wv v21, v1, v11");
+            rvv_asm!("vnsra.wv v24, v1, v11");
         });
     }
     let sew = 32u64;
