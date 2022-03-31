@@ -25,8 +25,11 @@ fn run(enable_mask: bool) {
     rng.fill(&mut expected_before[..]);
     expected.copy_from_slice(&expected_before[..]);
 
+    let vl = vsetvl(8, 256, 1) as usize;
+    assert_eq!(vl, 8);
+
     let mut index = VLEN as usize;
-    for i in 0..VLEN as usize {
+    for i in 0..vl as usize {
         if get_bit_in_slice(&vs2[..], i) == 1 {
             if enable_mask {
                 if get_bit_in_slice(&mask[..], i) == 1 {
@@ -40,7 +43,7 @@ fn run(enable_mask: bool) {
         }
     }
 
-    for i in 0..VLEN {
+    for i in 0..vl {
         if i <= index {
             if enable_mask {
                 if get_bit_in_slice(&mask[..], i) == 1 {
@@ -59,9 +62,6 @@ fn run(enable_mask: bool) {
             }
         }
     }
-
-    let vl = vsetvl(8, 256, 1) as usize;
-    assert_eq!(vl, 8);
 
     vl1r_v0(&mask[..]);
     vl1r_v1(&vs2[..]);
