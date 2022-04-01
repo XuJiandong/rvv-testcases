@@ -29,7 +29,7 @@ fn expected_op(lhs: &[u8], rhs: &[u8], result: &mut [u8]) {
 pub fn test_single_width_integer_multiply_add() {
     fn macc(lhs: &[u8], rhs: &[u8], result: &mut [u8], sew: u64, lmul: i64, avl: u64) {
         vop_vv_destructive(lhs, rhs, result, sew, avl, lmul, || unsafe {
-            rvv_asm!("vmacc.vv v21, v1, v11");
+            rvv_asm!("vmacc.vv v24, v8, v16");
         });
     }
     let sew = 256u64;
@@ -93,11 +93,11 @@ fn expected_op_wide_u(lhs: &[u8], rhs: &[u8], result: &mut [u8]) {
 pub fn test_widening_width_uinteger_multiply_add() {
     fn wmaccu(lhs: &[u8], rhs: &[u8], result: &mut [u8], sew: u64, lmul: i64, avl: u64) {
         vop_vv_destructive_wide(lhs, rhs, result, sew, avl, lmul, || unsafe {
-            rvv_asm!("vwmaccu.vv v21, v1, v11");
+            rvv_asm!("vwmaccu.vv v24, v8, v16");
         });
     }
     let sew = 256u64;
-    for lmul in [-8, -2, 1, 4, 8] {
+    for lmul in [-8, -2, 1, 4] {
         for avl in avl_iterator(sew, 4) {
             run_vop_vv(
                 sew,

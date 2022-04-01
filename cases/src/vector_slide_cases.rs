@@ -5,7 +5,7 @@ use rvv_asm::rvv_asm;
 
 use ckb_std::syscalls::debug;
 use rvv_testcases::{
-    intrinsic::{vl1r_v0, vl1r_v1, vl1r_v21, vs1r_v21, vsetvl},
+    intrinsic::{vl1r_v0, vl1r_v8, vl1r_v24, vs1r_v24, vsetvl},
     log,
     misc::{get_bit_in_slice, is_verbose, VLEN},
     rng::BestNumberRng,
@@ -70,24 +70,24 @@ fn test_vslideup(wide: usize) {
     expected.copy_from_slice(ref_offset.as_slice());
 
     vl1r_v0(&mask[..]);
-    vl1r_v1(&vs2[..]);
-    vl1r_v21(&expected_before[..]);
+    vl1r_v8(&vs2[..]);
+    vl1r_v24(&expected_before[..]);
     let x: u64 = 3;
     unsafe {
         rvv_asm!(
             "mv t0, {}",
-            "vslideup.vx v21, v1, t0, v0.t",
+            "vslideup.vx v24, v8, t0, v0.t",
             in (reg) x
         );
-        vs1r_v21(&mut result[..]);
+        vs1r_v24(&mut result[..]);
     }
 
     vl1r_v0(&mask[..]);
-    vl1r_v1(&vs2[..]);
-    vl1r_v21(&expected_before[..]);
+    vl1r_v8(&vs2[..]);
+    vl1r_v24(&expected_before[..]);
     unsafe {
-        rvv_asm!("vslideup.vi v21, v1, 3, v0.t",);
-        vs1r_v21(&mut result2[..]);
+        rvv_asm!("vslideup.vi v24, v8, 3, v0.t",);
+        vs1r_v24(&mut result2[..]);
     }
 
     if result != expected || result != result2 {
@@ -140,17 +140,17 @@ fn test_vslide1up(wide: usize) {
     }
 
     vl1r_v0(&mask[..]);
-    vl1r_v1(&vs2[..]);
-    vl1r_v21(&expected_before[..]);
+    vl1r_v8(&vs2[..]);
+    vl1r_v24(&expected_before[..]);
     let x: u64 = 12;
 
     unsafe {
         rvv_asm!(
             "mv t0, {}",
-            "vslide1up.vx v21, v1, t0, v0.t",
+            "vslide1up.vx v24, v8, t0, v0.t",
             in (reg) x
         );
-        vs1r_v21(&mut result[..]);
+        vs1r_v24(&mut result[..]);
     }
 
     if result != expected {
@@ -248,24 +248,24 @@ fn test_vslidedown(wide: usize) {
     expected.copy_from_slice(ref_offset.as_slice());
 
     vl1r_v0(&mask[..]);
-    vl1r_v1(&vs2[..]);
-    vl1r_v21(&expected_before[..]);
+    vl1r_v8(&vs2[..]);
+    vl1r_v24(&expected_before[..]);
     let x: u64 = 3;
     unsafe {
         rvv_asm!(
             "mv t0, {}",
-            "vslidedown.vx v21, v1, t0, v0.t",
+            "vslidedown.vx v24, v8, t0, v0.t",
             in (reg) x
         );
-        vs1r_v21(&mut result[..]);
+        vs1r_v24(&mut result[..]);
     }
 
     vl1r_v0(&mask[..]);
-    vl1r_v1(&vs2[..]);
-    vl1r_v21(&expected_before[..]);
+    vl1r_v8(&vs2[..]);
+    vl1r_v24(&expected_before[..]);
     unsafe {
-        rvv_asm!("vslidedown.vi v21, v1, 3, v0.t",);
-        vs1r_v21(&mut result2[..]);
+        rvv_asm!("vslidedown.vi v24, v8, 3, v0.t",);
+        vs1r_v24(&mut result2[..]);
     }
 
     if result != expected || result != result2 {
@@ -318,17 +318,17 @@ fn test_vslide1down(wide: usize) {
     }
 
     vl1r_v0(&mask[..]);
-    vl1r_v1(&vs2[..]);
-    vl1r_v21(&expected_before[..]);
+    vl1r_v8(&vs2[..]);
+    vl1r_v24(&expected_before[..]);
     let x: u64 = 12;
 
     unsafe {
         rvv_asm!(
             "mv t0, {}",
-            "vslide1down.vx v21, v1, t0, v0.t",
+            "vslide1down.vx v24, v8, t0, v0.t",
             in (reg) x
         );
-        vs1r_v21(&mut result[..]);
+        vs1r_v24(&mut result[..]);
     }
 
     if result != expected {

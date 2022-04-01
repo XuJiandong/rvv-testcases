@@ -128,7 +128,7 @@ pub fn run_vop_vv<T>(
             result[expected_range.clone()]
                 .copy_from_slice(&expected_before[expected_range.clone()]);
         }
-
+        
         match expected_op {
             ExpectedOp::Normal(ref mut op) => {
                 op(

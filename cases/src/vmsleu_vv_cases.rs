@@ -25,7 +25,7 @@ fn expected_op(lhs: &[u8], rhs: &[u8], result: &mut [u8], index: usize) {
 pub fn test_vmsleu_vv() {
     fn eq(lhs: &[u8], rhs: &[u8], result: &mut [u8], sew: u64, lmul: i64, avl: u64) {
         vmsop_vv(lhs, rhs, result, sew, avl, lmul, || unsafe {
-            rvv_asm!("vmsleu.vv v21, v1, v11");
+            rvv_asm!("vmsleu.vv v24, v8, v16");
         });
     }
     let sew = 256u64;

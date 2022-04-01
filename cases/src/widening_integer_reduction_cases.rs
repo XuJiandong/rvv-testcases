@@ -57,12 +57,12 @@ pub fn test_vwredsumu_vs() {
     fn add(lhs: &[u8], rhs: &[u8], result: &mut [u8], sew: u64, lmul: i64, avl: u64) {
         //log!("res: {:0>2X?}", result);
         vwredop_vs(lhs, rhs, result, sew, avl, lmul, || unsafe {
-            rvv_asm!("vwredsumu.vs v21, v1, v11");
+            rvv_asm!("vwredsumu.vs v24, v8, v16");
         });
     }
 
     for sew in [32, 64, 256] {
-        for lmul in [-2, 1, 4, 8] {
+        for lmul in [-2, 1, 4] {
             for avl in avl_iterator(sew, 4) {
                 run_vop_vv(
                     sew,
@@ -123,12 +123,12 @@ fn expected_op_sum(lhs: &[u8], rhs: &[u8], result: &mut [u8], index: usize) {
 pub fn test_vwredsum_vs() {
     fn add(lhs: &[u8], rhs: &[u8], result: &mut [u8], sew: u64, lmul: i64, avl: u64) {
         vwredop_vs(lhs, rhs, result, sew, avl, lmul, || unsafe {
-            rvv_asm!("vwredsum.vs v21, v1, v11");
+            rvv_asm!("vwredsum.vs v24, v8, v16");
         });
     }
 
     for sew in [32, 64, 256] {
-        for lmul in [-2, 1, 4, 8] {
+        for lmul in [-2, 1, 4] {
             for avl in avl_iterator(sew, 4) {
                 run_vop_vv(
                     sew,

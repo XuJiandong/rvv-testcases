@@ -20,7 +20,7 @@ fn expected_op_and(lhs: &[u8], rhs: &[u8], result: &mut [u8]) {
 fn test_vmand_mm(sew: u64) {
     fn and(lhs: &[u8], rhs: &[u8], result: &mut [u8], sew: u64, lmul: i64, avl: u64) {
         vop_vv(lhs, rhs, result, sew, avl, lmul, || unsafe {
-            rvv_asm!("vmand.mm v21, v1, v11");
+            rvv_asm!("vmand.mm v24, v8, v16");
         });
     }
     // vm<op>.mm instructions can only operate on whole V register.
@@ -46,7 +46,7 @@ fn expected_op_or(lhs: &[u8], rhs: &[u8], result: &mut [u8]) {
 fn test_vmor_mm(sew: u64) {
     fn or(lhs: &[u8], rhs: &[u8], result: &mut [u8], sew: u64, lmul: i64, avl: u64) {
         vop_vv(lhs, rhs, result, sew, avl, lmul, || unsafe {
-            rvv_asm!("vmor.mm v21, v1, v11");
+            rvv_asm!("vmor.mm v24, v8, v16");
         });
     }
     run_vmop_mm(
@@ -71,7 +71,7 @@ fn expected_op_nor(lhs: &[u8], rhs: &[u8], result: &mut [u8]) {
 fn test_vmnor_mm(sew: u64) {
     fn or(lhs: &[u8], rhs: &[u8], result: &mut [u8], sew: u64, lmul: i64, avl: u64) {
         vop_vv(lhs, rhs, result, sew, avl, lmul, || unsafe {
-            rvv_asm!("vmnor.mm v21, v1, v11");
+            rvv_asm!("vmnor.mm v24, v8, v16");
         });
     }
     run_vmop_mm(
@@ -96,7 +96,7 @@ fn expected_op_orn(lhs: &[u8], rhs: &[u8], result: &mut [u8]) {
 fn test_vmorn_mm(sew: u64) {
     fn or(lhs: &[u8], rhs: &[u8], result: &mut [u8], sew: u64, lmul: i64, avl: u64) {
         vop_vv(lhs, rhs, result, sew, avl, lmul, || unsafe {
-            rvv_asm!("vmornot.mm v21, v1, v11");
+            rvv_asm!("vmornot.mm v24, v8, v16");
         });
     }
     run_vmop_mm(
@@ -121,7 +121,7 @@ fn expected_op_nand(lhs: &[u8], rhs: &[u8], result: &mut [u8]) {
 fn test_vmnand_mm(sew: u64) {
     fn op(lhs: &[u8], rhs: &[u8], result: &mut [u8], sew: u64, lmul: i64, avl: u64) {
         vop_vv(lhs, rhs, result, sew, avl, lmul, || unsafe {
-            rvv_asm!("vmnand.mm v21, v1, v11");
+            rvv_asm!("vmnand.mm v24, v8, v16");
         });
     }
     run_vmop_mm(
@@ -146,7 +146,7 @@ fn expected_op_andn(lhs: &[u8], rhs: &[u8], result: &mut [u8]) {
 fn test_vmandn_mm(sew: u64) {
     fn op(lhs: &[u8], rhs: &[u8], result: &mut [u8], sew: u64, lmul: i64, avl: u64) {
         vop_vv(lhs, rhs, result, sew, avl, lmul, || unsafe {
-            rvv_asm!("vmandnot.mm v21, v1, v11");
+            rvv_asm!("vmandnot.mm v24, v8, v16");
         });
     }
     run_vmop_mm(
@@ -171,7 +171,7 @@ fn expected_op_xor(lhs: &[u8], rhs: &[u8], result: &mut [u8]) {
 fn test_vmxor_mm(sew: u64) {
     fn op(lhs: &[u8], rhs: &[u8], result: &mut [u8], sew: u64, lmul: i64, avl: u64) {
         vop_vv(lhs, rhs, result, sew, avl, lmul, || unsafe {
-            rvv_asm!("vmxor.mm v21, v1, v11");
+            rvv_asm!("vmxor.mm v24, v8, v16");
         });
     }
     run_vmop_mm(
@@ -196,7 +196,7 @@ fn expected_op_xnor(lhs: &[u8], rhs: &[u8], result: &mut [u8]) {
 fn test_vmxnor_mm(sew: u64) {
     fn op(lhs: &[u8], rhs: &[u8], result: &mut [u8], sew: u64, lmul: i64, avl: u64) {
         vop_vv(lhs, rhs, result, sew, avl, lmul, || unsafe {
-            rvv_asm!("vmxnor.mm v21, v1, v11");
+            rvv_asm!("vmxnor.mm v24, v8, v16");
         });
     }
     run_vmop_mm(

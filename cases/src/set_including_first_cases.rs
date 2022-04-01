@@ -3,7 +3,7 @@ use rand::Rng;
 use rvv_asm::rvv_asm;
 
 use ckb_std::syscalls::debug;
-use rvv_testcases::intrinsic::{vl1r_v0, vl1r_v1, vl1r_v21, vs1r_v21, vsetvl};
+use rvv_testcases::intrinsic::{vl1r_v0, vl1r_v8, vl1r_v24, vs1r_v24, vsetvl};
 use rvv_testcases::log;
 use rvv_testcases::misc::{get_bit_in_slice, is_verbose, set_bit_in_slice, VLEN};
 use rvv_testcases::rng::BestNumberRng;
@@ -64,15 +64,15 @@ fn run(enable_mask: bool) {
     }
 
     vl1r_v0(&mask[..]);
-    vl1r_v1(&vs2[..]);
-    vl1r_v21(&expected_before[..]);
+    vl1r_v8(&vs2[..]);
+    vl1r_v24(&expected_before[..]);
     unsafe {
         if enable_mask {
-            rvv_asm!("vmsif.m v21, v1, v0.t");
+            rvv_asm!("vmsif.m v24, v8, v0.t");
         } else {
-            rvv_asm!("vmsif.m v21, v1");
+            rvv_asm!("vmsif.m v24, v8");
         }
-        vs1r_v21(&mut result[..]);
+        vs1r_v24(&mut result[..]);
     }
     if result != expected {
         log!(
