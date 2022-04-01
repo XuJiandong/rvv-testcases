@@ -2,7 +2,7 @@ use alloc::boxed::Box;
 use core::arch::asm;
 
 use rvv_asm::rvv_asm;
-use rvv_testcases::intrinsic::{vl1r_v0, vl1r_v1};
+use rvv_testcases::intrinsic::{vl1r_v0, vl1r_v8};
 use rvv_testcases::misc::get_bit_in_slice;
 use rvv_testcases::misc::VLEN;
 use rvv_testcases::runner::{run_vxop_m, ExpectedOp};
@@ -57,11 +57,11 @@ fn cpop_op(mask_v0: &[u8], vs2: &[u8], rd: &mut [u8], enable_mask: bool) {
     unsafe {
         if enable_mask {
             vl1r_v0(mask_v0);
-            vl1r_v1(vs2);
-            rvv_asm!("vcpop.m t0, v1, v0.t", "mv {}, t0", out (reg) res);
+            vl1r_v8(vs2);
+            rvv_asm!("vcpop.m t0, v8, v0.t", "mv {}, t0", out (reg) res);
         } else {
-            vl1r_v1(vs2);
-            rvv_asm!("vcpop.m t0, v1", "mv {}, t0", out (reg) res);
+            vl1r_v8(vs2);
+            rvv_asm!("vcpop.m t0, v8", "mv {}, t0", out (reg) res);
         }
     }
     rd.copy_from_slice(&res.to_le_bytes());
@@ -72,11 +72,11 @@ fn first_op(mask_v0: &[u8], vs2: &[u8], rd: &mut [u8], enable_mask: bool) {
     unsafe {
         if enable_mask {
             vl1r_v0(mask_v0);
-            vl1r_v1(vs2);
-            rvv_asm!("vfirst.m t0, v1, v0.t", "mv {}, t0", out (reg) res);
+            vl1r_v8(vs2);
+            rvv_asm!("vfirst.m t0, v8, v0.t", "mv {}, t0", out (reg) res);
         } else {
-            vl1r_v1(vs2);
-            rvv_asm!("vfirst.m t0, v1", "mv {}, t0", out (reg) res);
+            vl1r_v8(vs2);
+            rvv_asm!("vfirst.m t0, v8", "mv {}, t0", out (reg) res);
         }
     }
     rd.copy_from_slice(&res.to_le_bytes());

@@ -32,7 +32,7 @@ pub fn test_integer_extension() {
             avl,
             lmul,
             || unsafe {
-                rvv_asm!("vzext.vf2 v21, v1");
+                rvv_asm!("vzext.vf2 v24, v8");
             },
             WideningCategory::NarrowVs2(2),
         );

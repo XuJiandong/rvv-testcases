@@ -10,7 +10,7 @@ pub fn test_single_width_averaging_add_and_subtract() {
     // vaaddu.vv
     fn vaaddu_vv(lhs: &[u8], rhs: &[u8], result: &mut [u8], sew: u64, lmul: i64, avl: u64) {
         vop_vv(lhs, rhs, result, sew, avl, lmul, || unsafe {
-            rvv_asm!("vaaddu.vv v21, v1, v11");
+            rvv_asm!("vaaddu.vv v24, v8, v16");
         });
     }
     pub fn expected_vaaddu_vv(lhs: &[u8], rhs: &[u8], result: &mut [u8]) {
@@ -43,7 +43,7 @@ pub fn test_single_width_averaging_add_and_subtract() {
     // vaadd.vv
     fn vaadd_vv(lhs: &[u8], rhs: &[u8], result: &mut [u8], sew: u64, lmul: i64, avl: u64) {
         vop_vv(lhs, rhs, result, sew, avl, lmul, || unsafe {
-            rvv_asm!("vaadd.vv v21, v1, v11");
+            rvv_asm!("vaadd.vv v24, v8, v16");
         });
     }
     pub fn expected_vaadd_vv(lhs: &[u8], rhs: &[u8], result: &mut [u8]) {
@@ -75,7 +75,7 @@ pub fn test_single_width_averaging_add_and_subtract() {
     // vasubu.vv
     fn vasubu_vv(lhs: &[u8], rhs: &[u8], result: &mut [u8], sew: u64, lmul: i64, avl: u64) {
         vop_vv(lhs, rhs, result, sew, avl, lmul, || unsafe {
-            rvv_asm!("vasubu.vv v21, v1, v11");
+            rvv_asm!("vasubu.vv v24, v8, v16");
         });
     }
     pub fn expected_vasubu_vv(lhs: &[u8], rhs: &[u8], result: &mut [u8]) {
@@ -108,7 +108,7 @@ pub fn test_single_width_averaging_add_and_subtract() {
     // vasub.vv
     fn vasub_vv(lhs: &[u8], rhs: &[u8], result: &mut [u8], sew: u64, lmul: i64, avl: u64) {
         vop_vv(lhs, rhs, result, sew, avl, lmul, || unsafe {
-            rvv_asm!("vasub.vv v21, v1, v11");
+            rvv_asm!("vasub.vv v24, v8, v16");
         });
     }
     pub fn expected_vasub_vv(lhs: &[u8], rhs: &[u8], result: &mut [u8]) {

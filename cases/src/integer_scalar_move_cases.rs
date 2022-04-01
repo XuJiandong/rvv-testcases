@@ -3,7 +3,7 @@ use rand::Rng;
 use rvv_asm::rvv_asm;
 
 use ckb_std::syscalls::debug;
-use rvv_testcases::intrinsic::{vl1r_v1, vs1r_v1, vsetvl};
+use rvv_testcases::intrinsic::{vl1r_v8, vs1r_v8, vsetvl};
 use rvv_testcases::log;
 use rvv_testcases::misc::{is_verbose, VLEN};
 use rvv_testcases::rng::BestNumberRng;
@@ -20,7 +20,7 @@ fn vmv_x_s() {
     let vl = vsetvl(32, 64, 1) as usize;
     assert_eq!(vl, 32);
 
-    vl1r_v1(&vs2[..]);
+    vl1r_v8(&vs2[..]);
 
     let index: u64 = 5;
     let mut result: u64;
@@ -35,7 +35,7 @@ fn vmv_x_s() {
 
     unsafe {
         rvv_asm!(
-            "vmv.x.s t0, v1",
+            "vmv.x.s t0, v8",
             "mv {}, t0",
             out (reg) result
         );
@@ -82,10 +82,10 @@ fn vmv_s_x() {
     unsafe {
         rvv_asm!(
             "mv t1, {}",
-            "vmv.s.x v1, t1",
+            "vmv.s.x v8, t1",
             in (reg) result2,
         );
-        vs1r_v1(&mut vs2);
+        vs1r_v8(&mut vs2);
     }
     if data[0..8] != vs2[0..8] {
         log!("more information, vs2 = {:?}, \n x = {}", vs2, result2);

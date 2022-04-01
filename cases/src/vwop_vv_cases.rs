@@ -41,11 +41,11 @@ fn expected_op_mulu(lhs: &[u8], rhs: &[u8], result: &mut [u8]) {
 pub fn test_vwop_vv() {
     fn add(lhs: &[u8], rhs: &[u8], result: &mut [u8], sew: u64, lmul: i64, avl: u64) {
         vwop_vv(lhs, rhs, result, sew, avl, lmul, || unsafe {
-            rvv_asm!("vwaddu.vv v21, v1, v11");
+            rvv_asm!("vwaddu.vv v24, v8, v16");
         });
     }
     let sew = 256u64;
-    for lmul in [-2, 1, 4, 8] {
+    for lmul in [-2, 1, 4] {
         for avl in avl_iterator(sew, 4) {
             run_vop_vv(
                 sew,
@@ -61,7 +61,7 @@ pub fn test_vwop_vv() {
 
     fn mulu(lhs: &[u8], rhs: &[u8], result: &mut [u8], sew: u64, lmul: i64, avl: u64) {
         vwop_vv(lhs, rhs, result, sew, avl, lmul, || unsafe {
-            rvv_asm!("vwmulu.vv v21, v1, v11");
+            rvv_asm!("vwmulu.vv v24, v8, v16");
         });
     }
     let sew = 256u64;

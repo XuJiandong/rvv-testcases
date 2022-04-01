@@ -16,6 +16,7 @@ pub enum WideningCategory {
     None,
     VdOnly,
     Vs2Only,
+    VdVs1,
     VdVs2,
     // EEW, 1/2, 1/4, or 1/8 of SEW
     NarrowVs2(usize),
@@ -63,6 +64,12 @@ pub fn run_vop_vv<T>(
     let mut result = Vec::<u8>::new();
 
     match cat {
+        WideningCategory::VdVs1 => {
+            expected.resize(avl_bytes * 2, 0);
+            result.resize(avl_bytes * 2, 0);
+            lhs.resize(avl_bytes, 0);
+            rhs.resize(avl_bytes * 2, 0u8);
+        }
         WideningCategory::VdVs2 => {
             expected.resize(avl_bytes * 2, 0);
             result.resize(avl_bytes * 2, 0);
@@ -91,6 +98,8 @@ pub fn run_vop_vv<T>(
     }
     expected_before.resize(expected.len(), 0);
 
+    let vl = vsetvl(avl as u64, sew, lmul);
+
     let mut rng = BestNumberRng::default();
     for i in 0..avl as usize {
         let range = i * sew_bytes..(i + 1) * sew_bytes;
@@ -105,9 +114,13 @@ pub fn run_vop_vv<T>(
             WideningCategory::NarrowVs2(n) => i * sew_bytes / n..(i + 1) * sew_bytes / n,
             _ => range.clone(),
         };
+        let rhs_range = match cat {
+            WideningCategory::VdVs1 => i * sew_bytes * 2..(i + 1) * sew_bytes * 2,
+            _ => range.clone(),
+        };
 
         rng.fill(&mut lhs[lhs_range.clone()]);
-        rng.fill(&mut rhs[range.clone()]);
+        rng.fill(&mut rhs[rhs_range.clone()]);
         rng.fill(&mut expected_before[expected_range.clone()]);
         expected[expected_range.clone()].copy_from_slice(&expected_before[expected_range.clone()]);
 
@@ -115,28 +128,33 @@ pub fn run_vop_vv<T>(
             result[expected_range.clone()]
                 .copy_from_slice(&expected_before[expected_range.clone()]);
         }
-
+        
         match expected_op {
             ExpectedOp::Normal(ref mut op) => {
                 op(
                     &lhs[lhs_range.clone()],
-                    &rhs[range.clone()],
+                    &rhs[rhs_range.clone()],
                     &mut expected[expected_range.clone()],
                 );
             }
             ExpectedOp::Reduction(ref mut op) => {
                 let expected_range = match cat {
+                    WideningCategory::VdVs1 => 0..sew_bytes * 2,
                     WideningCategory::VdVs2 => 0..sew_bytes * 2,
                     WideningCategory::VdOnly => 0..sew_bytes * 2,
                     _ => 0..sew_bytes,
                 };
                 // vs2: lhs, vs1: rhs
                 //  # vd[0] =  sum(vs2[*], vs1[0])
+                let index = i % vl as usize;
+                if index == 0 {
+                    rhs[rhs_range.clone()].copy_from_slice(&expected[expected_range.clone()]);
+                }
                 op(
                     &lhs[lhs_range.clone()],
-                    &rhs[range.clone()],
+                    &rhs[rhs_range.clone()],
                     &mut expected[expected_range.clone()],
-                    i,
+                    index,
                 );
             }
             _ => {
@@ -167,9 +185,13 @@ pub fn run_vop_vv<T>(
             WideningCategory::NarrowVs2(n) => i * sew_bytes / n..(i + 1) * sew_bytes / n,
             _ => range.clone(),
         };
+        let rhs_range = match cat {
+            WideningCategory::VdVs1 => i * sew_bytes * 2..(i + 1) * sew_bytes * 2,
+            _ => range.clone(),
+        };
 
         let left = &lhs[lhs_range.clone()];
-        let right = &rhs[range.clone()];
+        let right = &rhs[rhs_range.clone()];
 
         let res = &result[expected_range.clone()];
         let exp = &expected[expected_range.clone()];
@@ -372,6 +394,10 @@ pub fn run_vmop_mm<T>(
             panic!("Unexpected op")
         }
     }
+
+    // why?
+    let expected = expected.clone();
+
     v_op(
         lhs.as_slice(),
         rhs.as_slice(),
@@ -387,7 +413,7 @@ pub fn run_vmop_mm<T>(
 
         if res != exp {
             log!(
-                "[sew = {}, describe = {}] unexpected values found at index {}: {:?} (result) {:?} (expected)",
+                "[sew = {}, describe = {}] unexpected values found at index {}: {:0>2X?} (result) {:0>2X?} (expected)",
                 sew, desc, i, res, exp
             );
             panic!("Abort");

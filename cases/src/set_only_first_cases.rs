@@ -3,7 +3,7 @@ use rand::Rng;
 use rvv_asm::rvv_asm;
 
 use ckb_std::syscalls::debug;
-use rvv_testcases::intrinsic::{vl1r_v0, vl1r_v1, vl1r_v21, vs1r_v21, vsetvl};
+use rvv_testcases::intrinsic::{vl1r_v0, vl1r_v8, vl1r_v24, vs1r_v24, vsetvl};
 use rvv_testcases::log;
 use rvv_testcases::misc::{get_bit_in_slice, is_verbose, set_bit_in_slice, VLEN};
 use rvv_testcases::rng::BestNumberRng;
@@ -25,8 +25,11 @@ fn run(enable_mask: bool) {
     rng.fill(&mut expected_before[..]);
     expected.copy_from_slice(&expected_before[..]);
 
-    let mut index = VLEN as usize;
-    for i in 0..VLEN as usize {
+    let vl = vsetvl(8, 256, 1) as usize;
+    assert_eq!(vl, 8);
+
+    let mut index = vl as usize;
+    for i in 0..vl as usize {
         if get_bit_in_slice(&vs2[..], i) == 1 {
             if enable_mask {
                 if get_bit_in_slice(&mask[..], i) == 1 {
@@ -40,7 +43,7 @@ fn run(enable_mask: bool) {
         }
     }
 
-    for i in 0..VLEN {
+    for i in 0..vl {
         if i == index {
             if enable_mask {
                 if get_bit_in_slice(&mask[..], i) == 1 {
@@ -60,19 +63,16 @@ fn run(enable_mask: bool) {
         }
     }
 
-    let vl = vsetvl(8, 256, 1) as usize;
-    assert_eq!(vl, 8);
-
     vl1r_v0(&mask[..]);
-    vl1r_v1(&vs2[..]);
-    vl1r_v21(&expected_before[..]);
+    vl1r_v8(&vs2[..]);
+    vl1r_v24(&expected_before[..]);
     unsafe {
         if enable_mask {
-            rvv_asm!("vmsof.m v21, v1, v0.t");
+            rvv_asm!("vmsof.m v24, v8, v0.t");
         } else {
-            rvv_asm!("vmsof.m v21, v1");
+            rvv_asm!("vmsof.m v24, v8");
         }
-        vs1r_v21(&mut result[..]);
+        vs1r_v24(&mut result[..]);
     }
     if result != expected {
         log!(

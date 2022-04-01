@@ -1,7 +1,7 @@
 use alloc::vec::Vec;
 use ckb_std::syscalls::debug;
 use rand::Rng;
-use rvv_testcases::intrinsic::{vle_v1, vlse_v1, vlxei_v1, vs1r_v1, vse_v1, vsse_v1};
+use rvv_testcases::intrinsic::{vle_v8, vlse_v8, vlxei_v8, vs1r_v8, vse_v8, vsse_v8};
 use rvv_testcases::log;
 use rvv_testcases::misc::{MutSliceUtils, SliceUtils};
 use rvv_testcases::{intrinsic::vsetvl, misc::VLEN, rng::BestNumberRng};
@@ -19,8 +19,8 @@ fn test_unit_stride(sew: usize) {
     rng.fill(&mut mem[..]);
     rng.fill(&mut mem2[..]);
 
-    vle_v1(sew as u64, &mem[..]);
-    vse_v1(sew as u64, &mut mem2[..]);
+    vle_v8(sew as u64, &mem[..]);
+    vse_v8(sew as u64, &mut mem2[..]);
 
     if mem != mem2 {
         log!("test_unit_stride() failed, sew = {}", sew);
@@ -50,8 +50,8 @@ fn test_stride(sew: usize, stride: usize) {
     rng.fill(mem.as_mut_slice());
     rng.fill(mem2.as_mut_slice());
 
-    vlse_v1(sew as u64, &mem[..], stride as u64);
-    vsse_v1(sew as u64, &mem2[..], stride as u64);
+    vlse_v8(sew as u64, &mem[..], stride as u64);
+    vsse_v8(sew as u64, &mem2[..], stride as u64);
 
     for i in 0..vl as usize {
         let range = i * stride as usize..i * stride + sew / 8;
@@ -115,10 +115,10 @@ fn test_indexed_load(sew: usize, offset_sew: usize) {
         expected.get_mut_element(sew, i).copy_from_slice(slice);
     }
 
-    vlxei_v1(offset_sew as u64, mem.as_slice(), offset.as_slice());
+    vlxei_v8(offset_sew as u64, mem.as_slice(), offset.as_slice());
 
     assert!(result.len() >= VLEN / 8);
-    vs1r_v1(result.as_mut_slice());
+    vs1r_v8(result.as_mut_slice());
 
     for i in 0..vl {
         let result = result.as_slice();

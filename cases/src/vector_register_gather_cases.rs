@@ -5,7 +5,7 @@ use rand::Rng;
 use rvv_asm::rvv_asm;
 
 use ckb_std::syscalls::debug;
-use rvv_testcases::intrinsic::{vs1r_v21, vsetvl};
+use rvv_testcases::intrinsic::{vs1r_v24, vsetvl};
 use rvv_testcases::log;
 use rvv_testcases::misc::{get_bit_in_slice, is_verbose, U1024, U256, U512, VLEN};
 use rvv_testcases::rng::BestNumberRng;
@@ -80,17 +80,17 @@ fn to_wide(vs1: &[u8], wide: usize) -> Vec<u32> {
 fn rgather_vv(
     vd: &[u8],
     v2: &[u8],
-    v1: &[u8],
+    v8: &[u8],
     vm: &[u8],
     enable_mask: bool,
     wide: usize,
-    v1_wide: usize,
+    v8_wide: usize,
 ) -> Vec<u8> {
     let mut result: Vec<u8> = Vec::new();
     result.resize(vd.len(), 0);
     result.copy_from_slice(vd);
 
-    let v1 = to_wide(v1, v1_wide);
+    let v8 = to_wide(v8, v8_wide);
 
     let wide = wide / 8;
     for i in 0..(vd.len() / wide) {
@@ -98,7 +98,7 @@ fn rgather_vv(
             continue;
         }
 
-        let index = v1[i];
+        let index = v8[i];
         if index as usize >= (vd.len() / wide) {
             for j in 0..wide {
                 result[i * wide + j] = 0;
@@ -138,7 +138,7 @@ fn vrgather_vv(wide: usize, enable_mask: bool, enable_ei16: bool) {
     };
     let expected = expected.as_slice();
 
-    let vl = vsetvl((VLEN / wide) as u64, wide as u64, 2) as usize;
+    let vl = vsetvl((VLEN / wide) as u64, wide as u64, 1) as usize;
     assert_eq!(vl, VLEN / wide);
 
     unsafe {
@@ -279,9 +279,9 @@ fn vrgatherer_vx(wide: usize) {
     unsafe {
         rvv_asm!(
             "mv t0, {}", "vl1re8.v v0, (t0)",
-            "mv t0, {}", "vl1re8.v v1, (t0)",
+            "mv t0, {}", "vl1re8.v v8, (t0)",
             "mv t0, {}", "vl1re8.v v2, (t0)",
-            "mv t0, {}", "vl1re8.v v21, (t0)",
+            "mv t0, {}", "vl1re8.v v24, (t0)",
             in (reg) mask.as_ptr(),in (reg) vs1.as_ptr(),
             in (reg) vs2.as_ptr(),
             in (reg) expected_before.as_ptr()
@@ -289,12 +289,12 @@ fn vrgatherer_vx(wide: usize) {
 
         rvv_asm!(
             "mv t0, {}",
-            "vrgather.vx v21, v2, t0, v0.t",
+            "vrgather.vx v24, v2, t0, v0.t",
             in (reg) rs1
         );
     }
 
-    vs1r_v21(&mut result[..]);
+    vs1r_v24(&mut result[..]);
 
     if result != expected {
         log!(
