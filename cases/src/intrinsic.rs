@@ -128,20 +128,20 @@ pub fn vlxei_v8(offset_sew: u64, buf: &[u8], offset: &[u8]) {
     unsafe {
         match offset_sew {
             8 => {
-                rvv_asm!("mv t0, {0}", "vle8.v v29, (t0)", in (reg) offset_p);
-                rvv_asm!("mv t0, {0}", "vluxei8.v v8, (t0), v29", in (reg) p);
+                rvv_asm!("mv t0, {0}", "vle8.v v16, (t0)", in (reg) offset_p);
+                rvv_asm!("mv t0, {0}", "vluxei8.v v8, (t0), v16", in (reg) p);
             }
             16 => {
-                rvv_asm!("mv t0, {0}", "vle16.v v29, (t0)", in (reg) offset_p);
-                rvv_asm!("mv t0, {0}", "vluxei16.v v8, (t0), v29", in (reg) p);
+                rvv_asm!("mv t0, {0}", "vle16.v v16, (t0)", in (reg) offset_p);
+                rvv_asm!("mv t0, {0}", "vluxei16.v v8, (t0), v16", in (reg) p);
             }
             32 => {
-                rvv_asm!("mv t0, {0}", "vle32.v v29, (t0)", in (reg) offset_p);
-                rvv_asm!("mv t0, {0}", "vluxei32.v v8, (t0), v29", in (reg) p);
+                rvv_asm!("mv t0, {0}", "vle32.v v16, (t0)", in (reg) offset_p);
+                rvv_asm!("mv t0, {0}", "vluxei32.v v8, (t0), v16", in (reg) p);
             }
             64 => {
-                rvv_asm!("mv t0, {0}", "vle64.v v29, (t0)", in (reg) offset_p);
-                rvv_asm!("mv t0, {0}", "vluxei64.v v8, (t0), v29", in (reg) p);
+                rvv_asm!("mv t0, {0}", "vle64.v v16, (t0)", in (reg) offset_p);
+                rvv_asm!("mv t0, {0}", "vluxei64.v v8, (t0), v16", in (reg) p);
             }
             _ => {
                 panic!("Invalid offset_sew = {}", offset_sew);
@@ -226,20 +226,20 @@ pub fn vsxei_v8(offset_sew: u64, buf: &[u8], offset: &[u8]) {
     unsafe {
         match offset_sew {
             8 => {
-                rvv_asm!("mv t0, {0}", "vle8.v v29, (t0)", in (reg) offset_p);
-                rvv_asm!("mv t0, {0}", "vsuxei8.v v8, (t0), v29", in (reg) p);
+                rvv_asm!("mv t0, {0}", "vle8.v v16, (t0)", in (reg) offset_p);
+                rvv_asm!("mv t0, {0}", "vsuxei8.v v8, (t0), v16", in (reg) p);
             }
             16 => {
-                rvv_asm!("mv t0, {0}", "vle16.v v29, (t0)", in (reg) offset_p);
-                rvv_asm!("mv t0, {0}", "vsuxei16.v v8, (t0), v29", in (reg) p);
+                rvv_asm!("mv t0, {0}", "vle16.v v16, (t0)", in (reg) offset_p);
+                rvv_asm!("mv t0, {0}", "vsuxei16.v v8, (t0), v16", in (reg) p);
             }
             32 => {
-                rvv_asm!("mv t0, {0}", "vle32.v v29, (t0)", in (reg) offset_p);
-                rvv_asm!("mv t0, {0}", "vsuxei32.v v8, (t0), v29", in (reg) p);
+                rvv_asm!("mv t0, {0}", "vle32.v v16, (t0)", in (reg) offset_p);
+                rvv_asm!("mv t0, {0}", "vsuxei32.v v8, (t0), v16", in (reg) p);
             }
             64 => {
-                rvv_asm!("mv t0, {0}", "vle64.v v29, (t0)", in (reg) offset_p);
-                rvv_asm!("mv t0, {0}", "vsuxei64.v v8, (t0), v29", in (reg) p);
+                rvv_asm!("mv t0, {0}", "vle64.v v16, (t0)", in (reg) offset_p);
+                rvv_asm!("mv t0, {0}", "vsuxei64.v v8, (t0), v16", in (reg) p);
             }
             _ => {
                 panic!("Invalid offset_sew = {}", offset_sew);
@@ -248,7 +248,7 @@ pub fn vsxei_v8(offset_sew: u64, buf: &[u8], offset: &[u8]) {
     }
 }
 
-fn vle_v16(sew: u64, buf: &[u8]) {
+pub fn vle_v16(sew: u64, buf: &[u8]) {
     let p = buf.as_ptr();
     unsafe {
         match sew {
@@ -283,7 +283,42 @@ fn vle_v16(sew: u64, buf: &[u8]) {
     }
 }
 
-fn vle_v24(sew: u64, buf: &[u8]) {
+pub fn vse_v16(sew: u64, buf: &[u8]) {
+    let p = buf.as_ptr();
+    unsafe {
+        match sew {
+            8 => {
+                rvv_asm!("mv t0, {0}", "vse8.v v16, (t0)", in (reg) p);
+            }
+            16 => {
+                rvv_asm!("mv t0, {0}", "vse16.v v16, (t0)", in (reg) p);
+            }
+            32 => {
+                rvv_asm!("mv t0, {0}", "vse32.v v16, (t0)", in (reg) p);
+            }
+            64 => {
+                rvv_asm!("mv t0, {0}", "vse64.v v16, (t0)", in (reg) p);
+            }
+            128 => {
+                rvv_asm!("mv t0, {0}", "vse128.v v16, (t0)", in (reg) p);
+            }
+            256 => {
+                rvv_asm!("mv t0, {0}", "vse256.v v16, (t0)", in (reg) p);
+            }
+            512 => {
+                rvv_asm!("mv t0, {0}", "vse512.v v16, (t0)", in (reg) p);
+            }
+            1024 => {
+                rvv_asm!("mv t0, {0}", "vse1024.v v16, (t0)", in (reg) p);
+            }
+            _ => {
+                panic!("Invalid sew");
+            }
+        }
+    }
+}
+
+pub fn vle_v24(sew: u64, buf: &[u8]) {
     let p = buf.as_ptr();
     unsafe {
         match sew {
@@ -318,7 +353,7 @@ fn vle_v24(sew: u64, buf: &[u8]) {
     }
 }
 
-fn vse_v24(sew: u64, buf: &[u8]) {
+pub fn vse_v24(sew: u64, buf: &[u8]) {
     let p = buf.as_ptr();
     unsafe {
         match sew {

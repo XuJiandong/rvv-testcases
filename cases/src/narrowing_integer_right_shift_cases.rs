@@ -169,7 +169,7 @@ pub fn test_narrowing_integer_right_shift_arithmetic() {
         });
     }
     let sew = 32u64;
-    for lmul in [-2, 1, 4, 8] {
+    for lmul in [-2, 1, 4] {
         for avl in avl_iterator(sew, 4) {
             run_vop_vv(
                 sew,

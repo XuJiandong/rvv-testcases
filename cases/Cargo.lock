@@ -113,6 +113,11 @@ dependencies = [
 ]
 
 [[package]]
+name = "eint"
+version = "0.1.4"
+source = "git+https://github.com/joii2020/eint.git?branch=master#10a0cfd521825cb547bfba1b5701ed9655dc6f61"
+
+[[package]]
 name = "fake-simd"
 version = "0.1.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -305,6 +310,7 @@ name = "rvv-testcases"
 version = "0.1.0"
 dependencies = [
  "ckb-std",
+ "eint",
  "num-bigint",
  "num-traits",
  "rand",

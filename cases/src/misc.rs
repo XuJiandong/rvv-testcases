@@ -2,6 +2,7 @@ use core::convert::TryInto;
 
 use alloc::vec;
 use alloc::vec::Vec;
+use eint::{Eint, E1024, E128, E16, E256, E32, E512, E64, E8};
 use rvv_simulator_runtime::Uint;
 
 static mut VERBOSE: bool = false;
@@ -186,18 +187,26 @@ pub fn set_verbose(b: bool) {
 
 pub trait SliceUtils<'a> {
     fn get_element(&'a self, sew: usize, index: usize) -> &'a [u8];
-    fn read_u8(&self, eew: usize, index: usize) -> u8;
-    fn read_u16(&self, eew: usize, index: usize) -> u16;
-    fn read_u32(&self, eew: usize, index: usize) -> u32;
-    fn read_u64(&self, eew: usize, index: usize) -> u64;
+    fn read_u8(&self, eew: usize, index: usize) -> E8;
+    fn read_u16(&self, eew: usize, index: usize) -> E16;
+    fn read_u32(&self, eew: usize, index: usize) -> E32;
+    fn read_u64(&self, eew: usize, index: usize) -> E64;
+    fn read_u128(&self, eew: usize, index: usize) -> E128;
+    fn read_u256(&self, eew: usize, index: usize) -> E256;
+    fn read_u512(&self, eew: usize, index: usize) -> E512;
+    fn read_u1024(&self, eew: usize, index: usize) -> E1024;
 }
 
 pub trait MutSliceUtils<'a> {
     fn get_mut_element(&'a mut self, sew: usize, index: usize) -> &'a mut [u8];
-    fn write_u8(&'a mut self, eew: usize, index: usize, v: u8);
-    fn write_u16(&'a mut self, eew: usize, index: usize, v: u16);
-    fn write_u32(&'a mut self, eew: usize, index: usize, v: u32);
-    fn write_u64(&'a mut self, eew: usize, index: usize, v: u64);
+    fn write_u8(&'a mut self, eew: usize, index: usize, v: E8);
+    fn write_u16(&'a mut self, eew: usize, index: usize, v: E16);
+    fn write_u32(&'a mut self, eew: usize, index: usize, v: E32);
+    fn write_u64(&'a mut self, eew: usize, index: usize, v: E64);
+    fn write_u128(&'a mut self, eew: usize, index: usize, v: E128);
+    fn write_u256(&'a mut self, eew: usize, index: usize, v: E256);
+    fn write_u512(&'a mut self, eew: usize, index: usize, v: E512);
+    fn write_u1024(&'a mut self, eew: usize, index: usize, v: E1024);
 }
 
 impl<'a> SliceUtils<'a> for &'a [u8] {
@@ -206,28 +215,52 @@ impl<'a> SliceUtils<'a> for &'a [u8] {
         &self[start..start + eew / 8]
     }
 
-    fn read_u8(&self, eew: usize, index: usize) -> u8 {
+    fn read_u8(&self, eew: usize, index: usize) -> E8 {
         assert!(eew == 8);
         let slice = self.get_element(eew, index);
-        u8::from_le_bytes(slice.try_into().unwrap())
+        E8::get(slice.try_into().unwrap())
     }
 
-    fn read_u16(&self, eew: usize, index: usize) -> u16 {
+    fn read_u16(&self, eew: usize, index: usize) -> E16 {
         assert!(eew == 16);
         let slice = self.get_element(eew, index);
-        u16::from_le_bytes(slice.try_into().unwrap())
+        E16::get(slice.try_into().unwrap())
     }
 
-    fn read_u32(&self, eew: usize, index: usize) -> u32 {
+    fn read_u32(&self, eew: usize, index: usize) -> E32 {
         assert!(eew == 32);
         let slice = self.get_element(eew, index);
-        u32::from_le_bytes(slice.try_into().unwrap())
+        E32::get(slice.try_into().unwrap())
     }
 
-    fn read_u64(&self, eew: usize, index: usize) -> u64 {
+    fn read_u64(&self, eew: usize, index: usize) -> E64 {
         assert!(eew == 64);
         let slice = self.get_element(eew, index);
-        u64::from_le_bytes(slice.try_into().unwrap())
+        E64::get(slice.try_into().unwrap())
+    }
+
+    fn read_u128(&self, eew: usize, index: usize) -> E128 {
+        assert!(eew == 128);
+        let slice = self.get_element(eew, index);
+        E128::get(slice.try_into().unwrap())
+    }
+
+    fn read_u256(&self, eew: usize, index: usize) -> E256 {
+        assert!(eew == 256);
+        let slice = self.get_element(eew, index);
+        E256::get(slice.try_into().unwrap())
+    }
+
+    fn read_u512(&self, eew: usize, index: usize) -> E512 {
+        assert!(eew == 512);
+        let slice = self.get_element(eew, index);
+        E512::get(slice.try_into().unwrap())
+    }
+
+    fn read_u1024(&self, eew: usize, index: usize) -> E1024 {
+        assert!(eew == 1024);
+        let slice = self.get_element(eew, index);
+        E1024::get(slice.try_into().unwrap())
     }
 }
 
@@ -237,28 +270,44 @@ impl<'a> MutSliceUtils<'a> for &'a mut [u8] {
         &mut self[start..start + eew / 8]
     }
 
-    fn write_u8(&'a mut self, eew: usize, index: usize, v: u8) {
+    fn write_u8(&'a mut self, eew: usize, index: usize, v: E8) {
         assert!(eew == 8);
-        let slice = self.get_mut_element(eew, index);
-        slice.copy_from_slice(v.to_le_bytes().as_slice());
+        v.put(self.get_mut_element(eew, index));
     }
 
-    fn write_u16(&'a mut self, eew: usize, index: usize, v: u16) {
+    fn write_u16(&'a mut self, eew: usize, index: usize, v: E16) {
         assert!(eew == 16);
-        let slice = self.get_mut_element(eew, index);
-        slice.copy_from_slice(v.to_le_bytes().as_slice());
+        v.put(self.get_mut_element(eew, index));
     }
 
-    fn write_u32(&'a mut self, eew: usize, index: usize, v: u32) {
+    fn write_u32(&'a mut self, eew: usize, index: usize, v: E32) {
         assert!(eew == 32);
-        let slice = self.get_mut_element(eew, index);
-        slice.copy_from_slice(v.to_le_bytes().as_slice());
+        v.put(self.get_mut_element(eew, index));
     }
 
-    fn write_u64(&'a mut self, eew: usize, index: usize, v: u64) {
+    fn write_u64(&'a mut self, eew: usize, index: usize, v: E64) {
         assert!(eew == 64);
-        let slice = self.get_mut_element(eew, index);
-        slice.copy_from_slice(v.to_le_bytes().as_slice());
+        v.put(self.get_mut_element(eew, index));
+    }
+
+    fn write_u128(&'a mut self, eew: usize, index: usize, v: E128) {
+        assert!(eew == 128);
+        v.put(self.get_mut_element(eew, index));
+    }
+
+    fn write_u256(&'a mut self, eew: usize, index: usize, v: E256) {
+        assert!(eew == 256);
+        v.put(self.get_mut_element(eew, index));
+    }
+
+    fn write_u512(&'a mut self, eew: usize, index: usize, v: E512) {
+        assert!(eew == 512);
+        v.put(self.get_mut_element(eew, index));
+    }
+
+    fn write_u1024(&'a mut self, eew: usize, index: usize, v: E1024) {
+        assert!(eew == 1024);
+        v.put(self.get_mut_element(eew, index));
     }
 }
 

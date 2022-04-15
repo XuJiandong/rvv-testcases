@@ -18,7 +18,7 @@ num-traits = { version = "0.2.14", default-features = false }
 rand = { version = "0.8.4", default-features = false }
 # uint = { version = "0.9.1", default-features = false }
 rvv-simulator-runtime = { git = "https://github.com/TheWaWaR/rvv-prototype.git", rev="52a7a42" }
-
+eint = { git="https://github.com/joii2020/eint.git", branch="master" }
 
 [[bin]]
 path = "src/main.rs"
