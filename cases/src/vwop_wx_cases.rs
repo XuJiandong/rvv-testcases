@@ -28,7 +28,7 @@ pub fn test_vwop_wx() {
         });
     }
     let sew = 256u64;
-    for lmul in [-2, 1, 4] {
+    for lmul in [-2, 1, 2] {
         for avl in avl_iterator(sew, 4) {
             run_vop_vx(
                 256,

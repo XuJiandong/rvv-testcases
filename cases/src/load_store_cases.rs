@@ -196,12 +196,17 @@ fn get_offset_val(sew: usize, index: usize, offset: &[u8]) -> usize {
 
 fn test_indexed_unordered(sew: usize, offset_sew: usize, lmul: i64) {
     let vl = get_vl_by_lmul(sew, lmul);
+    if lmul > 1 && offset_sew > sew && offset_sew / sew * lmul as usize >= 8 {
+        return;
+    }
+
     if lmul as usize * (offset_sew / sew) > 16 {
         return;
     }
     if vl == 0 {
         return;
     }
+
     let set_vl = vsetvl(vl as u64, sew as u64, lmul);
     assert_eq!(set_vl, vl as u64);
     let vl = vl as usize;
@@ -366,11 +371,11 @@ pub fn test_load_store() {
             test_stride(sew, lmul, sew + 16);
         }
     }
-    //test_indexed_unordered(128, 8, 8);
-    for sew in [8, 16, 32, 64, 128, 256] {
-        for offet_sew in [8, 16, 32, 64] {
-            for lmul in [-8, -4, -2, 1, 2, 4, 8] {
-                test_indexed_unordered(sew, offet_sew, lmul);
+
+    for sew in [8, 16, 32, 64, 128, 256, 512, 1024] {
+        for offset_sew in [8, 16, 32, 64] {
+            for lmul in [-8, -4, -2, 1, 2, 4] {
+                test_indexed_unordered(sew, offset_sew, lmul);
             }
         }
     }

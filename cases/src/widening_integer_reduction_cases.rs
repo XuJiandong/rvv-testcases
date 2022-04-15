@@ -62,7 +62,7 @@ pub fn test_vwredsumu_vs() {
     }
 
     for sew in [32, 64, 256] {
-        for lmul in [-2, 1, 4] {
+        for lmul in [-2, 1, 2] {
             for avl in avl_iterator(sew, 4) {
                 run_vop_vv(
                     sew,
@@ -128,7 +128,7 @@ pub fn test_vwredsum_vs() {
     }
 
     for sew in [32, 64, 256] {
-        for lmul in [-2, 1, 4] {
+        for lmul in [-2, 1, 2] {
             for avl in avl_iterator(sew, 4) {
                 run_vop_vv(
                     sew,
