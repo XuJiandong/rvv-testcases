@@ -611,12 +611,12 @@ fn test_vlm_v(mem: &Vec<u8>, sew: usize, lmul: i64) {
         );
 
         rvv_asm! {
-            "vlm.v v8, t0",
+            "vlm.v v8, (t0)",
         };
 
         rvv_asm!(
             "mv t0, {}",
-            "vsm.v v8, t0",
+            "vsm.v v8, (t0)",
             in (reg) result1.as_ptr()
         );
     }
@@ -691,6 +691,198 @@ pub fn test_vector_unit_stride() {
     for sew in [8, 16, 32, 64, 128, 256, 512, 1024] {
         for lmul in [-8, -4, -2, 1, 2, 4, 8] {
             test_vlm_v(&mem, sew, lmul);
+        }
+    }
+}
+
+fn store_whole_v8(whole: usize, out_buf: &mut [u8]) {
+    unsafe {
+        rvv_asm!(
+            "mv t0, {}",
+            in (reg) out_buf.as_ptr()
+        );
+    }
+
+    match whole {
+        1 => unsafe {
+            rvv_asm!("vs1r.v v8, (t0)");
+        },
+        2 => unsafe {
+            rvv_asm!("vs2r.v v8, (t0)");
+        },
+        4 => unsafe {
+            rvv_asm!("vs4r.v v8, (t0)");
+        },
+        8 => unsafe {
+            rvv_asm!("vs8r.v v8, (t0)");
+        },
+        _ => panic!("Abort"),
+    }
+}
+
+fn load_whole_v8(whole: usize, whole_len: usize, buf: &[u8]) {
+    unsafe {
+        rvv_asm!(
+            "mv t0, {}",
+            in (reg) buf.as_ptr()
+        );
+    }
+
+    match whole {
+        1 => match whole_len {
+            8 => unsafe {
+                rvv_asm!("vl1re8.v v8, (t0)");
+            },
+            16 => unsafe {
+                rvv_asm!("vl1re16.v v8, (t0)");
+            },
+            32 => unsafe {
+                rvv_asm!("vl1re32.v v8, (t0)");
+            },
+            64 => unsafe {
+                rvv_asm!("vl1re64.v v8, (t0)");
+            },
+            _ => panic!("Abort"),
+        },
+        2 => match whole_len {
+            8 => unsafe {
+                rvv_asm!("vl2re8.v v8, (t0)");
+            },
+            16 => unsafe {
+                rvv_asm!("vl2re16.v v8, (t0)");
+            },
+            32 => unsafe {
+                rvv_asm!("vl2re32.v v8, (t0)");
+            },
+            64 => unsafe {
+                rvv_asm!("vl2re64.v v8, (t0)");
+            },
+            _ => panic!("Abort"),
+        },
+        4 => match whole_len {
+            8 => unsafe {
+                rvv_asm!("vl4re8.v v8, (t0)");
+            },
+            16 => unsafe {
+                rvv_asm!("vl4re16.v v8, (t0)");
+            },
+            32 => unsafe {
+                rvv_asm!("vl4re32.v v8, (t0)");
+            },
+            64 => unsafe {
+                rvv_asm!("vl4re64.v v8, (t0)");
+            },
+            _ => panic!("Abort"),
+        },
+        8 => match whole_len {
+            8 => unsafe {
+                rvv_asm!("vl8re8.v v8, (t0)");
+            },
+            16 => unsafe {
+                rvv_asm!("vl8re16.v v8, (t0)");
+            },
+            32 => unsafe {
+                rvv_asm!("vl8re32.v v8, (t0)");
+            },
+            64 => unsafe {
+                rvv_asm!("vl8re64.v v8, (t0)");
+            },
+            _ => panic!("Abort"),
+        },
+        _ => {
+            log!("can run vl{}re{}", whole, whole_len);
+            panic!("Abort")
+        }
+    }
+}
+
+fn get_whole_expected(
+    load_whole: usize,
+    load_whole_len: usize,
+    store_whole: usize,
+    mem: &[u8],
+) -> Vec<u8> {
+    let load_len = VLEN / 8 / (load_whole_len / 8) * load_whole;
+    let mut data = [0x55u8; 2048];
+    data[..load_len].copy_from_slice(&mem[..load_len]);
+
+    let store_len = VLEN / 8 * store_whole;
+    let mut data2 = [0u8; 2048];
+
+    data2[..store_len].copy_from_slice(&data[..store_len]);
+
+    data2.to_vec()
+}
+
+fn check_whole(
+    mem: &[u8],
+    load_whole: usize,
+    load_whole_len: usize,
+    store_whole: usize,
+    sew: usize,
+    lmul: i64,
+) {
+    vsetvl(2048, 8, 8);
+    let data = [0x55u8; VLEN];
+    unsafe {
+        rvv_asm!(
+            "mv t0, {}",
+            "vle8.v v8, (t0)",
+            in (reg) data.as_ptr());
+    }
+
+    let vl = get_vl_by_lmul(sew, lmul);
+    if vl == 0 {
+        return;
+    }
+    let set_vl = vsetvl(vl as u64, sew as u64, lmul);
+    assert_eq!(set_vl, vl as u64);
+
+    load_whole_v8(load_whole, load_whole_len, &mem);
+
+    let mut result = [0u8; 2048];
+    store_whole_v8(store_whole, &mut result);
+
+    let expected = get_whole_expected(load_whole, load_whole_len, store_whole, &mem);
+    if result != expected.as_slice() {
+        log!(
+            "Failed on test_whole_load_store vl{}re{}.v vs{}r.v, sew = {}, lmul = {}",
+            load_whole,
+            load_whole_len,
+            1,
+            sew,
+            lmul
+        );
+        log!(
+            "More infomation:\nresult: {:0>2X?}\nexpected: {:0>2X?}",
+            result,
+            expected
+        );
+        panic!("Abort");
+    }
+}
+
+fn whole_load_store(sew: usize, lmul: i64) {
+    let mem = {
+        let mut rng = BestNumberRng::default();
+        let mut buf = [1u8; 2048];
+        rng.fill(&mut buf[..]);
+        buf
+    };
+
+    for load_whole in [1, 2, 4, 8] {
+        for load_whole_len in [8, 16, 32, 64] {
+            for store_whole in [1, 2, 4, 8] {
+                check_whole(&mem, load_whole, load_whole_len, store_whole, sew, lmul);
+            }
+        }
+    }
+}
+
+pub fn test_whole_load_store() {
+    for sew in [8, 16, 32, 64, 128, 256, 512, 1024] {
+        for lmul in [-8, -4, -2, 1, 2, 4, 8] {
+            whole_load_store(sew, lmul);
         }
     }
 }
