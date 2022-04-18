@@ -13,9 +13,9 @@ use rvv_testcases::misc::{MutSliceUtils, SliceUtils};
 use rvv_testcases::{intrinsic::vsetvl, misc::VLEN, rng::BestNumberRng};
 
 fn fill_all_regisert() {
-    let vl = vsetvl(256, 8, 8);
-    assert_eq!(vl, 256);
-    let data = [0x55u8; VLEN / 8];
+    let vl = vsetvl(2048, 8, 8);
+    assert_eq!(vl, 2048);
+    let data = [0x55u8; VLEN];
     unsafe {
         rvv_asm!(
             "mv t0, {}",
@@ -579,6 +579,118 @@ pub fn test_load_store_uxei() {
                 test_indexed_unordered(sew, offset_sew, lmul);
                 test_indexed_ordered(sew, offset_sew, lmul);
             }
+        }
+    }
+}
+
+fn test_vlm_v(mem: &Vec<u8>, sew: usize, lmul: i64) {
+    fill_all_regisert();
+
+    let vl = get_vl_by_lmul(sew, lmul);
+    if vl == 0 {
+        return;
+    }
+    let set_vl = vsetvl(vl as u64, sew as u64, lmul);
+    assert_eq!(set_vl, vl as u64);
+    let vl = vl as usize;
+
+    let sew_byte = sew >> 3;
+    let mem_len = vl * sew_byte;
+    let mut ceil_len = mem_len / sew;
+    if ceil_len == 0 {
+        ceil_len = 1;
+    }
+
+    let mut result1: Vec<u8> = Vec::new();
+    result1.resize(ceil_len, 0xFF);
+
+    unsafe {
+        rvv_asm!(
+            "mv t0, {}",
+            in (reg) mem.as_ptr()
+        );
+
+        rvv_asm! {
+            "vlm.v v8, t0",
+        };
+
+        rvv_asm!(
+            "mv t0, {}",
+            "vsm.v v8, t0",
+            in (reg) result1.as_ptr()
+        );
+    }
+
+    let expected1 = &mem[..ceil_len];
+
+    if expected1 != result1 {
+        log!(
+            "Failed on test_vector_unit_stride, sew = {}, lmul = {}, vl = {}",
+            sew,
+            lmul,
+            vl
+        );
+        log!(
+            "More infomation:\nresult: {:0>2X?}\nexpected: {:0>2X?}",
+            result1,
+            expected1
+        );
+        log!(
+            "More infomation: sew_byte: {}, mem len: {}, ceil len: {}",
+            sew_byte,
+            mem_len,
+            ceil_len
+        );
+        panic!("Abort");
+    }
+
+    let mut result2: Vec<u8> = Vec::new();
+    result2.resize(mem_len, 0xFF);
+
+    vse_v8(sew as u64, &result2);
+
+    let expected2 = {
+        let mut buf: Vec<u8> = Vec::new();
+        buf.resize(mem_len, 0x55);
+
+        buf[..ceil_len].copy_from_slice(&mem[..ceil_len]);
+        buf
+    };
+
+    if expected2 != result2 {
+        log!(
+            "Failed on test_vector_unit_stride, sew = {}, lmul = {}, vl = {}",
+            sew,
+            lmul,
+            vl
+        );
+        log!(
+            "More infomation:\nresult2: {:0>2X?}\nexpected2: {:0>2X?}",
+            result2,
+            expected2
+        );
+        log!(
+            "More infomation: sew_byte: {}, mem len: {}, ceil len: {}",
+            sew_byte,
+            mem_len,
+            ceil_len
+        );
+        panic!("Abort");
+    }
+}
+
+pub fn test_vector_unit_stride() {
+    let mut rng = BestNumberRng::default();
+    let mem: Vec<u8> = {
+        let mut buf: Vec<u8> = Vec::new();
+        buf.resize(VLEN, 0x77);
+        rng.fill(&mut buf[..]);
+        buf
+    };
+
+    for sew in [8, 16, 32, 64, 128, 256, 512, 1024] {
+        for lmul in [-8, -4, -2, 1, 2, 4, 8] {
+            test_vlm_v(&mem, sew, lmul);
         }
     }
 }

@@ -183,6 +183,7 @@ fn program_entry(argc: u64, argv: *const *const u8) -> i8 {
     );
     test_case!(load_store_cases::test_load_store, test_pattern);
     test_case!(load_store_cases::test_load_store_uxei, test_pattern);
+    test_case!(load_store_cases::test_vector_unit_stride, test_pattern);
     test_case!(integer_merge_cases::test_integer_merge, test_pattern);
     test_case!(adc_sbc_cases::test_adc_sbc, test_pattern);
     test_case!(vector_compress_cases::test_vector_compress, test_pattern);
