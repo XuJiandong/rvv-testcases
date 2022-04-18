@@ -122,7 +122,7 @@ pub fn vlse_v8(sew: u64, buf: &[u8], stride: u64) {
     }
 }
 
-pub fn vlxei_v8(offset_sew: u64, buf: &[u8], offset: &[u8]) {
+pub fn vluxei_v8(offset_sew: u64, buf: &[u8], offset: &[u8]) {
     let p = buf.as_ptr();
     let offset_p = offset.as_ptr();
     unsafe {
@@ -142,6 +142,34 @@ pub fn vlxei_v8(offset_sew: u64, buf: &[u8], offset: &[u8]) {
             64 => {
                 rvv_asm!("mv t0, {0}", "vle64.v v16, (t0)", in (reg) offset_p);
                 rvv_asm!("mv t0, {0}", "vluxei64.v v8, (t0), v16", in (reg) p);
+            }
+            _ => {
+                panic!("Invalid offset_sew = {}", offset_sew);
+            }
+        }
+    }
+}
+
+pub fn vloxei_v8(offset_sew: u64, buf: &[u8], offset: &[u8]) {
+    let p = buf.as_ptr();
+    let offset_p = offset.as_ptr();
+    unsafe {
+        match offset_sew {
+            8 => {
+                rvv_asm!("mv t0, {0}", "vle8.v v16, (t0)", in (reg) offset_p);
+                rvv_asm!("mv t0, {0}", "vloxei8.v v8, (t0), v16", in (reg) p);
+            }
+            16 => {
+                rvv_asm!("mv t0, {0}", "vle16.v v16, (t0)", in (reg) offset_p);
+                rvv_asm!("mv t0, {0}", "vloxei16.v v8, (t0), v16", in (reg) p);
+            }
+            32 => {
+                rvv_asm!("mv t0, {0}", "vle32.v v16, (t0)", in (reg) offset_p);
+                rvv_asm!("mv t0, {0}", "vloxei32.v v8, (t0), v16", in (reg) p);
+            }
+            64 => {
+                rvv_asm!("mv t0, {0}", "vle64.v v16, (t0)", in (reg) offset_p);
+                rvv_asm!("mv t0, {0}", "vloxei64.v v8, (t0), v16", in (reg) p);
             }
             _ => {
                 panic!("Invalid offset_sew = {}", offset_sew);
@@ -220,7 +248,7 @@ pub fn vsse_v8(sew: u64, buf: &[u8], stride: u64) {
     }
 }
 
-pub fn vsxei_v8(offset_sew: u64, buf: &[u8], offset: &[u8]) {
+pub fn vsuxei_v8(offset_sew: u64, buf: &[u8], offset: &[u8]) {
     let p = buf.as_ptr();
     let offset_p = offset.as_ptr();
     unsafe {
@@ -240,6 +268,34 @@ pub fn vsxei_v8(offset_sew: u64, buf: &[u8], offset: &[u8]) {
             64 => {
                 rvv_asm!("mv t0, {0}", "vle64.v v16, (t0)", in (reg) offset_p);
                 rvv_asm!("mv t0, {0}", "vsuxei64.v v8, (t0), v16", in (reg) p);
+            }
+            _ => {
+                panic!("Invalid offset_sew = {}", offset_sew);
+            }
+        }
+    }
+}
+
+pub fn vsoxei_v8(offset_sew: u64, buf: &[u8], offset: &[u8]) {
+    let p = buf.as_ptr();
+    let offset_p = offset.as_ptr();
+    unsafe {
+        match offset_sew {
+            8 => {
+                rvv_asm!("mv t0, {0}", "vle8.v v16, (t0)", in (reg) offset_p);
+                rvv_asm!("mv t0, {0}", "vsoxei8.v v8, (t0), v16", in (reg) p);
+            }
+            16 => {
+                rvv_asm!("mv t0, {0}", "vle16.v v16, (t0)", in (reg) offset_p);
+                rvv_asm!("mv t0, {0}", "vsoxei16.v v8, (t0), v16", in (reg) p);
+            }
+            32 => {
+                rvv_asm!("mv t0, {0}", "vle32.v v16, (t0)", in (reg) offset_p);
+                rvv_asm!("mv t0, {0}", "vsoxei32.v v8, (t0), v16", in (reg) p);
+            }
+            64 => {
+                rvv_asm!("mv t0, {0}", "vle64.v v16, (t0)", in (reg) offset_p);
+                rvv_asm!("mv t0, {0}", "vsoxei64.v v8, (t0), v16", in (reg) p);
             }
             _ => {
                 panic!("Invalid offset_sew = {}", offset_sew);
