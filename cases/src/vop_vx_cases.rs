@@ -10,22 +10,22 @@ fn expected_op_add(lhs: &[u8], x: u64, result: &mut [u8]) {
     assert_eq!(lhs.len(), result.len());
     match lhs.len() {
         1 => {
-            result[0] = lhs[0] + x as u8;
+            result[0] = lhs[0].wrapping_add(x as u8);
         }
         2 => {
-            let r = u16::from_le_bytes(lhs.try_into().unwrap()) + x as u16;
+            let r = u16::from_le_bytes(lhs.try_into().unwrap()).wrapping_add(x as u16);
             result.copy_from_slice(&r.to_le_bytes());
         }
         4 => {
-            let r = u32::from_le_bytes(lhs.try_into().unwrap()) + x as u32;
+            let r = u32::from_le_bytes(lhs.try_into().unwrap()).wrapping_add(x as u32);
             result.copy_from_slice(&r.to_le_bytes());
         }
         8 => {
-            let r = u64::from_le_bytes(lhs.try_into().unwrap()) + x as u64;
+            let r = u64::from_le_bytes(lhs.try_into().unwrap()).wrapping_add(x as u64);
             result.copy_from_slice(&r.to_le_bytes());
         }
         16 => {
-            let r = u128::from_le_bytes(lhs.try_into().unwrap()) + x as u128;
+            let r = u128::from_le_bytes(lhs.try_into().unwrap()).wrapping_add(x as u128);
             result.copy_from_slice(&r.to_le_bytes());
         }
         32 => {
@@ -113,22 +113,22 @@ fn expected_op_rsub(lhs: &[u8], x: u64, result: &mut [u8]) {
     assert_eq!(lhs.len(), result.len());
     match lhs.len() {
         1 => {
-            result[0] = x as u8 - lhs[0];
+            result[0] = (x as u8).wrapping_sub(lhs[0]);
         }
         2 => {
-            let r = x as u16 - u16::from_le_bytes(lhs.try_into().unwrap());
+            let r = (x as u16).wrapping_sub(u16::from_le_bytes(lhs.try_into().unwrap()));
             result.copy_from_slice(&r.to_le_bytes());
         }
         4 => {
-            let r = x as u32 - u32::from_le_bytes(lhs.try_into().unwrap());
+            let r = (x as u32).wrapping_sub(u32::from_le_bytes(lhs.try_into().unwrap()));
             result.copy_from_slice(&r.to_le_bytes());
         }
         8 => {
-            let r = x as u64 - u64::from_le_bytes(lhs.try_into().unwrap());
+            let r = (x as u64).wrapping_sub(u64::from_le_bytes(lhs.try_into().unwrap()));
             result.copy_from_slice(&r.to_le_bytes());
         }
         16 => {
-            let r = x as u128 - u128::from_le_bytes(lhs.try_into().unwrap());
+            let r = (x as u128).wrapping_sub(u128::from_le_bytes(lhs.try_into().unwrap()));
             result.copy_from_slice(&r.to_le_bytes());
         }
         32 => {
@@ -166,7 +166,7 @@ fn expected_op_and(lhs: &[u8], x: u64, result: &mut [u8]) {
     assert_eq!(lhs.len(), result.len());
     match lhs.len() {
         1 => {
-            result[0] = x as u8 - lhs[0];
+            result[0] = x as u8 & lhs[0];
         }
         2 => {
             let r = x as u16 & u16::from_le_bytes(lhs.try_into().unwrap());
@@ -319,22 +319,22 @@ fn expected_op_mul(lhs: &[u8], x: u64, result: &mut [u8]) {
     assert_eq!(lhs.len(), result.len());
     match lhs.len() {
         1 => {
-            result[0] = x as u8 * lhs[0];
+            result[0] = (x as u8).wrapping_mul(lhs[0]);
         }
         2 => {
-            let r = i16::from_le_bytes(lhs.try_into().unwrap()) * x as i16;
+            let r = i16::from_le_bytes(lhs.try_into().unwrap()).wrapping_mul(x as i16);
             result.copy_from_slice(&r.to_le_bytes());
         }
         4 => {
-            let r = i32::from_le_bytes(lhs.try_into().unwrap()) * x as i32;
+            let r = i32::from_le_bytes(lhs.try_into().unwrap()).wrapping_mul(x as i32);
             result.copy_from_slice(&r.to_le_bytes());
         }
         8 => {
-            let r = i64::from_le_bytes(lhs.try_into().unwrap()) * x as i64;
+            let r = i64::from_le_bytes(lhs.try_into().unwrap()).wrapping_mul(x as i64);
             result.copy_from_slice(&r.to_le_bytes());
         }
         16 => {
-            let r = i128::from_le_bytes(lhs.try_into().unwrap()) * x as i128;
+            let r = i128::from_le_bytes(lhs.try_into().unwrap()).wrapping_mul(x as i128);
             result.copy_from_slice(&r.to_le_bytes());
         }
         32 => {
@@ -370,9 +370,25 @@ fn test_vmul_vx(sew: u64, lmul: i64, avl: u64) {
 fn expected_op_mulh(lhs: &[u8], x: u64, result: &mut [u8]) {
     assert_eq!(lhs.len(), result.len());
     match lhs.len() {
+        1 => {
+            let r = ((lhs[0] as i8) as i16) * x as i16;
+            let r = (r >> 8) as i8;
+            result.copy_from_slice(&r.to_le_bytes());
+        }
         2 => {
             let r = i16::from_le_bytes(lhs.try_into().unwrap()) as i32 * x as i32;
             let r = (r >> 16) as i16;
+            result.copy_from_slice(&r.to_le_bytes());
+        }
+        4 => {
+            let r = i32::from_le_bytes(lhs.try_into().unwrap()) as i64 * x as i64;
+            let r = (r >> 32) as i32;
+            result.copy_from_slice(&r.to_le_bytes());
+        }
+        8 => {
+            let r1 = i64::from_le_bytes(lhs.try_into().unwrap()) as i128 * ((x as i64) as i128);
+            let r = (r1 >> 64) as i64;
+
             result.copy_from_slice(&r.to_le_bytes());
         }
         32 => {
@@ -409,9 +425,24 @@ fn test_vmulh_vx(sew: u64, lmul: i64, avl: u64) {
 fn expected_op_mulhu(lhs: &[u8], x: u64, result: &mut [u8]) {
     assert_eq!(lhs.len(), result.len());
     match lhs.len() {
+        1 => {
+            let r = lhs[0] as u32 * x as u32;
+            let r = (r >> 8) as u8;
+            result.copy_from_slice(&r.to_le_bytes());
+        }
         2 => {
             let r = u16::from_le_bytes(lhs.try_into().unwrap()) as u32 * x as u32;
             let r = (r >> 16) as u16;
+            result.copy_from_slice(&r.to_le_bytes());
+        }
+        4 => {
+            let r = u32::from_le_bytes(lhs.try_into().unwrap()) as u64 * x as u64;
+            let r = (r >> 32) as u32;
+            result.copy_from_slice(&r.to_le_bytes());
+        }
+        8 => {
+            let r = u64::from_le_bytes(lhs.try_into().unwrap()) as u128 * x as u128;
+            let r = (r >> 64) as u64;
             result.copy_from_slice(&r.to_le_bytes());
         }
         32 => {
@@ -448,9 +479,24 @@ fn test_vmulhu_vx(sew: u64, lmul: i64, avl: u64) {
 fn expected_op_mulhsu(lhs: &[u8], x: u64, result: &mut [u8]) {
     assert_eq!(lhs.len(), result.len());
     match lhs.len() {
+        1 => {
+            let r = ((lhs[0] as i8) as u32).wrapping_mul(x as u32);
+            let r = (r >> 8) as u8;
+            result.copy_from_slice(&r.to_le_bytes());
+        }
         2 => {
-            let r = i16::from_le_bytes(lhs.try_into().unwrap()) as u32 * x as u32;
+            let r = (i16::from_le_bytes(lhs.try_into().unwrap()) as u32).wrapping_mul(x as u32);
             let r = (r >> 16) as u16;
+            result.copy_from_slice(&r.to_le_bytes());
+        }
+        4 => {
+            let r = (i32::from_le_bytes(lhs.try_into().unwrap()) as u64).wrapping_mul(x as u64);
+            let r = (r >> 32) as u32;
+            result.copy_from_slice(&r.to_le_bytes());
+        }
+        8 => {
+            let r = (i64::from_le_bytes(lhs.try_into().unwrap()) as u128).wrapping_mul(x as u128);
+            let r = (r >> 64) as u64;
             result.copy_from_slice(&r.to_le_bytes());
         }
         32 => {
@@ -484,9 +530,322 @@ fn test_vmulhsu_vx(sew: u64, lmul: i64, avl: u64) {
     );
 }
 
+fn expected_op_divu(lhs: &[u8], x: u64, result: &mut [u8]) {
+    assert_eq!(lhs.len(), result.len());
+    match lhs.len() {
+        1 => {
+            let x = x as u8;
+            if x == 0 {
+                result.copy_from_slice(&u8::MAX.to_le_bytes());
+            } else {
+                let res = lhs[0].wrapping_div(x);
+                result[0] = res;
+            }
+        }
+        2 => {
+            let x = x as u16;
+            if x == 0 {
+                result.copy_from_slice(&u16::MAX.to_le_bytes());
+            } else {
+                let res = u16::from_le_bytes(lhs.try_into().unwrap()).wrapping_div(x as u16);
+                result.copy_from_slice(&res.to_le_bytes());
+            }
+        }
+        4 => {
+            let x = x as u32;
+            if x == 0 {
+                result.copy_from_slice(&u32::MAX.to_le_bytes());
+            } else {
+                let res = u32::from_le_bytes(lhs.try_into().unwrap()).wrapping_div(x as u32);
+                result.copy_from_slice(&res.to_le_bytes());
+            }
+        }
+        8 => {
+            if x == 0 {
+                result.copy_from_slice(&u64::MAX.to_le_bytes());
+            } else {
+                let res = u64::from_le_bytes(lhs.try_into().unwrap()).wrapping_div(x);
+                result.copy_from_slice(&res.to_le_bytes());
+            }
+        }
+        16 => {
+            let x = x as u128;
+            if x == 0 {
+                result.copy_from_slice(&u128::MAX.to_le_bytes());
+            } else {
+                let res = u128::from_le_bytes(lhs.try_into().unwrap()).wrapping_div(x as u128);
+                result.copy_from_slice(&res.to_le_bytes());
+            }
+        }
+        32 => {
+            let l = E256::get(lhs);
+            let res = l.wrapping_div_u(E256::from(x));
+            res.put(result);
+        }
+        _ => {
+            panic!("Invalid sew");
+        }
+    }
+}
+
+fn test_vdivu_vx(sew: u64, lmul: i64, avl: u64) {
+    fn op(lhs: &[u8], x: u64, result: &mut [u8], sew: u64, lmul: i64, avl: u64) {
+        vop_vx(lhs, x, result, sew, avl, lmul, |x: u64| unsafe {
+            rvv_asm!("mv t0, {}", 
+                     "vdivu.vx v24, v8, t0",
+                     in (reg) x);
+        });
+    }
+
+    run_vop_vx(
+        sew,
+        lmul,
+        avl,
+        expected_op_divu,
+        op,
+        WideningCategory::None,
+        "vdivu.vx",
+    );
+}
+
+fn expected_op_div(lhs: &[u8], x: u64, result: &mut [u8]) {
+    assert_eq!(lhs.len(), result.len());
+    match lhs.len() {
+        1 => {
+            let x = x as i8;
+            if x == 0 {
+                result.copy_from_slice(&u8::MAX.to_le_bytes());
+            } else {
+                let res = (lhs[0] as i8).wrapping_div(x);
+                result[0] = res as u8;
+            }
+        }
+        2 => {
+            let x = x as i16;
+            if x == 0 {
+                result.copy_from_slice(&u16::MAX.to_le_bytes());
+            } else {
+                let res = i16::from_le_bytes(lhs.try_into().unwrap()).wrapping_div(x as i16);
+                result.copy_from_slice(&res.to_le_bytes());
+            }
+        }
+        4 => {
+            let x = x as i32;
+            if x == 0 {
+                result.copy_from_slice(&u32::MAX.to_le_bytes());
+            } else {
+                let res = i32::from_le_bytes(lhs.try_into().unwrap()).wrapping_div(x as i32);
+                result.copy_from_slice(&res.to_le_bytes());
+            }
+        }
+        8 => {
+            if x == 0 {
+                result.copy_from_slice(&u64::MAX.to_le_bytes());
+            } else {
+                let res = i64::from_le_bytes(lhs.try_into().unwrap()).wrapping_div(x as i64);
+                result.copy_from_slice(&res.to_le_bytes());
+            }
+        }
+        16 => {
+            let x = x as i128;
+            if x == 0 {
+                result.copy_from_slice(&u128::MAX.to_le_bytes());
+            } else {
+                let res = i128::from_le_bytes(lhs.try_into().unwrap()).wrapping_div(x as i128);
+                result.copy_from_slice(&res.to_le_bytes());
+            }
+        }
+        32 => {
+            let l = E256::get(lhs);
+            let res = l.wrapping_div_s(E256::from(x as i64));
+            res.put(result);
+        }
+        _ => {
+            panic!("Invalid sew");
+        }
+    }
+}
+
+fn test_vdiv_vx(sew: u64, lmul: i64, avl: u64) {
+    fn op(lhs: &[u8], x: u64, result: &mut [u8], sew: u64, lmul: i64, avl: u64) {
+        vop_vx(lhs, x, result, sew, avl, lmul, |x: u64| unsafe {
+            rvv_asm!("mv t0, {}", 
+                     "vdiv.vx v24, v8, t0",
+                     in (reg) x);
+        });
+    }
+
+    run_vop_vx(
+        sew,
+        lmul,
+        avl,
+        expected_op_div,
+        op,
+        WideningCategory::None,
+        "vdiv.vx",
+    );
+}
+
+fn expected_op_remu(lhs: &[u8], x: u64, result: &mut [u8]) {
+    assert_eq!(lhs.len(), result.len());
+    match lhs.len() {
+        1 => {
+            let x = x as u8;
+            if x == 0 {
+                result[0] = lhs[0];
+            } else {
+                let res = lhs[0] as u8 % x;
+                result[0] = res;
+            }
+        }
+        2 => {
+            let x = x as u16;
+            if x == 0 {
+                result.copy_from_slice(lhs);
+            } else {
+                let res = u16::from_le_bytes(lhs.try_into().unwrap()) % (x as u16);
+                result.copy_from_slice(&res.to_le_bytes());
+            }
+        }
+        4 => {
+            let x = x as u32;
+            if x == 0 {
+                result.copy_from_slice(lhs);
+            } else {
+                let res = u32::from_le_bytes(lhs.try_into().unwrap()) % (x as u32);
+                result.copy_from_slice(&res.to_le_bytes());
+            }
+        }
+        8 => {
+            if x == 0 {
+                result.copy_from_slice(lhs);
+            } else {
+                let res = u64::from_le_bytes(lhs.try_into().unwrap()) % (x as u64);
+                result.copy_from_slice(&res.to_le_bytes());
+            }
+        }
+        16 => {
+            let x = x as u128;
+            if x == 0 {
+                result.copy_from_slice(lhs);
+            } else {
+                let res = u128::from_le_bytes(lhs.try_into().unwrap()) % (x as u128);
+                result.copy_from_slice(&res.to_le_bytes());
+            }
+        }
+        32 => {
+            let l = E256::get(lhs);
+            let res = l.wrapping_rem_u(E256::from(x as u64));
+            res.put(result);
+        }
+        _ => {
+            panic!("Invalid sew");
+        }
+    }
+}
+
+fn test_vremu_vx(sew: u64, lmul: i64, avl: u64) {
+    fn op(lhs: &[u8], x: u64, result: &mut [u8], sew: u64, lmul: i64, avl: u64) {
+        vop_vx(lhs, x, result, sew, avl, lmul, |x: u64| unsafe {
+            rvv_asm!("mv t0, {}", 
+                     "vremu.vx v24, v8, t0",
+                     in (reg) x);
+        });
+    }
+
+    run_vop_vx(
+        sew,
+        lmul,
+        avl,
+        expected_op_remu,
+        op,
+        WideningCategory::None,
+        "vremu.vx",
+    );
+}
+
+fn expected_op_rem(lhs: &[u8], x: u64, result: &mut [u8]) {
+    assert_eq!(lhs.len(), result.len());
+    match lhs.len() {
+        1 => {
+            let x = x as i8;
+            if x == 0 {
+                result[0] = lhs[0];
+            } else {
+                let res = lhs[0] as i8 % x;
+                result[0] = res as u8;
+            }
+        }
+        2 => {
+            let x = x as i16;
+            if x == 0 {
+                result.copy_from_slice(lhs);
+            } else {
+                let res = i16::from_le_bytes(lhs.try_into().unwrap()) % x;
+                result.copy_from_slice(&res.to_le_bytes());
+            }
+        }
+        4 => {
+            let x = x as i32;
+            if x == 0 {
+                result.copy_from_slice(lhs);
+            } else {
+                let res = i32::from_le_bytes(lhs.try_into().unwrap()) % x;
+                result.copy_from_slice(&res.to_le_bytes());
+            }
+        }
+        8 => {
+            let x = x as i64;
+            if x == 0 {
+                result.copy_from_slice(lhs);
+            } else {
+                let res = i64::from_le_bytes(lhs.try_into().unwrap()) % x;
+                result.copy_from_slice(&res.to_le_bytes());
+            }
+        }
+        16 => {
+            let x = x as i128;
+            if x == 0 {
+                result.copy_from_slice(lhs);
+            } else {
+                let res = i128::from_le_bytes(lhs.try_into().unwrap()) % x;
+                result.copy_from_slice(&res.to_le_bytes());
+            }
+        }
+        32 => {
+            let l = E256::get(lhs);
+            let res = l.wrapping_rem_s(E256::from(x as i64));
+            res.put(result);
+        }
+        _ => {
+            panic!("Invalid sew");
+        }
+    }
+}
+
+fn test_vrem_vx(sew: u64, lmul: i64, avl: u64) {
+    fn op(lhs: &[u8], x: u64, result: &mut [u8], sew: u64, lmul: i64, avl: u64) {
+        vop_vx(lhs, x, result, sew, avl, lmul, |x: u64| unsafe {
+            rvv_asm!("mv t0, {}", 
+                     "vrem.vx v24, v8, t0",
+                     in (reg) x);
+        });
+    }
+
+    run_vop_vx(
+        sew,
+        lmul,
+        avl,
+        expected_op_rem,
+        op,
+        WideningCategory::None,
+        "vrem.vx",
+    );
+}
+
 pub fn test_vop_vx() {
     // test combinations of lmul, sew, avl, etc
-    for sew in [16, 256] {
+    for sew in [8, 16, 32, 64, 256] {
         for lmul in [-2, 1, 4, 8] {
             for avl in avl_iterator(sew, 4) {
                 test_vadd_vx(sew, lmul, avl);
@@ -499,6 +858,10 @@ pub fn test_vop_vx() {
                 test_vmulh_vx(sew, lmul, avl);
                 test_vmulhu_vx(sew, lmul, avl);
                 test_vmulhsu_vx(sew, lmul, avl);
+                test_vdivu_vx(sew, lmul, avl);
+                test_vdiv_vx(sew, lmul, avl);
+                test_vremu_vx(sew, lmul, avl);
+                test_vrem_vx(sew, lmul, avl);
             }
         }
     }

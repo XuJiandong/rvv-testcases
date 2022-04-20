@@ -343,6 +343,178 @@ fn test_vmulhsu_vv(sew: u64, lmul: i64, avl: u64) {
     );
 }
 
+fn expected_op_divu(lhs: &[u8], rhs: &[u8], result: &mut [u8]) {
+    assert!(lhs.len() == rhs.len() && rhs.len() == result.len());
+    match lhs.len() {
+        8 => {
+            let l = u64::from_le_bytes(lhs.try_into().unwrap());
+            let r = u64::from_le_bytes(rhs.try_into().unwrap());
+            if r == 0 {
+                result.copy_from_slice(&u64::MAX.to_le_bytes());
+            } else {
+                let res = l.wrapping_div(r);
+                result.copy_from_slice(&res.to_le_bytes());
+            }
+        }
+        32 => {
+            let l = E256::get(lhs);
+            let r = E256::get(rhs);
+            let res = l.wrapping_div_u(r);
+            res.put(result);
+        }
+        _ => {
+            panic!("Invalid sew");
+        }
+    }
+}
+
+fn test_vdivu_vv(sew: u64, lmul: i64, avl: u64) {
+    fn op(lhs: &[u8], rhs: &[u8], result: &mut [u8], sew: u64, lmul: i64, avl: u64) {
+        vop_vv(lhs, rhs, result, sew, avl, lmul, || unsafe {
+            rvv_asm!("vdivu.vv v24, v8, v16");
+        });
+    }
+
+    run_vop_vv(
+        sew,
+        lmul,
+        avl,
+        ExpectedOp::Normal(Box::new(expected_op_divu)),
+        op,
+        WideningCategory::None,
+        "vdivu.vv",
+    );
+}
+
+fn expected_op_div(lhs: &[u8], rhs: &[u8], result: &mut [u8]) {
+    assert!(lhs.len() == rhs.len() && rhs.len() == result.len());
+    match lhs.len() {
+        8 => {
+            let l = i64::from_le_bytes(lhs.try_into().unwrap());
+            let r = i64::from_le_bytes(rhs.try_into().unwrap());
+            if r == 0 {
+                result.copy_from_slice(&u64::MAX.to_le_bytes());
+            } else {
+                let res = l.wrapping_div(r);
+                result.copy_from_slice(&res.to_le_bytes());
+            }
+        }
+        32 => {
+            let l = E256::get(lhs);
+            let r = E256::get(rhs);
+            let res = l.wrapping_div_s(r);
+            res.put(result);
+        }
+        _ => {
+            panic!("Invalid sew");
+        }
+    }
+}
+
+fn test_vdiv_vv(sew: u64, lmul: i64, avl: u64) {
+    fn op(lhs: &[u8], rhs: &[u8], result: &mut [u8], sew: u64, lmul: i64, avl: u64) {
+        vop_vv(lhs, rhs, result, sew, avl, lmul, || unsafe {
+            rvv_asm!("vdiv.vv v24, v8, v16");
+        });
+    }
+
+    run_vop_vv(
+        sew,
+        lmul,
+        avl,
+        ExpectedOp::Normal(Box::new(expected_op_div)),
+        op,
+        WideningCategory::None,
+        "vdiv.vv",
+    );
+}
+
+fn expected_op_remu(lhs: &[u8], rhs: &[u8], result: &mut [u8]) {
+    assert!(lhs.len() == rhs.len() && rhs.len() == result.len());
+    match lhs.len() {
+        8 => {
+            let l = u64::from_le_bytes(lhs.try_into().unwrap());
+            let r = u64::from_le_bytes(rhs.try_into().unwrap());
+            if r == 0 {
+                result.copy_from_slice(lhs);
+            } else {
+                let res = l % r;
+                result.copy_from_slice(&res.to_le_bytes());
+            }
+        }
+        32 => {
+            let l = E256::get(lhs);
+            let r = E256::get(rhs);
+            let res = l.wrapping_rem_u(r);
+            res.put(result);
+        }
+        _ => {
+            panic!("Invalid sew");
+        }
+    }
+}
+
+fn test_vremu_vv(sew: u64, lmul: i64, avl: u64) {
+    fn op(lhs: &[u8], rhs: &[u8], result: &mut [u8], sew: u64, lmul: i64, avl: u64) {
+        vop_vv(lhs, rhs, result, sew, avl, lmul, || unsafe {
+            rvv_asm!("vremu.vv v24, v8, v16");
+        });
+    }
+
+    run_vop_vv(
+        sew,
+        lmul,
+        avl,
+        ExpectedOp::Normal(Box::new(expected_op_remu)),
+        op,
+        WideningCategory::None,
+        "vremu.vv",
+    );
+}
+
+fn expected_op_rem(lhs: &[u8], rhs: &[u8], result: &mut [u8]) {
+    assert!(lhs.len() == rhs.len() && rhs.len() == result.len());
+    match lhs.len() {
+        8 => {
+            let l = i64::from_le_bytes(lhs.try_into().unwrap());
+            let r = i64::from_le_bytes(rhs.try_into().unwrap());
+            if r == 0 {
+                result.copy_from_slice(lhs);
+            } else {
+                let res = l % r;
+                result.copy_from_slice(&res.to_le_bytes());
+            }
+        }
+        32 => {
+            let l = E256::get(lhs);
+            let r = E256::get(rhs);
+            let res = l.wrapping_rem_s(r);
+            res.put(result);
+        }
+        _ => {
+            panic!("Invalid sew");
+        }
+    }
+}
+
+fn test_vrem_vv(sew: u64, lmul: i64, avl: u64) {
+    fn op(lhs: &[u8], rhs: &[u8], result: &mut [u8], sew: u64, lmul: i64, avl: u64) {
+        vop_vv(lhs, rhs, result, sew, avl, lmul, || unsafe {
+            rvv_asm!("vrem.vv v24, v8, v16");
+        });
+    }
+
+    run_vop_vv(
+        sew,
+        lmul,
+        avl,
+        ExpectedOp::Normal(Box::new(expected_op_rem)),
+        op,
+        WideningCategory::None,
+        "vrem.vv",
+    );
+}
+
 pub fn test_vop_vv() {
     for sew in [64, 256] {
         for lmul in [-8, -2, 1, 4, 8] {
@@ -355,6 +527,10 @@ pub fn test_vop_vv() {
                 test_vmulh_vv(sew, lmul, avl);
                 test_vmulhu_vv(sew, lmul, avl);
                 test_vmulhsu_vv(sew, lmul, avl);
+                test_vdivu_vv(sew, lmul, avl);
+                test_vdiv_vv(sew, lmul, avl);
+                test_vremu_vv(sew, lmul, avl);
+                test_vrem_vv(sew, lmul, avl);
             }
         }
     }
