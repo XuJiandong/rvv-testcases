@@ -22,6 +22,7 @@ mod set_only_first_cases;
 mod single_width_averaging_cases;
 mod single_width_integer_multiply_add_cases;
 mod single_width_integer_reduction_cases;
+mod single_width_scaling_shift;
 mod single_width_shift_cases;
 mod vector_compress_cases;
 mod vector_element_index_cases;
@@ -197,6 +198,10 @@ fn program_entry(argc: u64, argv: *const *const u8) -> i8 {
     );
     test_case!(
         vector_register_gather_cases::test_vrgatherer_vx,
+        test_pattern
+    );
+    test_case!(
+        single_width_scaling_shift::test_single_with_scaling_shift,
         test_pattern
     );
     0
