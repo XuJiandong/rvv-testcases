@@ -109,7 +109,121 @@ fn test_vmul_vv() {
                 ExpectedOp::Normal(Box::new(expected_op_mul)),
                 mul,
                 WideningCategory::None,
-                "vadd.vv",
+                "vmul.vv",
+            );
+        }
+    }
+}
+
+fn expected_op_and(lhs: &[u8], rhs: &[u8], result: &mut [u8]) {
+    assert!(lhs.len() == rhs.len() && rhs.len() == result.len());
+    match lhs.len() {
+        32 => {
+            let l = U256::from_little_endian(lhs);
+            let r = U256::from_little_endian(rhs);
+            let res = l & r;
+            let res2: U256 = res.into();
+            res2.to_little_endian(result);
+        }
+        _ => {
+            panic!("Invalid sew");
+        }
+    }
+}
+
+fn test_vand_vv() {
+    fn and(lhs: &[u8], rhs: &[u8], result: &mut [u8], sew: u64, lmul: i64, avl: u64) {
+        vop_vv(lhs, rhs, result, sew, avl, lmul, || unsafe {
+            rvv_asm!("vand.vv v24, v8, v16");
+        });
+    }
+    let sew = 256u64;
+    for lmul in [-8, 8] {
+        for avl in avl_iterator(sew, 4) {
+            run_vop_vv(
+                sew,
+                lmul,
+                avl,
+                ExpectedOp::Normal(Box::new(expected_op_and)),
+                and,
+                WideningCategory::None,
+                "vand.vv",
+            );
+        }
+    }
+}
+
+fn expected_op_or(lhs: &[u8], rhs: &[u8], result: &mut [u8]) {
+    assert!(lhs.len() == rhs.len() && rhs.len() == result.len());
+    match lhs.len() {
+        32 => {
+            let l = U256::from_little_endian(lhs);
+            let r = U256::from_little_endian(rhs);
+            let res = l | r;
+            let res2: U256 = res.into();
+            res2.to_little_endian(result);
+        }
+        _ => {
+            panic!("Invalid sew");
+        }
+    }
+}
+
+fn test_vor_vv() {
+    fn or(lhs: &[u8], rhs: &[u8], result: &mut [u8], sew: u64, lmul: i64, avl: u64) {
+        vop_vv(lhs, rhs, result, sew, avl, lmul, || unsafe {
+            rvv_asm!("vor.vv v24, v8, v16");
+        });
+    }
+    let sew = 256u64;
+    for lmul in [-8, 8] {
+        for avl in avl_iterator(sew, 4) {
+            run_vop_vv(
+                sew,
+                lmul,
+                avl,
+                ExpectedOp::Normal(Box::new(expected_op_or)),
+                or,
+                WideningCategory::None,
+                "vor.vv",
+            );
+        }
+    }
+}
+
+fn expected_op_xor(lhs: &[u8], rhs: &[u8], result: &mut [u8]) {
+    assert!(lhs.len() == rhs.len() && rhs.len() == result.len());
+    match lhs.len() {
+        32 => {
+            let l = U256::from_little_endian(lhs);
+            let r = U256::from_little_endian(rhs);
+            let res = l ^ r;
+            let res2: U256 = res.into();
+            res2.to_little_endian(result);
+        }
+        _ => {
+            panic!("Invalid sew");
+        }
+    }
+}
+
+fn test_vxor_vv() {
+    fn xor(lhs: &[u8], rhs: &[u8], result: &mut [u8], sew: u64, lmul: i64, avl: u64) {
+        vop_vv(lhs, rhs, result, sew, avl, lmul, || unsafe {
+            rvv_asm!("vxor.vv v24, v8, v16");
+        });
+    }
+    let sew = 256u64;
+    for lmul in [-8, 8] {
+        for avl in avl_iterator(sew, 4) {
+            run_vop_vv(
+                sew,
+                lmul,
+                avl,
+                ExpectedOp::Normal(Box::new(expected_op_xor)),
+                xor,
+                WideningCategory::None,
+                "vxor.vv",
             );
         }
     }
@@ -118,4 +232,7 @@ fn test_vmul_vv() {
 pub fn test_vop_vv() {
     test_vadd_vv();
     test_vmul_vv();
+    test_vand_vv();
+    test_vor_vv();
+    test_vxor_vv();
 }
