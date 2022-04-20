@@ -47,51 +47,7 @@ fn expected_op_add(lhs: &[u8], x: u64, result: &mut [u8]) {
     }
 }
 
-fn expected_op_sub(lhs: &[u8], x: u64, result: &mut [u8]) {
-    assert!(lhs.len() == result.len());
-    let imm = shrink_to_imm(x);
-    match lhs.len() {
-        1 => {
-            result[0] = lhs[0] + imm as u8;
-        }
-        2 => {
-            let r = imm as u16 - u16::from_le_bytes(lhs.try_into().unwrap());
-            result.copy_from_slice(&r.to_le_bytes());
-        }
-        4 => {
-            let r = imm as u32 - u32::from_le_bytes(lhs.try_into().unwrap());
-            result.copy_from_slice(&r.to_le_bytes());
-        }
-        8 => {
-            let r = imm as u64 - u64::from_le_bytes(lhs.try_into().unwrap());
-            result.copy_from_slice(&r.to_le_bytes());
-        }
-        16 => {
-            let r = imm as u128 - u128::from_le_bytes(lhs.try_into().unwrap());
-            result.copy_from_slice(&r.to_le_bytes());
-        }
-        32 => {
-            let x = imm as u64;
-            let (r, _) = x
-                .sign_extend()
-                .overflowing_sub(U256::from_little_endian(lhs));
-            r.to_little_endian(result);
-        }
-        // 64 => {
-        //     let (r, _) = U512::from_little_endian(lhs).overflowing_add(U512::from(imm as i64));
-        //     r.to_little_endian(result);
-        // }
-        // 128 => {
-        //     let (r, _) = U1024::from_little_endian(lhs).overflowing_add(U1024::from(imm as i64));
-        //     r.to_little_endian(result);
-        // }
-        _ => {
-            panic!("Invalid sew");
-        }
-    }
-}
-
-pub fn test_vop_vi() {
+fn test_vadd_vi() {
     // test combinations of lmul, sew, avl, etc
     fn add(lhs: &[u8], x: u64, result: &mut [u8], sew: u64, lmul: i64, avl: u64) {
         vop_vx(lhs, x, result, sew, avl, lmul, |x: u64| unsafe {
@@ -213,7 +169,53 @@ pub fn test_vop_vi() {
             );
         }
     }
+}
 
+fn expected_op_sub(lhs: &[u8], x: u64, result: &mut [u8]) {
+    assert!(lhs.len() == result.len());
+    let imm = shrink_to_imm(x);
+    match lhs.len() {
+        1 => {
+            result[0] = lhs[0] + imm as u8;
+        }
+        2 => {
+            let r = imm as u16 - u16::from_le_bytes(lhs.try_into().unwrap());
+            result.copy_from_slice(&r.to_le_bytes());
+        }
+        4 => {
+            let r = imm as u32 - u32::from_le_bytes(lhs.try_into().unwrap());
+            result.copy_from_slice(&r.to_le_bytes());
+        }
+        8 => {
+            let r = imm as u64 - u64::from_le_bytes(lhs.try_into().unwrap());
+            result.copy_from_slice(&r.to_le_bytes());
+        }
+        16 => {
+            let r = imm as u128 - u128::from_le_bytes(lhs.try_into().unwrap());
+            result.copy_from_slice(&r.to_le_bytes());
+        }
+        32 => {
+            let x = imm as u64;
+            let (r, _) = x
+                .sign_extend()
+                .overflowing_sub(U256::from_little_endian(lhs));
+            r.to_little_endian(result);
+        }
+        // 64 => {
+        //     let (r, _) = U512::from_little_endian(lhs).overflowing_add(U512::from(imm as i64));
+        //     r.to_little_endian(result);
+        // }
+        // 128 => {
+        //     let (r, _) = U1024::from_little_endian(lhs).overflowing_add(U1024::from(imm as i64));
+        //     r.to_little_endian(result);
+        // }
+        _ => {
+            panic!("Invalid sew");
+        }
+    }
+}
+
+fn test_vrsub_vi() {
     fn sub(lhs: &[u8], x: u64, result: &mut [u8], sew: u64, lmul: i64, avl: u64) {
         vop_vx(lhs, x, result, sew, avl, lmul, |x: u64| unsafe {
             let imm = shrink_to_imm(x);
@@ -334,4 +336,9 @@ pub fn test_vop_vi() {
             );
         }
     }
+}
+
+pub fn test_vop_vi() {
+    test_vadd_vi();
+    test_vrsub_vi();
 }

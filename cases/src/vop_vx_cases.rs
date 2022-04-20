@@ -37,6 +37,30 @@ fn expected_op_add(lhs: &[u8], x: u64, result: &mut [u8]) {
     }
 }
 
+fn test_vadd_vx() {
+    fn add(lhs: &[u8], x: u64, result: &mut [u8], sew: u64, lmul: i64, avl: u64) {
+        vop_vx(lhs, x, result, sew, avl, lmul, |x: u64| unsafe {
+            rvv_asm!("mv t0, {}", 
+                     "vadd.vx v24, v8, t0",
+                     in (reg) x);
+        });
+    }
+    let sew = 256u64;
+    for lmul in [-2, 1, 4, 8] {
+        for avl in avl_iterator(sew, 4) {
+            run_vop_vx(
+                sew,
+                lmul,
+                avl,
+                expected_op_add,
+                add,
+                WideningCategory::None,
+                "vadd.vx",
+            );
+        }
+    }
+}
+
 fn expected_op_sub(lhs: &[u8], x: u64, result: &mut [u8]) {
     assert_eq!(lhs.len(), result.len());
     match lhs.len() {
@@ -65,6 +89,30 @@ fn expected_op_sub(lhs: &[u8], x: u64, result: &mut [u8]) {
         }
         _ => {
             panic!("Invalid sew");
+        }
+    }
+}
+
+fn test_vsub_vx() {
+    fn sub(lhs: &[u8], x: u64, result: &mut [u8], sew: u64, lmul: i64, avl: u64) {
+        vop_vx(lhs, x, result, sew, avl, lmul, |x: u64| unsafe {
+            rvv_asm!("mv t0, {}", 
+                     "vsub.vx v24, v8, t0",
+                     in (reg) x);
+        });
+    }
+    let sew = 256u64;
+    for lmul in [-2, 1, 4, 8] {
+        for avl in avl_iterator(sew, 4) {
+            run_vop_vx(
+                sew,
+                lmul,
+                avl,
+                expected_op_sub,
+                sub,
+                WideningCategory::None,
+                "vsub.vx",
+            );
         }
     }
 }
@@ -103,52 +151,7 @@ fn expected_op_rsub(lhs: &[u8], x: u64, result: &mut [u8]) {
     }
 }
 
-pub fn test_vop_vx() {
-    // test combinations of lmul, sew, avl, etc
-    fn add(lhs: &[u8], x: u64, result: &mut [u8], sew: u64, lmul: i64, avl: u64) {
-        vop_vx(lhs, x, result, sew, avl, lmul, |x: u64| unsafe {
-            rvv_asm!("mv t0, {}", 
-                     "vadd.vx v24, v8, t0",
-                     in (reg) x);
-        });
-    }
-    let sew = 256u64;
-    for lmul in [-2, 1, 4, 8] {
-        for avl in avl_iterator(sew, 4) {
-            run_vop_vx(
-                sew,
-                lmul,
-                avl,
-                expected_op_add,
-                add,
-                WideningCategory::None,
-                "vadd.vx",
-            );
-        }
-    }
-
-    fn sub(lhs: &[u8], x: u64, result: &mut [u8], sew: u64, lmul: i64, avl: u64) {
-        vop_vx(lhs, x, result, sew, avl, lmul, |x: u64| unsafe {
-            rvv_asm!("mv t0, {}", 
-                     "vsub.vx v24, v8, t0",
-                     in (reg) x);
-        });
-    }
-    let sew = 256u64;
-    for lmul in [-2, 1, 4, 8] {
-        for avl in avl_iterator(sew, 4) {
-            run_vop_vx(
-                sew,
-                lmul,
-                avl,
-                expected_op_sub,
-                sub,
-                WideningCategory::None,
-                "vsub.vx",
-            );
-        }
-    }
-
+fn test_vrsub_vx() {
     fn rsub(lhs: &[u8], x: u64, result: &mut [u8], sew: u64, lmul: i64, avl: u64) {
         vop_vx(lhs, x, result, sew, avl, lmul, |x: u64| unsafe {
             rvv_asm!("mv t0, {}", 
@@ -170,4 +173,11 @@ pub fn test_vop_vx() {
             );
         }
     }
+}
+
+pub fn test_vop_vx() {
+    // test combinations of lmul, sew, avl, etc
+    test_vadd_vx();
+    test_vsub_vx();
+    test_vrsub_vx();
 }
