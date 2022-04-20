@@ -1,4 +1,5 @@
 use core::arch::asm;
+use core::cmp::Ordering::{Greater, Less};
 use core::convert::TryInto;
 use eint::{Eint, E256};
 use rvv_asm::rvv_asm;
@@ -843,6 +844,290 @@ fn test_vrem_vx(sew: u64, lmul: i64, avl: u64) {
     );
 }
 
+fn expected_op_minu(lhs: &[u8], x: u64, result: &mut [u8]) {
+    assert_eq!(lhs.len(), result.len());
+    match lhs.len() {
+        1 => {
+            result[0] = if lhs[0] < x as u8 { lhs[0] } else { x as u8 };
+        }
+        2 => {
+            if u16::from_le_bytes(lhs.try_into().unwrap()) < x as u16 {
+                result.copy_from_slice(lhs);
+            } else {
+                result.copy_from_slice((x as u16).to_le_bytes().as_slice())
+            }
+        }
+        4 => {
+            if u32::from_le_bytes(lhs.try_into().unwrap()) < x as u32 {
+                result.copy_from_slice(lhs);
+            } else {
+                result.copy_from_slice((x as u32).to_le_bytes().as_slice())
+            }
+        }
+        8 => {
+            if u64::from_le_bytes(lhs.try_into().unwrap()) < x as u64 {
+                result.copy_from_slice(lhs);
+            } else {
+                result.copy_from_slice((x as u64).to_le_bytes().as_slice())
+            }
+        }
+        16 => {
+            if u128::from_le_bytes(lhs.try_into().unwrap()) < x as u128 {
+                result.copy_from_slice(lhs);
+            } else {
+                result.copy_from_slice((x as u128).to_le_bytes().as_slice())
+            }
+        }
+        32 => {
+            let l = E256::get(lhs);
+            let r = E256::from(x);
+            if l.cmp_u(&r) == Less {
+                result.copy_from_slice(lhs);
+            } else {
+                result[..8].copy_from_slice(x.to_le_bytes().as_slice());
+            }
+        }
+        _ => {
+            panic!("Invalid sew");
+        }
+    }
+}
+
+fn test_vminu_vx(sew: u64, lmul: i64, avl: u64) {
+    fn op(lhs: &[u8], x: u64, result: &mut [u8], sew: u64, lmul: i64, avl: u64) {
+        vop_vx(lhs, x, result, sew, avl, lmul, |x: u64| unsafe {
+            rvv_asm!("mv t0, {}", 
+                     "vminu.vx v24, v8, t0",
+                     in (reg) x);
+        });
+    }
+
+    run_vop_vx(
+        sew,
+        lmul,
+        avl,
+        expected_op_minu,
+        op,
+        WideningCategory::None,
+        "vminu.vx",
+    );
+}
+
+fn expected_op_min(lhs: &[u8], x: u64, result: &mut [u8]) {
+    assert_eq!(lhs.len(), result.len());
+    match lhs.len() {
+        1 => {
+            result[0] = if (lhs[0] as i8) < (x as i8) {
+                lhs[0]
+            } else {
+                x as u8
+            };
+        }
+        2 => {
+            if i16::from_le_bytes(lhs.try_into().unwrap()) < x as i16 {
+                result.copy_from_slice(lhs);
+            } else {
+                result.copy_from_slice((x as i16).to_le_bytes().as_slice())
+            }
+        }
+        4 => {
+            if i32::from_le_bytes(lhs.try_into().unwrap()) < x as i32 {
+                result.copy_from_slice(lhs);
+            } else {
+                result.copy_from_slice((x as i32).to_le_bytes().as_slice())
+            }
+        }
+        8 => {
+            if i64::from_le_bytes(lhs.try_into().unwrap()) < x as i64 {
+                result.copy_from_slice(lhs);
+            } else {
+                result.copy_from_slice((x as i64).to_le_bytes().as_slice())
+            }
+        }
+        16 => {
+            if i128::from_le_bytes(lhs.try_into().unwrap()) < x as i128 {
+                result.copy_from_slice(lhs);
+            } else {
+                result.copy_from_slice((x as i128).to_le_bytes().as_slice())
+            }
+        }
+        32 => {
+            let l = E256::get(lhs);
+            let r = E256::from(x);
+            if l.cmp_s(&r) == Less {
+                result.copy_from_slice(lhs);
+            } else {
+                E256::from(x as i64).put(result);
+            }
+        }
+        _ => {
+            panic!("Invalid sew");
+        }
+    }
+}
+
+fn test_vmin_vx(sew: u64, lmul: i64, avl: u64) {
+    fn op(lhs: &[u8], x: u64, result: &mut [u8], sew: u64, lmul: i64, avl: u64) {
+        vop_vx(lhs, x, result, sew, avl, lmul, |x: u64| unsafe {
+            rvv_asm!("mv t0, {}", 
+                     "vmin.vx v24, v8, t0",
+                     in (reg) x);
+        });
+    }
+
+    run_vop_vx(
+        sew,
+        lmul,
+        avl,
+        expected_op_min,
+        op,
+        WideningCategory::None,
+        "vmin.vx",
+    );
+}
+
+fn expected_op_maxu(lhs: &[u8], x: u64, result: &mut [u8]) {
+    assert_eq!(lhs.len(), result.len());
+    match lhs.len() {
+        1 => {
+            result[0] = if lhs[0] > x as u8 { lhs[0] } else { x as u8 };
+        }
+        2 => {
+            if u16::from_le_bytes(lhs.try_into().unwrap()) > x as u16 {
+                result.copy_from_slice(lhs);
+            } else {
+                result.copy_from_slice((x as u16).to_le_bytes().as_slice())
+            }
+        }
+        4 => {
+            if u32::from_le_bytes(lhs.try_into().unwrap()) > x as u32 {
+                result.copy_from_slice(lhs);
+            } else {
+                result.copy_from_slice((x as u32).to_le_bytes().as_slice())
+            }
+        }
+        8 => {
+            if u64::from_le_bytes(lhs.try_into().unwrap()) > x as u64 {
+                result.copy_from_slice(lhs);
+            } else {
+                result.copy_from_slice((x as u64).to_le_bytes().as_slice())
+            }
+        }
+        16 => {
+            if u128::from_le_bytes(lhs.try_into().unwrap()) > x as u128 {
+                result.copy_from_slice(lhs);
+            } else {
+                result.copy_from_slice((x as u128).to_le_bytes().as_slice())
+            }
+        }
+        32 => {
+            let l = E256::get(lhs);
+            let r = E256::from(x);
+            if l.cmp_u(&r) == Greater {
+                result.copy_from_slice(lhs);
+            } else {
+                result[..8].copy_from_slice(x.to_le_bytes().as_slice());
+            }
+        }
+        _ => {
+            panic!("Invalid sew");
+        }
+    }
+}
+
+fn test_vmaxu_vx(sew: u64, lmul: i64, avl: u64) {
+    fn op(lhs: &[u8], x: u64, result: &mut [u8], sew: u64, lmul: i64, avl: u64) {
+        vop_vx(lhs, x, result, sew, avl, lmul, |x: u64| unsafe {
+            rvv_asm!("mv t0, {}", 
+                     "vmaxu.vx v24, v8, t0",
+                     in (reg) x);
+        });
+    }
+
+    run_vop_vx(
+        sew,
+        lmul,
+        avl,
+        expected_op_maxu,
+        op,
+        WideningCategory::None,
+        "vmaxu.vx",
+    );
+}
+
+fn expected_op_max(lhs: &[u8], x: u64, result: &mut [u8]) {
+    assert_eq!(lhs.len(), result.len());
+    match lhs.len() {
+        1 => {
+            result[0] = if (lhs[0] as i8) > (x as i8) {
+                lhs[0]
+            } else {
+                x as u8
+            };
+        }
+        2 => {
+            if i16::from_le_bytes(lhs.try_into().unwrap()) > x as i16 {
+                result.copy_from_slice(lhs);
+            } else {
+                result.copy_from_slice((x as i16).to_le_bytes().as_slice())
+            }
+        }
+        4 => {
+            if i32::from_le_bytes(lhs.try_into().unwrap()) > x as i32 {
+                result.copy_from_slice(lhs);
+            } else {
+                result.copy_from_slice((x as i32).to_le_bytes().as_slice())
+            }
+        }
+        8 => {
+            if i64::from_le_bytes(lhs.try_into().unwrap()) > x as i64 {
+                result.copy_from_slice(lhs);
+            } else {
+                result.copy_from_slice((x as i64).to_le_bytes().as_slice())
+            }
+        }
+        16 => {
+            if i128::from_le_bytes(lhs.try_into().unwrap()) > x as i128 {
+                result.copy_from_slice(lhs);
+            } else {
+                result.copy_from_slice((x as i128).to_le_bytes().as_slice())
+            }
+        }
+        32 => {
+            let l = E256::get(lhs);
+            let r = E256::from(x);
+            if l.cmp_s(&r) == Greater {
+                result.copy_from_slice(lhs);
+            } else {
+                E256::from(x as i64).put(result);
+            }
+        }
+        _ => {
+            panic!("Invalid sew");
+        }
+    }
+}
+
+fn test_vmax_vx(sew: u64, lmul: i64, avl: u64) {
+    fn op(lhs: &[u8], x: u64, result: &mut [u8], sew: u64, lmul: i64, avl: u64) {
+        vop_vx(lhs, x, result, sew, avl, lmul, |x: u64| unsafe {
+            rvv_asm!("mv t0, {}", 
+                     "vmax.vx v24, v8, t0",
+                     in (reg) x);
+        });
+    }
+
+    run_vop_vx(
+        sew,
+        lmul,
+        avl,
+        expected_op_max,
+        op,
+        WideningCategory::None,
+        "vmax.vx",
+    );
+}
+
 pub fn test_vop_vx() {
     // test combinations of lmul, sew, avl, etc
     for sew in [8, 16, 32, 64, 256] {
@@ -862,6 +1147,10 @@ pub fn test_vop_vx() {
                 test_vdiv_vx(sew, lmul, avl);
                 test_vremu_vx(sew, lmul, avl);
                 test_vrem_vx(sew, lmul, avl);
+                test_vminu_vx(sew, lmul, avl);
+                test_vmin_vx(sew, lmul, avl);
+                test_vmaxu_vx(sew, lmul, avl);
+                test_vmax_vx(sew, lmul, avl);
             }
         }
     }
