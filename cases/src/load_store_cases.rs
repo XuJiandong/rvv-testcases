@@ -1,7 +1,7 @@
 use alloc::vec::Vec;
 use ckb_std::syscalls::debug;
 use core::arch::asm;
-use eint::{Eint, E1024, E128, E16, E256, E32, E512, E64, E8};
+use eint::{Eint, E16, E32, E64, E8};
 use rand::Rng;
 use rvv_asm::rvv_asm;
 use rvv_testcases::intrinsic::{
@@ -9,7 +9,7 @@ use rvv_testcases::intrinsic::{
     vsse_v8, vsuxei_v8,
 };
 use rvv_testcases::log;
-use rvv_testcases::misc::{MutSliceUtils, SliceUtils};
+use rvv_testcases::misc::MutSliceUtils;
 use rvv_testcases::{intrinsic::vsetvl, misc::VLEN, rng::BestNumberRng};
 
 fn fill_all_regisert() {
@@ -157,7 +157,7 @@ pub fn test_load_store() {
 }
 
 fn get_offset_val(sew: usize, index: usize, offset: &[u8]) -> usize {
-    let data = &offset[index * sew >> 3..(index + 1) * sew >> 3];
+    let data = &offset[index * (sew >> 3)..(index + 1) * (sew >> 3)];
     match sew {
         8 => E8::get(data).u32() as usize,
         16 => E16::get(data).u32() as usize,
@@ -170,45 +170,13 @@ fn get_offset_val(sew: usize, index: usize, offset: &[u8]) -> usize {
                 v.u32() as usize
             }
         }
-        128 => {
-            let v = E128::get(data);
-            if v > E32::MAX_U.into() {
-                0xFFFFFFFF as usize
-            } else {
-                v.u32() as usize
-            }
-        }
-        256 => {
-            let v = E256::get(data);
-            if v > E32::MAX_U.into() {
-                0xFFFFFFFF as usize
-            } else {
-                v.u32() as usize
-            }
-        }
-        512 => {
-            let v = E512::get(data);
-            if v > E32::MAX_U.into() {
-                0xFFFFFFFF as usize
-            } else {
-                v.u32() as usize
-            }
-        }
-        1024 => {
-            let v = E1024::get(data);
-            if v > E32::MAX_U.into() {
-                0xFFFFFFFF as usize
-            } else {
-                v.u32() as usize
-            }
-        }
         _ => {
             panic!("Abort")
         }
     }
 }
 
-fn test_indexed_unordered(sew: usize, offset_sew: usize, lmul: i64) {
+fn test_indexed_unordered(sew: usize, offset_sew: usize, lmul: i64, test_ordered: bool) {
     let vl = get_vl_by_lmul(sew, lmul);
 
     if lmul > 1 && offset_sew > sew && offset_sew / sew * lmul as usize >= 8 {
@@ -229,31 +197,28 @@ fn test_indexed_unordered(sew: usize, offset_sew: usize, lmul: i64) {
     let mut rng = BestNumberRng::default();
     let mem: Vec<u8> = {
         let mut buf: Vec<u8> = Vec::new();
-        buf.resize(VLEN, 0);
+        buf.resize(vl * sew_byte, 0);
         rng.fill(&mut buf[..]);
         buf
     };
 
     let offset = {
-        let max_offset = mem.len() - 1 - sew_byte;
+        let max_offset = mem.len() - sew_byte;
+
         let mut buf: Vec<u8> = Vec::new();
         buf.resize(vl * (offset_sew / 8), 0);
         rng.fill(&mut buf[..]);
 
-        let mut index: usize = 1;
+        let mut index: usize = 0;
         for i in 0..vl {
             let val = get_offset_val(offset_sew, i, &buf);
-            if val >= vl {
+            if val > max_offset {
                 let mut buf = buf.as_mut_slice();
                 match offset_sew {
                     8 => buf.write_u8(offset_sew, i, E8::from(index as u64)),
                     16 => buf.write_u16(offset_sew, i, E16::from(index as u64)),
                     32 => buf.write_u32(offset_sew, i, E32::from(index as u64)),
                     64 => buf.write_u64(offset_sew, i, E64::from(index as u64)),
-                    128 => buf.write_u128(offset_sew, i, E128::from(index as u64)),
-                    256 => buf.write_u256(offset_sew, i, E256::from(index as u64)),
-                    512 => buf.write_u512(offset_sew, i, E512::from(index as u64)),
-                    1024 => buf.write_u1024(offset_sew, i, E1024::from(index as u64)),
                     _ => {
                         log!("unspported offset sew: {}", offset_sew);
                         panic!("Abort");
@@ -276,53 +241,37 @@ fn test_indexed_unordered(sew: usize, offset_sew: usize, lmul: i64) {
 
         buf
     };
-
-    let result2 = {
-        let mut buf: Vec<u8> = Vec::new();
-        buf.resize(vl * sew_byte, 0xFF);
-
-        buf
-    };
+    if test_ordered {
+        vloxei_v8(offset_sew as u64, &mem, &offset);
+    } else {
+        vluxei_v8(offset_sew as u64, &mem, &offset);
+    }
+    vse_v8(sew as u64, &result1);
 
     let expected1 = {
         let mut buf: Vec<u8> = Vec::new();
         buf.resize(vl * sew_byte, 0xFF);
 
-        let mem = mem.as_slice();
-
         for i in 0..vl {
             let index = get_offset_val(offset_sew, i, offset.as_slice());
-            if index > mem.len() {
+            if index + sew_byte > mem.len() {
+                log!("index: {} too long", index);
                 panic!("Abort");
             } else {
-                let data = match sew {
-                    8 => &mem[index..index + 1],
-                    16 => &mem[index..index + 2],
-                    32 => &mem[index..index + 4],
-                    64 => &mem[index..index + 8],
-                    128 => &mem[index..index + 16],
-                    256 => &mem[index..index + 32],
-                    512 => &mem[index..index + 64],
-                    1024 => &mem[index..index + 128],
-                    _ => {
-                        log!("unspported sew: {}", sew);
-                        panic!("Abort");
-                    }
-                };
+                let data = &mem[index..index + sew_byte];
                 buf[i * sew_byte..(i + 1) * sew_byte].copy_from_slice(data);
             }
         }
         buf
     };
 
-    vluxei_v8(offset_sew as u64, &mem, &offset);
-    vse_v8(sew as u64, &result1);
     if expected1 != result1 {
         log!(
-            "Failed on test_indexed_unordered, sew = {}, offset_sew = {}, lmul = {}",
+            "Failed on test_indexed_unordered, sew = {}, offset_sew = {}, lmul = {}, vl = {}",
             sew,
             offset_sew,
-            &lmul
+            lmul,
+            vl
         );
         log!(
             "More infomation:\nresult1: {:0>2X?}\nexpected1: {:0>2X?}\noffset: {:0>2X?}\nmem: {:0>2X?}",
@@ -334,185 +283,16 @@ fn test_indexed_unordered(sew: usize, offset_sew: usize, lmul: i64) {
         panic!("Abort");
     }
 
-    let expected2 = {
-        let mut buf: Vec<u8> = Vec::new();
-        buf.resize(vl * sew_byte, 0xFF);
-        let expected1 = expected1.as_slice();
-        for i in 0..vl {
-            let index = get_offset_val(offset_sew, i, offset.as_slice());
-            if index > vl {
-                continue;
-            } else {
-                let mut data: Vec<u8> = Vec::new();
-                data.resize(sew_byte, 0);
-                match sew {
-                    8 => expected1.read_u8(sew, i).put(&mut data),
-                    16 => expected1.read_u16(sew, i).put(&mut data),
-                    32 => expected1.read_u32(sew, i).put(&mut data),
-                    64 => expected1.read_u64(sew, i).put(&mut data),
-                    128 => expected1.read_u128(sew, i).put(&mut data),
-                    256 => expected1.read_u256(sew, i).put(&mut data),
-                    512 => expected1.read_u512(sew, i).put(&mut data),
-                    1024 => expected1.read_u1024(sew, i).put(&mut data),
-                    _ => {
-                        log!("unspported sew: {}", sew);
-                        panic!("Abort");
-                    }
-                };
-                let buf_len = buf.len();
-                if index + sew_byte > buf_len {
-                    buf[index..].copy_from_slice(&data[..buf_len - index]);
-                } else {
-                    buf[index..index + sew_byte].copy_from_slice(data.as_slice());
-                }
-            }
-        }
-        buf
-    };
-    vsuxei_v8(offset_sew as u64, &result2, &offset);
-
-    if expected2 != result2 {
-        log!(
-            "Failed on test_indexed_unordered, sew = {}, offset_sew = {}, lmul = {}",
-            sew,
-            offset_sew,
-            &lmul
-        );
-        log!(
-            "More infomation:\nresult2: {:0>2X?}\nexpected2: {:0>2X?}\noffset: {:0>2X?}\nmem: {:0>2X?}",
-            result2,
-            expected2,
-            offset,
-            mem
-        );
-        panic!("Abort");
-    }
-}
-
-fn test_indexed_ordered(sew: usize, offset_sew: usize, lmul: i64) {
-    let vl = get_vl_by_lmul(sew, lmul);
-
-    if lmul > 1 && offset_sew > sew && offset_sew / sew * lmul as usize >= 8 {
-        return;
-    }
-    if lmul > 0 && lmul as usize * (offset_sew / sew) > 16 {
-        return;
-    }
-    if vl == 0 {
-        return;
-    }
-
-    let set_vl = vsetvl(vl as u64, sew as u64, lmul);
-    assert_eq!(set_vl, vl as u64);
-    let vl = vl as usize;
-    let sew_byte = sew / 8;
-
-    let mut rng = BestNumberRng::default();
-    let mem: Vec<u8> = {
-        let mut buf: Vec<u8> = Vec::new();
-        buf.resize(VLEN, 0);
-        rng.fill(&mut buf[..]);
-        buf
-    };
-
-    let offset = {
-        let max_offset = mem.len() - 1 - sew_byte;
-        let mut buf: Vec<u8> = Vec::new();
-        buf.resize(vl * (offset_sew / 8), 0);
-        rng.fill(&mut buf[..]);
-
-        let mut index: usize = 1;
-        for i in 0..vl {
-            let val = get_offset_val(offset_sew, i, &buf);
-            if val >= vl {
-                let mut buf = buf.as_mut_slice();
-                match offset_sew {
-                    8 => buf.write_u8(offset_sew, i, E8::from(index as u64)),
-                    16 => buf.write_u16(offset_sew, i, E16::from(index as u64)),
-                    32 => buf.write_u32(offset_sew, i, E32::from(index as u64)),
-                    64 => buf.write_u64(offset_sew, i, E64::from(index as u64)),
-                    128 => buf.write_u128(offset_sew, i, E128::from(index as u64)),
-                    256 => buf.write_u256(offset_sew, i, E256::from(index as u64)),
-                    512 => buf.write_u512(offset_sew, i, E512::from(index as u64)),
-                    1024 => buf.write_u1024(offset_sew, i, E1024::from(index as u64)),
-                    _ => {
-                        log!("unspported offset sew: {}", offset_sew);
-                        panic!("Abort");
-                    }
-                }
-
-                index += 1;
-                if index >= max_offset {
-                    index = 0;
-                }
-            }
-        }
-
-        buf
-    };
-
-    let result1 = {
-        let mut buf: Vec<u8> = Vec::new();
-        buf.resize(vl * sew_byte, 0xFF);
-
-        buf
-    };
-
     let result2 = {
         let mut buf: Vec<u8> = Vec::new();
         buf.resize(vl * sew_byte, 0xFF);
 
         buf
     };
-
-    let expected1 = {
-        let mut buf: Vec<u8> = Vec::new();
-        buf.resize(vl * sew_byte, 0xFF);
-
-        let mem = mem.as_slice();
-
-        for i in 0..vl {
-            let index = get_offset_val(offset_sew, i, offset.as_slice());
-            if index > mem.len() {
-                panic!("Abort");
-            } else {
-                let data = match sew {
-                    8 => &mem[index..index + 1],
-                    16 => &mem[index..index + 2],
-                    32 => &mem[index..index + 4],
-                    64 => &mem[index..index + 8],
-                    128 => &mem[index..index + 16],
-                    256 => &mem[index..index + 32],
-                    512 => &mem[index..index + 64],
-                    1024 => &mem[index..index + 128],
-                    _ => {
-                        log!("unspported sew: {}", sew);
-                        panic!("Abort");
-                    }
-                };
-                buf[i * sew_byte..(i + 1) * sew_byte].copy_from_slice(data);
-            }
-        }
-        buf
-    };
-
-    vloxei_v8(offset_sew as u64, &mem, &offset);
-    vse_v8(sew as u64, &result1);
-    if expected1 != result1 {
-        log!(
-            "Failed on test_indexed_unordered, sew = {}, offset_sew = {}, lmul = {}",
-            sew,
-            offset_sew,
-            &lmul
-        );
-        log!(
-            "More infomation:\nresult1: {:0>2X?}\nexpected1: {:0>2X?}\noffset: {:0>2X?}\nmem: {:0>2X?}",
-            result1,
-            expected1,
-            offset,
-            mem
-        );
-        panic!("Abort");
+    if test_ordered {
+        vsoxei_v8(offset_sew as u64, &result2, &offset);
+    } else {
+        vsuxei_v8(offset_sew as u64, &result2, &offset);
     }
 
     let expected2 = {
@@ -521,46 +301,34 @@ fn test_indexed_ordered(sew: usize, offset_sew: usize, lmul: i64) {
         let expected1 = expected1.as_slice();
         for i in 0..vl {
             let index = get_offset_val(offset_sew, i, offset.as_slice());
-            if index > vl {
-                continue;
+            if index >= vl * sew_byte {
+                log!("index {} is out of bound", index);
+                panic!("Abore");
             } else {
-                let mut data: Vec<u8> = Vec::new();
-                data.resize(sew_byte, 0);
-                match sew {
-                    8 => expected1.read_u8(sew, i).put(&mut data),
-                    16 => expected1.read_u16(sew, i).put(&mut data),
-                    32 => expected1.read_u32(sew, i).put(&mut data),
-                    64 => expected1.read_u64(sew, i).put(&mut data),
-                    128 => expected1.read_u128(sew, i).put(&mut data),
-                    256 => expected1.read_u256(sew, i).put(&mut data),
-                    512 => expected1.read_u512(sew, i).put(&mut data),
-                    1024 => expected1.read_u1024(sew, i).put(&mut data),
-                    _ => {
-                        log!("unspported sew: {}", sew);
-                        panic!("Abort");
-                    }
-                };
+                let data = &expected1[i * sew_byte..i * sew_byte + sew_byte];
                 let buf_len = buf.len();
                 if index + sew_byte > buf_len {
                     buf[index..].copy_from_slice(&data[..buf_len - index]);
                 } else {
-                    buf[index..index + sew_byte].copy_from_slice(data.as_slice());
+                    buf[index..index + sew_byte].copy_from_slice(data);
                 }
             }
         }
         buf
     };
-    vsoxei_v8(offset_sew as u64, &result2, &offset);
 
     if expected2 != result2 {
         log!(
-            "Failed on test_indexed_unordered, sew = {}, offset_sew = {}, lmul = {}",
+            "Failed on test_indexed_unordered, sew = {}, offset_sew = {}, lmul = {}, vl = {}",
             sew,
             offset_sew,
-            &lmul
+            lmul,
+            vl
         );
         log!(
-            "More infomation:\nresult2: {:0>2X?}\nexpected2: {:0>2X?}\noffset: {:0>2X?}\nmem: {:0>2X?}",
+            "More infomation:\nresult1: {:0>2X?}\nexpected1: {:0>2X?}\nresult2: {:0>2X?}\nexpected2: {:0>2X?}\noffset: {:0>2X?}\nmem: {:0>2X?}",
+            result1,
+            expected1,
             result2,
             expected2,
             offset,
@@ -571,13 +339,11 @@ fn test_indexed_ordered(sew: usize, offset_sew: usize, lmul: i64) {
 }
 
 pub fn test_load_store_uxei() {
-    // TODO vsuxei may cause memory out of bounds
-    test_indexed_unordered(512, 64, -4);
     for sew in [8, 16, 32, 64, 128, 256, 512, 1024] {
         for offset_sew in [8, 16, 32, 64] {
             for lmul in [-8, -4, -2, 1, 2, 4, 8] {
-                test_indexed_unordered(sew, offset_sew, lmul);
-                test_indexed_ordered(sew, offset_sew, lmul);
+                test_indexed_unordered(sew, offset_sew, lmul, false);
+                test_indexed_unordered(sew, offset_sew, lmul, true);
             }
         }
     }
