@@ -19,6 +19,7 @@ mod narrowing_integer_right_shift_cases;
 mod set_before_first_cases;
 mod set_including_first_cases;
 mod set_only_first_cases;
+mod single_saturating_add_subtract_cases;
 mod single_width_averaging_cases;
 mod single_width_integer_multiply_add_cases;
 mod single_width_integer_reduction_cases;
@@ -202,6 +203,10 @@ fn program_entry(argc: u64, argv: *const *const u8) -> i8 {
     );
     test_case!(
         single_width_scaling_shift::test_single_with_scaling_shift,
+        test_pattern
+    );
+    test_case!(
+        single_saturating_add_subtract_cases::test_single_saturating_add_subtract,
         test_pattern
     );
     0
