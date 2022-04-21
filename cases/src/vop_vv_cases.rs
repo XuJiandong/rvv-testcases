@@ -692,6 +692,47 @@ fn test_vmax_vv(sew: u64, lmul: i64, avl: u64) {
     );
 }
 
+fn expected_op_smul(lhs: &[u8], rhs: &[u8], result: &mut [u8]) {
+    assert!(lhs.len() == rhs.len() && rhs.len() == result.len());
+    match lhs.len() {
+        8 => {
+            let l = i64::from_le_bytes(lhs.try_into().unwrap()) as i128;
+            let r = i64::from_le_bytes(rhs.try_into().unwrap()) as i128;
+            let res = (l.wrapping_mul(r) >> 63) as i64;
+
+            result.copy_from_slice(&res.to_le_bytes());
+        }
+        32 => {
+            let l = E256::get(lhs);
+            let r = E256::get(rhs);
+            let (res_l, res_h) = l.widening_mul_s(r);
+            let res = res_l.wrapping_shr(255) | res_h.wrapping_shl(1);
+            res.put(result);
+        }
+        _ => {
+            panic!("Invalid sew");
+        }
+    }
+}
+
+fn test_vsmul_vv(sew: u64, lmul: i64, avl: u64) {
+    fn op(lhs: &[u8], rhs: &[u8], result: &mut [u8], sew: u64, lmul: i64, avl: u64) {
+        vop_vv(lhs, rhs, result, sew, avl, lmul, || unsafe {
+            rvv_asm!("vsmul.vv v24, v8, v16");
+        });
+    }
+
+    run_vop_vv(
+        sew,
+        lmul,
+        avl,
+        ExpectedOp::Normal(Box::new(expected_op_smul)),
+        op,
+        WideningCategory::None,
+        "vsmul.vv",
+    );
+}
+
 pub fn test_vop_vv() {
     for sew in [64, 256] {
         for lmul in [-8, -2, 1, 4, 8] {
@@ -712,6 +753,7 @@ pub fn test_vop_vv() {
                 test_vmin_vv(sew, lmul, avl);
                 test_vmaxu_vv(sew, lmul, avl);
                 test_vmax_vv(sew, lmul, avl);
+                test_vsmul_vv(sew, lmul, avl);
             }
         }
     }

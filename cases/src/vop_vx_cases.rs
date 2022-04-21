@@ -1,7 +1,7 @@
 use core::arch::asm;
 use core::cmp::Ordering::{Greater, Less};
 use core::convert::TryInto;
-use eint::{Eint, E256};
+use eint::{Eint, E128, E256};
 use rvv_asm::rvv_asm;
 use rvv_testcases::intrinsic::vop_vx;
 use rvv_testcases::misc::{avl_iterator, Widening, U256};
@@ -1128,6 +1128,69 @@ fn test_vmax_vx(sew: u64, lmul: i64, avl: u64) {
     );
 }
 
+fn expected_op_smul(lhs: &[u8], x: u64, result: &mut [u8]) {
+    assert_eq!(lhs.len(), result.len());
+    match lhs.len() {
+        1 => {
+            let l = lhs[0] as i16;
+            let res = (l.wrapping_mul(x as i16) >> 7) as i8;
+
+            result.copy_from_slice(&res.to_le_bytes());
+        }
+        2 => {
+            let l = i16::from_le_bytes(lhs.try_into().unwrap()) as i32;
+            let res = (l.wrapping_mul(x as i32) >> 15) as i16;
+
+            result.copy_from_slice(&res.to_le_bytes());
+        }
+        4 => {
+            let l = i32::from_le_bytes(lhs.try_into().unwrap()) as i64;
+            let res = (l.wrapping_mul(x as i64) >> 31) as i32;
+
+            result.copy_from_slice(&res.to_le_bytes());
+        }
+        8 => {
+            let l = i64::from_le_bytes(lhs.try_into().unwrap()) as i128;
+            let res = (l.wrapping_mul((x as i64) as i128) >> 63) as i64;
+
+            result.copy_from_slice(&res.to_le_bytes());
+        }
+        16 => {
+            let (res_l, res_h) = E128::get(lhs).widening_mul_s(E128::from(x as i64));
+            let res = res_l.wrapping_shr(127) | res_h.wrapping_shl(1);
+            res.put(result);
+        }
+        32 => {
+            let (res_l, res_h) = E256::get(lhs).widening_mul_s(E256::from(x as i64));
+            let res = res_l.wrapping_shr(255) | res_h.wrapping_shl(1);
+            res.put(result);
+        }
+        _ => {
+            panic!("Invalid sew");
+        }
+    }
+}
+
+fn test_vsmul_vx(sew: u64, lmul: i64, avl: u64) {
+    fn op(lhs: &[u8], x: u64, result: &mut [u8], sew: u64, lmul: i64, avl: u64) {
+        vop_vx(lhs, x, result, sew, avl, lmul, |x: u64| unsafe {
+            rvv_asm!("mv t0, {}", 
+                     "vsmul.vx v24, v8, t0",
+                     in (reg) x);
+        });
+    }
+
+    run_vop_vx(
+        sew,
+        lmul,
+        avl,
+        expected_op_smul,
+        op,
+        WideningCategory::None,
+        "vsmul.vx",
+    );
+}
+
 pub fn test_vop_vx() {
     // test combinations of lmul, sew, avl, etc
     for sew in [8, 16, 32, 64, 256] {
@@ -1151,6 +1214,7 @@ pub fn test_vop_vx() {
                 test_vmin_vx(sew, lmul, avl);
                 test_vmaxu_vx(sew, lmul, avl);
                 test_vmax_vx(sew, lmul, avl);
+                test_vsmul_vx(sew, lmul, avl);
             }
         }
     }
