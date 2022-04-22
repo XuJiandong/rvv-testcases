@@ -307,11 +307,9 @@ fn test_indexed_unordered(sew: usize, offset_sew: usize, lmul: i64, test_ordered
             } else {
                 let data = &expected1[i * sew_byte..i * sew_byte + sew_byte];
                 let buf_len = buf.len();
-                if index + sew_byte > buf_len {
-                    buf[index..].copy_from_slice(&data[..buf_len - index]);
-                } else {
-                    buf[index..index + sew_byte].copy_from_slice(data);
-                }
+
+                assert!(index + sew_byte <= buf_len);
+                buf[index..index + sew_byte].copy_from_slice(data);
             }
         }
         buf
