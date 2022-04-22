@@ -114,8 +114,9 @@ dependencies = [
 
 [[package]]
 name = "eint"
-version = "0.1.4"
-source = "git+https://github.com/joii2020/eint.git?branch=master#10a0cfd521825cb547bfba1b5701ed9655dc6f61"
+version = "0.1.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7d3f694b6fb11da6aa04569f0713f34cf0d9297e2c4a5648fa82e481e7119676"
 
 [[package]]
 name = "fake-simd"
