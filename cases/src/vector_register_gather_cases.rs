@@ -94,20 +94,19 @@ fn rgather_vv(
 
     let wide = wide / 8;
     for i in 0..(vd.len() / wide) {
-        if enable_mask && get_bit_in_slice(vm, i) == 1 {
+        if enable_mask && get_bit_in_slice(vm, i) == 0 {
             continue;
         }
 
         let index = v8[i];
-        if index as usize >= (vd.len() / wide) {
+        let pos = index as usize * wide;
+
+        if pos >= vd.len() {
             for j in 0..wide {
                 result[i * wide + j] = 0;
             }
         } else {
-            for j in 0..wide {
-                let d: usize = index as usize * wide;
-                result[i * wide + j] = v2[d + j];
-            }
+            result[i * wide..(i + 1) * wide].copy_from_slice(&v2[pos..pos + wide]);
         }
     }
 
@@ -232,19 +231,18 @@ fn rgather_vx(vd: &[u8], v2: &[u8], rs: u64, vm: &[u8], wide: usize) -> Vec<u8> 
     let length = vd.len() / wide;
 
     for i in 0..length {
-        if get_bit_in_slice(vm, i) == 1 {
+        if get_bit_in_slice(vm, i) == 0 {
             continue;
         }
 
-        if rs as usize > vd.len() {
+        let pos = rs as usize * wide;
+
+        if pos >= vd.len() {
             for j in 0..wide {
                 result[i * wide + j] = 0;
             }
         } else {
-            for j in 0..wide {
-                let d: usize = rs as usize * wide;
-                result[i * wide + j] = v2[d + j];
-            }
+            result[i * wide..(i + 1) * wide].copy_from_slice(&v2[pos..pos + wide]);
         }
     }
 

@@ -2,6 +2,7 @@ use core::arch::asm;
 use core::convert::TryInto;
 
 use alloc::boxed::Box;
+use eint::{Eint, E128, E256, E512, E64};
 use rvv_asm::rvv_asm;
 use rvv_testcases::intrinsic::{vop_wv, vop_wx};
 use rvv_testcases::misc::{avl_iterator, U256, U512};
@@ -53,7 +54,7 @@ pub fn test_narrowing_integer_right_shift() {
         });
     }
     let sew = 256u64;
-    for lmul in [-2, 1, 4] {
+    for lmul in [-2, 1, 2] {
         for avl in avl_iterator(sew, 4) {
             run_vop_vx(
                 256,
@@ -73,7 +74,7 @@ pub fn test_narrowing_integer_right_shift() {
         });
     }
     let sew = 256u64;
-    for lmul in [-2, 1, 4] {
+    for lmul in [-2, 1, 2] {
         for avl in avl_iterator(sew, 4) {
             run_vop_vv(
                 256,
@@ -104,9 +105,13 @@ fn expected_op_arithmetic(lhs: &[u8], x: u64, result: &mut [u8]) {
             let res = (l.wrapping_shr(x as u32) | hi) as i32;
             result.copy_from_slice(&res.to_le_bytes());
         }
+        8 => {
+            let res = E128::get(lhs).wrapping_sra(x as u32).u64();
+            result.copy_from_slice(&res.to_le_bytes());
+        }
         32 => {
-            // TODO Need the large number arithmetic library
-            assert!(false);
+            let res = E512::get(lhs).wrapping_sra(x as u32);
+            res.0.put(result);
         }
         n => {
             panic!("Invalid sew: {}", n);
@@ -131,9 +136,13 @@ fn expected_op_arithmetic2(lhs: &[u8], rhs: &[u8], result: &mut [u8]) {
             let res = (l.wrapping_shr(x as u32) | hi) as i32;
             result.copy_from_slice(&res.to_le_bytes());
         }
+        8 => {
+            let res = E128::get(lhs).wrapping_sra(E64::get(rhs).u32()).u64();
+            result.copy_from_slice(&res.to_le_bytes());
+        }
         32 => {
-            // TODO Need the large number arithmetic library
-            assert!(false);
+            let res = E512::get(lhs).wrapping_sra(E256::get(rhs).u32());
+            res.0.put(result);
         }
         n => {
             panic!("Invalid sew: {}", n);
@@ -147,19 +156,19 @@ pub fn test_narrowing_integer_right_shift_arithmetic() {
             rvv_asm!("mv t0, {}", "vnsra.wx v24, v8, t0", in (reg) x);
         });
     }
-    // TODO
-    let sew = 32u64;
-    for lmul in [-2, 1, 4] {
-        for avl in avl_iterator(sew, 4) {
-            run_vop_vx(
-                sew,
-                lmul,
-                avl,
-                expected_op_arithmetic,
-                srl,
-                WideningCategory::Vs2Only,
-                "vnsra.wx",
-            );
+    for sew in [64, 256] {
+        for lmul in [-2, 1, 4] {
+            for avl in avl_iterator(sew, 4) {
+                run_vop_vx(
+                    sew,
+                    lmul,
+                    avl,
+                    expected_op_arithmetic,
+                    srl,
+                    WideningCategory::Vs2Only,
+                    "vnsra.wx",
+                );
+            }
         }
     }
 
@@ -168,18 +177,19 @@ pub fn test_narrowing_integer_right_shift_arithmetic() {
             rvv_asm!("vnsra.wv v24, v8, v16");
         });
     }
-    let sew = 32u64;
-    for lmul in [-2, 1, 4, 8] {
-        for avl in avl_iterator(sew, 4) {
-            run_vop_vv(
-                sew,
-                lmul,
-                avl,
-                ExpectedOp::Normal(Box::new(expected_op_arithmetic2)),
-                srl2,
-                WideningCategory::Vs2Only,
-                "vnsra.wv",
-            );
+    for sew in [64, 256] {
+        for lmul in [-2, 1, 4] {
+            for avl in avl_iterator(sew, 4) {
+                run_vop_vv(
+                    sew,
+                    lmul,
+                    avl,
+                    ExpectedOp::Normal(Box::new(expected_op_arithmetic2)),
+                    srl2,
+                    WideningCategory::Vs2Only,
+                    "vnsra.wv",
+                );
+            }
         }
     }
 }
