@@ -5,7 +5,7 @@ use rvv_asm::rvv_asm;
 
 use ckb_std::syscalls::debug;
 use rvv_testcases::{
-    intrinsic::{vl1r_v0, vl1r_v8, vl1r_v24, vs1r_v24, vsetvl},
+    intrinsic::{vl1r_v0, vl1r_v24, vl1r_v8, vs1r_v24, vsetvl},
     log,
     misc::{get_bit_in_slice, is_verbose, VLEN},
     rng::BestNumberRng,
@@ -31,9 +31,13 @@ fn sideup(
 
     let wide = wide / 8;
     for i in offset..length as usize {
-        if get_bit_in_slice(mask, i) == 1 {
+        if get_bit_in_slice(mask, i) == 0 {
             continue;
         }
+        if (i as i64) - (offset as i64) < 0 {
+            continue;
+        }
+
         for j in 0..wide {
             if i * wide + j >= cache.len() {
                 break;
@@ -118,7 +122,6 @@ fn test_vslide1up(wide: usize) {
     }
     let mut mask = [0u8; VLEN / 8];
     let mut expected_before = [0u8; VLEN / 8];
-    let mut expected = [0u8; VLEN / 8];
     let mut vs2 = [0u8; VLEN / 8];
     let mut result = [0u8; VLEN / 8];
 
@@ -128,21 +131,22 @@ fn test_vslide1up(wide: usize) {
     rng.fill(&mut vs2[..]);
     rng.fill(&mut expected_before[..]);
 
-    let ref_offset = sideup(&vs2, 1, VLEN / wide, wide, &expected_before, &mask);
+    let mut expected = sideup(&vs2, 1, VLEN / wide, wide, &expected_before, &mask);
 
     let vl = vsetvl((VLEN / wide) as u64, wide as u64, 1) as usize;
     assert_eq!(vl, VLEN / wide);
-
-    expected.copy_from_slice(ref_offset.as_slice());
-    expected[0] = 12;
-    for i in 1..(wide / 8) {
-        expected[i] = 0;
-    }
 
     vl1r_v0(&mask[..]);
     vl1r_v8(&vs2[..]);
     vl1r_v24(&expected_before[..]);
     let x: u64 = 12;
+
+    if get_bit_in_slice(&mask, 0) == 1 {
+        expected[0] = x as u8;
+        for i in 1..wide / 8 {
+            expected[i] = 0;
+        }
+    }
 
     unsafe {
         rvv_asm!(
@@ -153,14 +157,15 @@ fn test_vslide1up(wide: usize) {
         vs1r_v24(&mut result[..]);
     }
 
-    if result != expected {
+    if result != expected.as_slice() {
         log!(
             "[describe = vslide1up.vx] unexpected values found: \nresult = {:0>2X?}, \nexpected = {:0>2X?}",
             result,
             expected
         );
         log!(
-            "more information, \nvs2 = {:0>2X?}, \nmask = {:0>2X?}, \nexpected_before = {:0>2X?}",
+            "more information, wide = {} \nvs2 = {:0>2X?}, \nmask = {:0>2X?}, \nexpected_before = {:0>2X?}",
+            wide,
             vs2,
             mask,
             expected_before
@@ -203,7 +208,7 @@ fn sidedown(
 
     let wide = wide / 8;
     for i in 0..length - offset as usize {
-        if get_bit_in_slice(mask, i) == 1 {
+        if get_bit_in_slice(mask, i) == 0 {
             continue;
         }
         for j in 0..wide {
@@ -212,7 +217,7 @@ fn sidedown(
     }
 
     for i in length - offset..length as usize {
-        if get_bit_in_slice(mask, i) == 1 {
+        if get_bit_in_slice(mask, i) == 0 {
             continue;
         }
         for j in 0..wide {
@@ -229,7 +234,6 @@ fn test_vslidedown(wide: usize) {
     }
     let mut mask = [0u8; VLEN / 8];
     let mut expected_before = [0u8; VLEN / 8];
-    let mut expected = [0u8; VLEN / 8];
     let mut vs2 = [0u8; VLEN / 8];
     let mut result = [0u8; VLEN / 8];
     let mut result2 = [0u8; VLEN / 8];
@@ -240,12 +244,10 @@ fn test_vslidedown(wide: usize) {
     rng.fill(&mut vs2[..]);
     rng.fill(&mut expected_before[..]);
 
-    let ref_offset = sidedown(&vs2, 3, VLEN / wide, wide, &expected_before, &mask);
+    let expected = sidedown(&vs2, 3, VLEN / wide, wide, &expected_before, &mask);
 
     let vl = vsetvl((VLEN / wide) as u64, wide as u64, 1) as usize;
     assert_eq!(vl, VLEN / wide);
-
-    expected.copy_from_slice(ref_offset.as_slice());
 
     vl1r_v0(&mask[..]);
     vl1r_v8(&vs2[..]);
@@ -268,7 +270,7 @@ fn test_vslidedown(wide: usize) {
         vs1r_v24(&mut result2[..]);
     }
 
-    if result != expected || result != result2 {
+    if result != expected.as_slice() || result != result2 {
         log!(
             "[describe = vslidedown.vx] unexpected values found: \nresult = {:0>2X?}, \nresult2 = {:0>2X?}, \nexpected = {:0>2X?}",
             result,
@@ -296,7 +298,6 @@ fn test_vslide1down(wide: usize) {
     }
     let mut mask = [0u8; VLEN / 8];
     let mut expected_before = [0u8; VLEN / 8];
-    let mut expected = [0u8; VLEN / 8];
     let mut vs2 = [0u8; VLEN / 8];
     let mut result = [0u8; VLEN / 8];
 
@@ -306,21 +307,23 @@ fn test_vslide1down(wide: usize) {
     rng.fill(&mut vs2[..]);
     rng.fill(&mut expected_before[..]);
 
-    let ref_offset = sidedown(&vs2, 1, VLEN / wide, wide, &expected_before, &mask);
+    let mut expected = sidedown(&vs2, 1, VLEN / wide, wide, &expected_before, &mask);
 
     let vl = vsetvl((VLEN / wide) as u64, wide as u64, 1) as usize;
     assert_eq!(vl, VLEN / wide);
-
-    expected.copy_from_slice(ref_offset.as_slice());
-    expected[expected.len() - wide / 8] = 12;
-    for i in expected.len() - wide / 8 + 1..expected.len() {
-        expected[i] = 0;
-    }
 
     vl1r_v0(&mask[..]);
     vl1r_v8(&vs2[..]);
     vl1r_v24(&expected_before[..]);
     let x: u64 = 12;
+
+    if get_bit_in_slice(&mask, vl - 1) == 1 {
+        let pos = (wide / 8) * (vl - 1);
+        expected[pos] = x as u8;
+        for i in pos + 1..vs2.len() {
+            expected[i] = 0;
+        }
+    }
 
     unsafe {
         rvv_asm!(
@@ -331,7 +334,7 @@ fn test_vslide1down(wide: usize) {
         vs1r_v24(&mut result[..]);
     }
 
-    if result != expected {
+    if result != expected.as_slice() {
         log!(
             "[describe = vslide1down.vx] unexpected values found: \nresult = {:0>2X?}, \nexpected = {:0>2X?}",
             result,
