@@ -5,8 +5,8 @@ use eint::{Eint, E16, E32, E64, E8};
 use rand::Rng;
 use rvv_asm::rvv_asm;
 use rvv_testcases::intrinsic::{
-    vle_v16, vle_v24, vle_v8, vloxei_v8, vlse_v8, vluxei_v8, vse_v16, vse_v24, vse_v8, vsoxei_v8,
-    vsse_v8, vsuxei_v8,
+    vle_v16, vle_v24, vle_v8, vloxei_v8, vlse_v8, vluxei_v8, vs1r_v8, vs2r_v8, vs4r_v8, vs8r_v8,
+    vse_v16, vse_v24, vse_v8, vsm_v_v8, vsoxei_v8, vsse_v8, vsuxei_v8,
 };
 use rvv_testcases::log;
 use rvv_testcases::misc::MutSliceUtils;
@@ -71,15 +71,15 @@ fn test_unit_stride(sew: usize, lmul: i64, offset: i64, register: usize) {
     match register {
         8 => {
             vle_v8(sew as u64, &mem[..]);
-            vse_v8(sew as u64, &mem2[..]);
+            vse_v8(sew as u64, &mut mem2[..]);
         }
         16 => {
             vle_v16(sew as u64, &mem[..]);
-            vse_v16(sew as u64, &mem2[..]);
+            vse_v16(sew as u64, &mut mem2[..]);
         }
         24 => {
             vle_v24(sew as u64, &mem[..]);
-            vse_v24(sew as u64, &mem2[..]);
+            vse_v24(sew as u64, &mut mem2[..]);
         }
         _ => {}
     };
@@ -128,7 +128,7 @@ fn test_stride(sew: usize, lmul: i64, stride: usize) {
     rng.fill(mem2.as_mut_slice());
 
     vlse_v8(sew as u64, &mem[..], stride as u64);
-    vsse_v8(sew as u64, &mem2[..], stride as u64);
+    vsse_v8(sew as u64, &mut mem2[..], stride as u64);
 
     for i in 0..vl as usize {
         let range = i * stride as usize..i * stride + sew / 8;
@@ -240,7 +240,7 @@ fn test_indexed_unordered(sew: usize, offset_sew: usize, lmul: i64, test_ordered
         buf
     };
 
-    let result1 = {
+    let mut result1 = {
         let mut buf: Vec<u8> = Vec::new();
         buf.resize(vl * sew_byte, 0xFF);
 
@@ -251,7 +251,7 @@ fn test_indexed_unordered(sew: usize, offset_sew: usize, lmul: i64, test_ordered
     } else {
         vluxei_v8(offset_sew as u64, &mem, &offset);
     }
-    vse_v8(sew as u64, &result1);
+    vse_v8(sew as u64, &mut result1);
 
     let expected1 = {
         let mut buf: Vec<u8> = Vec::new();
@@ -288,16 +288,16 @@ fn test_indexed_unordered(sew: usize, offset_sew: usize, lmul: i64, test_ordered
         panic!("Abort");
     }
 
-    let result2 = {
+    let mut result2 = {
         let mut buf: Vec<u8> = Vec::new();
         buf.resize(vl * sew_byte, 0xFF);
 
         buf
     };
     if test_ordered {
-        vsoxei_v8(offset_sew as u64, &result2, &offset);
+        vsoxei_v8(offset_sew as u64, &mut result2, &offset);
     } else {
-        vsuxei_v8(offset_sew as u64, &result2, &offset);
+        vsuxei_v8(offset_sew as u64, &mut result2, &offset);
     }
 
     let expected2 = {
@@ -385,12 +385,14 @@ fn test_vlm_v(mem: &Vec<u8>, sew: usize, lmul: i64) {
         rvv_asm! {
             "vlm.v v8, (t0)",
         };
-
-        rvv_asm!(
-            "mv t0, {}",
-            "vsm.v v8, (t0)",
-            in (reg) result1.as_ptr()
-        );
+    }
+    if ceil_len < vl * sew_byte {
+        let mut temp_buffer: Vec<u8> = Vec::new();
+        temp_buffer.resize((vl * sew_byte) as usize, 0);
+        vsm_v_v8(&mut temp_buffer);
+        result1.copy_from_slice(&temp_buffer[..ceil_len]);
+    } else {
+        vsm_v_v8(&mut result1);
     }
 
     let expected1 = &mem[..ceil_len];
@@ -419,7 +421,7 @@ fn test_vlm_v(mem: &Vec<u8>, sew: usize, lmul: i64) {
     let mut result2: Vec<u8> = Vec::new();
     result2.resize(mem_len, 0xFF);
 
-    vse_v8(sew as u64, &result2);
+    vse_v8(sew as u64, &mut result2);
 
     let expected2 = {
         let mut buf: Vec<u8> = Vec::new();
@@ -468,26 +470,11 @@ pub fn test_vector_unit_stride() {
 }
 
 fn store_whole_v8(whole: usize, out_buf: &mut [u8]) {
-    unsafe {
-        rvv_asm!(
-            "mv t0, {}",
-            in (reg) out_buf.as_ptr()
-        );
-    }
-
     match whole {
-        1 => unsafe {
-            rvv_asm!("vs1r.v v8, (t0)");
-        },
-        2 => unsafe {
-            rvv_asm!("vs2r.v v8, (t0)");
-        },
-        4 => unsafe {
-            rvv_asm!("vs4r.v v8, (t0)");
-        },
-        8 => unsafe {
-            rvv_asm!("vs8r.v v8, (t0)");
-        },
+        1 => vs1r_v8(out_buf),
+        2 => vs2r_v8(out_buf),
+        4 => vs4r_v8(out_buf),
+        8 => vs8r_v8(out_buf),
         _ => panic!("Abort"),
     }
 }
