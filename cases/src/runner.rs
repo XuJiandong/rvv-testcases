@@ -49,6 +49,10 @@ pub fn run_vop_vv<T>(
             desc
         );
     }
+    let vl = vsetvl(avl as u64, sew, lmul);
+    if vl == 0 {
+        return;
+    }
 
     let avl_bytes = (sew / 8 * avl) as usize;
     let sew_bytes = (sew / 8) as usize;
@@ -97,8 +101,6 @@ pub fn run_vop_vv<T>(
         }
     }
     expected_before.resize(expected.len(), 0);
-
-    let vl = vsetvl(avl as u64, sew, lmul);
 
     let mut rng = BestNumberRng::default();
     for i in 0..avl as usize {
@@ -445,6 +447,10 @@ pub fn run_vmsop_vv<T1, T2>(
             desc
         );
     }
+    let vl = vsetvl(avl as u64, sew, lmul);
+    if vl == 0 {
+        return;
+    }
 
     let avl_bytes = (sew / 8 * avl) as usize;
     let sew_bytes = (sew / 8) as usize;
@@ -526,6 +532,10 @@ pub fn run_vmsop_vx<T1, T2>(
             avl,
             desc
         );
+    }
+    let vl = vsetvl(avl as u64, sew, lmul);
+    if vl == 0 {
+        return;
     }
 
     let avl_bytes = (sew / 8 * avl) as usize;

@@ -54,7 +54,9 @@ fn test_unit_stride(sew: usize, lmul: i64, offset: i64, register: usize) {
     }
     let vl = vl as u64;
     let res_vl = vsetvl(vl, sew as u64, lmul);
-    //log!("vsetvl failed, vsetvl result: {}, expected: {}", res_vl, vl);
+    if res_vl == 0 {
+        return;
+    }
 
     let mut mem: Vec<u8> = Vec::new();
     mem.resize(res_vl as usize * sew / 8, 1);
@@ -107,7 +109,9 @@ fn test_stride(sew: usize, lmul: i64, stride: usize) {
     }
     let vl = vl as u64;
     let res_vl = vsetvl(vl, sew as u64, lmul);
-    // log!("vsetvl failed, vsetvl result: {}, expected: {}", res_vl, vl);
+    if res_vl == 0 {
+        return;
+    }
 
     let mut mem: Vec<u8> = Vec::new();
     mem.resize(res_vl as usize * sew / 8, 1);
@@ -177,19 +181,20 @@ fn get_offset_val(sew: usize, index: usize, offset: &[u8]) -> usize {
 }
 
 fn test_indexed_unordered(sew: usize, offset_sew: usize, lmul: i64, test_ordered: bool) {
-    let vl = get_vl_by_lmul(sew, lmul);
+    let emul = offset_sew as f64 / sew as f64 * lmul as f64;
+    if emul < 0.125 || emul > 8.0 {
+        return;
+    }
 
-    if lmul > 1 && offset_sew > sew && offset_sew / sew * lmul as usize >= 8 {
-        return;
-    }
-    if lmul > 0 && lmul as usize * (offset_sew / sew) > 16 {
-        return;
-    }
+    let vl = get_vl_by_lmul(sew, lmul);
     if vl == 0 {
         return;
     }
 
     let set_vl = vsetvl(vl as u64, sew as u64, lmul);
+    if set_vl == 0 {
+        return;
+    }
     assert_eq!(set_vl, vl as u64);
     let vl = vl as usize;
     let sew_byte = sew / 8;
@@ -355,6 +360,9 @@ fn test_vlm_v(mem: &Vec<u8>, sew: usize, lmul: i64) {
         return;
     }
     let set_vl = vsetvl(vl as u64, sew as u64, lmul);
+    if set_vl == 0 {
+        return;
+    }
     assert_eq!(set_vl, vl as u64);
     let vl = vl as usize;
 
@@ -600,6 +608,9 @@ fn check_whole(
         return;
     }
     let set_vl = vsetvl(vl as u64, sew as u64, lmul);
+    if set_vl == 0 {
+        return;
+    }
     assert_eq!(set_vl, vl as u64);
 
     load_whole_v8(load_whole, load_whole_len, &mem);
