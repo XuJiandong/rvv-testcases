@@ -392,3 +392,11 @@ pub fn add_i512(a: &[u8; 64], b: &[u8; 64]) -> [u8; 64] {
 
     r
 }
+
+pub fn conver_to_i512(d: E256) -> E512 {
+    if d.is_negative() {
+        E512(d, E256::MAX_U)
+    } else {
+        E512::from(d)
+    }
+}
