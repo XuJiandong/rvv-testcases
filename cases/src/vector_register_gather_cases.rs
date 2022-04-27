@@ -167,8 +167,7 @@ fn vrgather_vv(wide: usize, enable_mask: bool, enable_ei16: bool) {
             }
         }
 
-        let p = result.as_mut_ptr();
-        rvv_asm!("mv t0, {}", "vs1r.v v24, (t0)", in (reg) p);
+        vs1r_v24(&mut result);
     }
 
     if result != expected {

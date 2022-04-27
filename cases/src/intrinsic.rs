@@ -2,6 +2,7 @@ use crate::misc::{compress_into_bits, get_bit_in_slice, set_bit_in_slice};
 
 use super::misc::{create_vtype, VLEN};
 use super::runner::WideningCategory;
+use alloc::vec::Vec;
 use core::arch::asm;
 use rvv_asm::rvv_asm;
 
@@ -23,7 +24,15 @@ pub fn vsetvl(avl: u64, sew: u64, lmul: i64) -> u64 {
             out (reg) vl,
         );
     }
+    unsafe {
+        RVV_LEN = vl * (sew >> 3);
+    }
     vl
+}
+
+static mut RVV_LEN: u64 = 0;
+fn get_rvv_len() -> u64 {
+    unsafe { RVV_LEN }
 }
 
 // TODO: rvv_asm! doesn't support this
@@ -178,7 +187,8 @@ pub fn vloxei_v8(offset_sew: u64, buf: &[u8], offset: &[u8]) {
     }
 }
 
-pub fn vse_v8(sew: u64, buf: &[u8]) {
+pub fn vse_v8(sew: u64, buf: &mut [u8]) {
+    assert!(get_rvv_len() <= buf.len() as u64);
     let p = buf.as_ptr();
     unsafe {
         match sew {
@@ -213,7 +223,8 @@ pub fn vse_v8(sew: u64, buf: &[u8]) {
     }
 }
 
-pub fn vsse_v8(sew: u64, buf: &[u8], stride: u64) {
+pub fn vsse_v8(sew: u64, buf: &mut [u8], stride: u64) {
+    assert!(get_rvv_len() <= buf.len() as u64);
     let p = buf.as_ptr();
     unsafe {
         match sew {
@@ -248,7 +259,8 @@ pub fn vsse_v8(sew: u64, buf: &[u8], stride: u64) {
     }
 }
 
-pub fn vsuxei_v8(offset_sew: u64, buf: &[u8], offset: &[u8]) {
+pub fn vsuxei_v8(offset_sew: u64, buf: &mut [u8], offset: &[u8]) {
+    assert!(get_rvv_len() <= buf.len() as u64);
     let p = buf.as_ptr();
     let offset_p = offset.as_ptr();
     unsafe {
@@ -276,7 +288,8 @@ pub fn vsuxei_v8(offset_sew: u64, buf: &[u8], offset: &[u8]) {
     }
 }
 
-pub fn vsoxei_v8(offset_sew: u64, buf: &[u8], offset: &[u8]) {
+pub fn vsoxei_v8(offset_sew: u64, buf: &mut [u8], offset: &[u8]) {
+    assert!(get_rvv_len() <= buf.len() as u64);
     let p = buf.as_ptr();
     let offset_p = offset.as_ptr();
     unsafe {
@@ -339,7 +352,8 @@ pub fn vle_v16(sew: u64, buf: &[u8]) {
     }
 }
 
-pub fn vse_v16(sew: u64, buf: &[u8]) {
+pub fn vse_v16(sew: u64, buf: &mut [u8]) {
+    assert!(get_rvv_len() <= buf.len() as u64);
     let p = buf.as_ptr();
     unsafe {
         match sew {
@@ -409,7 +423,8 @@ pub fn vle_v24(sew: u64, buf: &[u8]) {
     }
 }
 
-pub fn vse_v24(sew: u64, buf: &[u8]) {
+pub fn vse_v24(sew: u64, buf: &mut [u8]) {
+    assert!(get_rvv_len() <= buf.len() as u64);
     let p = buf.as_ptr();
     unsafe {
         match sew {
@@ -445,10 +460,34 @@ pub fn vse_v24(sew: u64, buf: &[u8]) {
 }
 
 pub fn vs1r_v8(buf: &mut [u8]) {
-    assert_eq!(buf.len(), VLEN / 8);
+    assert!(buf.len() >= VLEN / 8);
     let p = buf.as_ptr();
     unsafe {
         rvv_asm!("mv t0, {}", "vs1r.v v8, (t0)", in (reg) p);
+    }
+}
+
+pub fn vs2r_v8(buf: &mut [u8]) {
+    assert!(buf.len() >= VLEN / 4);
+    let p = buf.as_ptr();
+    unsafe {
+        rvv_asm!("mv t0, {}", "vs2r.v v8, (t0)", in (reg) p);
+    }
+}
+
+pub fn vs4r_v8(buf: &mut [u8]) {
+    assert!(buf.len() >= VLEN / 2);
+    let p = buf.as_ptr();
+    unsafe {
+        rvv_asm!("mv t0, {}", "vs4r.v v8, (t0)", in (reg) p);
+    }
+}
+
+pub fn vs8r_v8(buf: &mut [u8]) {
+    assert!(buf.len() >= VLEN);
+    let p = buf.as_ptr();
+    unsafe {
+        rvv_asm!("mv t0, {}", "vs8r.v v8, (t0)", in (reg) p);
     }
 }
 
@@ -484,6 +523,14 @@ pub fn vl1r_v0(buf: &[u8]) {
     }
 }
 
+pub fn vsm_v_v8(buf: &mut [u8]) {
+    assert!(get_rvv_len() <= buf.len() as u64);
+    let p = buf.as_ptr();
+    unsafe {
+        rvv_asm!("mv t0, {}", "vsm.v v8, (t0)", in (reg) p);
+    }
+}
+
 //
 // format
 // <vd>op_<vs2><vs1>
@@ -512,7 +559,14 @@ where
 
         op();
 
-        vse_v24(sew, result);
+        if result.len() as u64 >= vl * sew_bytes {
+            vse_v24(sew, result);
+        } else {
+            let mut temp_buf: Vec<u8> = Vec::new();
+            temp_buf.resize((vl * sew_bytes) as usize, 0);
+            vse_v24(sew, &mut temp_buf);
+            result.copy_from_slice(&temp_buf[..result.len()]);
+        }
 
         avl -= vl;
         if avl == 0 {
