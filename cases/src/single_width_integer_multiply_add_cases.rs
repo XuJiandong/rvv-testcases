@@ -8,8 +8,8 @@ use rvv_testcases::{
     runner::{run_vop_vv, run_vop_vx, ExpectedOp, WideningCategory},
 };
 
-// use ckb_std::syscalls::debug;
-// use rvv_testcases::log;
+use ckb_std::syscalls::debug;
+use rvv_testcases::log;
 
 fn expected_op_macc_vv(lhs: &[u8], rhs: &[u8], result: &mut [u8]) {
     assert!(lhs.len() == rhs.len() && rhs.len() == result.len());
@@ -248,8 +248,8 @@ fn expected_op_wmaccsu_vv(lhs: &[u8], rhs: &[u8], result: &mut [u8]) {
     assert!(lhs.len() == rhs.len() && rhs.len() * 2 == result.len());
     match lhs.len() {
         8 => {
-            let l = i64::from_le_bytes(lhs.try_into().unwrap()) as i128;
-            let r = u64::from_le_bytes(rhs.try_into().unwrap()) as i128;
+            let l = u64::from_le_bytes(lhs.try_into().unwrap()) as i128;
+            let r = i64::from_le_bytes(rhs.try_into().unwrap()) as i128;
             let extra = i128::from_le_bytes(result.try_into().unwrap());
 
             let res1 = l.wrapping_mul(r);
@@ -257,8 +257,8 @@ fn expected_op_wmaccsu_vv(lhs: &[u8], rhs: &[u8], result: &mut [u8]) {
             result.copy_from_slice(&res2.to_le_bytes());
         }
         32 => {
-            let l = conver_to_i512(E256::get(lhs));
-            let r = E512::from(E256::get(rhs));
+            let l = E512::from(E256::get(lhs));
+            let r = conver_to_i512(E256::get(rhs));
             let extra = E512::get(result);
 
             let (res, _) = l.overflowing_mul_s(r);
@@ -291,8 +291,8 @@ fn expected_op_wmaccsu_vx(lhs: &[u8], rhs: u64, result: &mut [u8]) {
     assert!(lhs.len() * 2 == result.len());
     match lhs.len() {
         8 => {
-            let l = i64::from_le_bytes(lhs.try_into().unwrap()) as i128;
-            let r = rhs as i128;
+            let l = u64::from_le_bytes(lhs.try_into().unwrap()) as i128;
+            let r = (rhs as i64) as i128;
             let extra = i128::from_le_bytes(result.try_into().unwrap());
 
             let res1 = l.wrapping_mul(r);
@@ -300,8 +300,8 @@ fn expected_op_wmaccsu_vx(lhs: &[u8], rhs: u64, result: &mut [u8]) {
             result.copy_from_slice(&res2.to_le_bytes());
         }
         32 => {
-            let l = conver_to_i512(E256::get(lhs));
-            let r = E512::from(rhs);
+            let l = E512::from(E256::get(lhs));
+            let r = E512::from(rhs as i64);
             let extra = E512::get(result);
 
             let (res, _) = l.overflowing_mul_s(r);
@@ -326,7 +326,7 @@ fn test_vwmaccsu_vx(sew: u64, lmul: i64, avl: u64) {
         expected_op_wmaccsu_vx,
         op,
         WideningCategory::VdOnly,
-        "vwmaccsu.vv",
+        "vwmaccsu.vx",
     );
 }
 
@@ -334,8 +334,8 @@ fn expected_op_wmaccus_vx(lhs: &[u8], rhs: u64, result: &mut [u8]) {
     assert!(lhs.len() * 2 == result.len());
     match lhs.len() {
         8 => {
-            let l = u64::from_le_bytes(lhs.try_into().unwrap()) as i128;
-            let r = (rhs as i64) as i128;
+            let l = i64::from_le_bytes(lhs.try_into().unwrap()) as i128;
+            let r = rhs  as i128;
             let extra = i128::from_le_bytes(result.try_into().unwrap());
 
             let res1 = l.wrapping_mul(r);
@@ -343,8 +343,8 @@ fn expected_op_wmaccus_vx(lhs: &[u8], rhs: u64, result: &mut [u8]) {
             result.copy_from_slice(&res2.to_le_bytes());
         }
         32 => {
-            let l = E512::from(E256::get(lhs));
-            let r = E512::from(rhs as i64);
+            let l = conver_to_i512(E256::get(lhs));
+            let r = E512::from(rhs);
             let extra = E512::get(result);
 
             let (res, _) = l.overflowing_mul_s(r);
