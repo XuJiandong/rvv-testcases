@@ -8,9 +8,6 @@ use rvv_testcases::{
     runner::{run_vop_vv, run_vop_vx, ExpectedOp, WideningCategory},
 };
 
-use ckb_std::syscalls::debug;
-use rvv_testcases::log;
-
 fn expected_op_macc_vv(lhs: &[u8], rhs: &[u8], result: &mut [u8]) {
     assert!(lhs.len() == rhs.len() && rhs.len() == result.len());
     match lhs.len() {
