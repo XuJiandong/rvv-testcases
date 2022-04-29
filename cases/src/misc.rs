@@ -135,10 +135,10 @@ pub fn shrink_to_imm(x: u64) -> i8 {
     }
 }
 
-// 0 to 31
+// 0 to 15
 pub fn shrink_to_imm_u(x: u64) -> u8 {
     let x2 = (x & 0b11111) as u64;
-    (x2 % 17) as u8
+    (x2 % 16) as u8
 }
 
 pub fn avl_iterator(sew: u64, target_lmul: i64) -> Vec<u64> {
