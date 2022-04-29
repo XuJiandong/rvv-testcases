@@ -1,8 +1,5 @@
 use alloc::boxed::Box;
-use core::{
-    arch::asm,
-    convert::TryInto,
-};
+use core::{arch::asm, convert::TryInto};
 use eint::{Eint, E128, E256};
 use rvv_asm::rvv_asm;
 use rvv_testcases::{
@@ -181,6 +178,54 @@ fn test_vsaddu_vi(sew: u64, lmul: i64, avl: u64) {
         vop_vx(lhs, x, result, sew, avl, lmul, |x: u64| unsafe {
             let imm = shrink_to_imm_u(x);
             match imm {
+                31 => {
+                    rvv_asm!("vsaddu.vi v24, v8, 31");
+                }
+                30 => {
+                    rvv_asm!("vsaddu.vi v24, v8, 30");
+                }
+                29 => {
+                    rvv_asm!("vsaddu.vi v24, v8, 29");
+                }
+                28 => {
+                    rvv_asm!("vsaddu.vi v24, v8, 28");
+                }
+                27 => {
+                    rvv_asm!("vsaddu.vi v24, v8, 27");
+                }
+                26 => {
+                    rvv_asm!("vsaddu.vi v24, v8, 26");
+                }
+                25 => {
+                    rvv_asm!("vsaddu.vi v24, v8, 25");
+                }
+                24 => {
+                    rvv_asm!("vsaddu.vi v24, v8, 24");
+                }
+                23 => {
+                    rvv_asm!("vsaddu.vi v24, v8, 23");
+                }
+                22 => {
+                    rvv_asm!("vsaddu.vi v24, v8, 22");
+                }
+                21 => {
+                    rvv_asm!("vsaddu.vi v24, v8, 21");
+                }
+                20 => {
+                    rvv_asm!("vsaddu.vi v24, v8, 20");
+                }
+                19 => {
+                    rvv_asm!("vsaddu.vi v24, v8, 19");
+                }
+                18 => {
+                    rvv_asm!("vsaddu.vi v24, v8, 18");
+                }
+                17 => {
+                    rvv_asm!("vsaddu.vi v24, v8, 17");
+                }
+                16 => {
+                    rvv_asm!("vsaddu.vi v24, v8, 16");
+                }
                 15 => {
                     rvv_asm!("vsaddu.vi v24, v8, 15");
                 }
