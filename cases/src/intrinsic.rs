@@ -841,8 +841,8 @@ where
 
         let mut temp = [0u8; VLEN / 8];
         vs1r_v24(&mut temp);
-        for _ in 0..vl {
-            let bit = get_bit_in_slice(&temp[..], index);
+        for i in 0..vl {
+            let bit = get_bit_in_slice(&temp[..], i as usize);
             set_bit_in_slice(result, index, bit);
             index += 1;
         }

@@ -575,7 +575,7 @@ pub fn run_vmsop_vx<T1, T2>(
                 sew, desc, i, res, exp
             );
             log!(
-                "more information, lhs = {:?}, rhs = {:?}, lmul = {}, avl = {}",
+                "more information, lhs = {:0>2X?}, rhs = {:?}, lmul = {}, avl = {}",
                 left,
                 right,
                 lmul,
