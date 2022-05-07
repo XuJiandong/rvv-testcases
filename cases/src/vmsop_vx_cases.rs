@@ -86,7 +86,7 @@ fn expected_op_ltu(lhs: &[u8], x: u64, result: &mut [u8], index: usize) {
         }
         32 => {
             let l = E256::get(lhs);
-            let r = E256::from(x);
+            let r = E256::from(x as i64);
             let res = if l.cmp_u(&r).is_lt() { 1 } else { 0 };
             set_bit_in_slice(result, index, res);
         }
@@ -158,7 +158,7 @@ fn expected_op_leu(lhs: &[u8], x: u64, result: &mut [u8], index: usize) {
         }
         32 => {
             let l = E256::get(lhs);
-            let r = E256::from(x);
+            let r = E256::from(x as i64);
             let res = if l.cmp_u(&r).is_le() { 1 } else { 0 };
             set_bit_in_slice(result, index, res);
         }
@@ -228,7 +228,7 @@ fn expected_op_gtu(lhs: &[u8], x: u64, result: &mut [u8], index: usize) {
         }
         32 => {
             let l = E256::get(lhs);
-            let r = E256::from(x);
+            let r = E256::from(x as i64);
             let res = if l.cmp_u(&r).is_gt() { 1 } else { 0 };
             set_bit_in_slice(result, index, res);
         }
