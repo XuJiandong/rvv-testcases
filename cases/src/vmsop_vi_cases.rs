@@ -1,16 +1,13 @@
 use core::{arch::asm, convert::TryInto};
-
-use rvv_asm::rvv_asm;
-
 use eint::{Eint, E128, E256};
+use rvv_asm::rvv_asm;
 use rvv_testcases::{
-    intrinsic::vmsop_vx,
-    misc::{avl_iterator, conver_to_i256, set_bit_in_slice, shrink_to_imm},
-    runner::{run_vmsop_vx, WideningCategory},
+    intrinsic::vmsop_vi,
+    misc::{avl_iterator, conver_to_i256, set_bit_in_slice},
+    runner::{run_vmsop_vi, WideningCategory},
 };
 
-fn expected_eq(lhs: &[u8], x: u64, result: &mut [u8], index: usize) {
-    let imm = shrink_to_imm(x);
+fn expected_eq(lhs: &[u8], imm: i64, result: &mut [u8], index: usize) {
     let res = match lhs.len() {
         8 => {
             let l = i64::from_le_bytes(lhs.try_into().unwrap());
@@ -35,10 +32,9 @@ fn expected_eq(lhs: &[u8], x: u64, result: &mut [u8], index: usize) {
     };
     set_bit_in_slice(result, index, res);
 }
-fn test_vmseq(sew: u64, lmul: i64, avl: u64) {
-    fn op(lhs: &[u8], x: u64, result: &mut [u8], sew: u64, lmul: i64, avl: u64) {
-        vmsop_vx(lhs, x, result, sew, avl, lmul, |x| unsafe {
-            let imm = shrink_to_imm(x);
+fn test_vmseq(sew: u64, lmul: i64, avl: u64, imm: i64) {
+    fn op(lhs: &[u8], imm: i64, result: &mut [u8], sew: u64, lmul: i64, avl: u64) {
+        vmsop_vi(lhs, imm, result, sew, avl, lmul, |imm| unsafe {
             match imm {
                 -16 => {
                     rvv_asm!("vmseq.vi v24, v8, -16");
@@ -142,10 +138,11 @@ fn test_vmseq(sew: u64, lmul: i64, avl: u64) {
             }
         });
     }
-    run_vmsop_vx(
+    run_vmsop_vi(
         sew,
         lmul,
         avl,
+        imm,
         expected_eq,
         op,
         WideningCategory::None,
@@ -153,8 +150,7 @@ fn test_vmseq(sew: u64, lmul: i64, avl: u64) {
     );
 }
 
-fn expected_ne(lhs: &[u8], x: u64, result: &mut [u8], index: usize) {
-    let imm = shrink_to_imm(x);
+fn expected_ne(lhs: &[u8], imm: i64, result: &mut [u8], index: usize) {
     let res = match lhs.len() {
         8 => {
             let l = i64::from_le_bytes(lhs.try_into().unwrap());
@@ -179,10 +175,9 @@ fn expected_ne(lhs: &[u8], x: u64, result: &mut [u8], index: usize) {
     };
     set_bit_in_slice(result, index, res);
 }
-fn test_vmsne(sew: u64, lmul: i64, avl: u64) {
-    fn op(lhs: &[u8], x: u64, result: &mut [u8], sew: u64, lmul: i64, avl: u64) {
-        vmsop_vx(lhs, x, result, sew, avl, lmul, |x| unsafe {
-            let imm = shrink_to_imm(x);
+fn test_vmsne(sew: u64, lmul: i64, avl: u64, imm: i64) {
+    fn op(lhs: &[u8], imm: i64, result: &mut [u8], sew: u64, lmul: i64, avl: u64) {
+        vmsop_vi(lhs, imm, result, sew, avl, lmul, |imm| unsafe {
             match imm {
                 -16 => {
                     rvv_asm!("vmsne.vi v24, v8, -16");
@@ -286,10 +281,11 @@ fn test_vmsne(sew: u64, lmul: i64, avl: u64) {
             }
         });
     }
-    run_vmsop_vx(
+    run_vmsop_vi(
         sew,
         lmul,
         avl,
+        imm,
         expected_ne,
         op,
         WideningCategory::None,
@@ -297,8 +293,7 @@ fn test_vmsne(sew: u64, lmul: i64, avl: u64) {
     );
 }
 
-fn expected_leu(lhs: &[u8], x: u64, result: &mut [u8], index: usize) {
-    let imm = shrink_to_imm(x);
+fn expected_leu(lhs: &[u8], imm: i64, result: &mut [u8], index: usize) {
     let res = match lhs.len() {
         8 => {
             let l = u64::from_le_bytes(lhs.try_into().unwrap());
@@ -323,10 +318,9 @@ fn expected_leu(lhs: &[u8], x: u64, result: &mut [u8], index: usize) {
     };
     set_bit_in_slice(result, index, res);
 }
-fn test_vmsleu(sew: u64, lmul: i64, avl: u64) {
-    fn op(lhs: &[u8], x: u64, result: &mut [u8], sew: u64, lmul: i64, avl: u64) {
-        vmsop_vx(lhs, x, result, sew, avl, lmul, |x| unsafe {
-            let imm = shrink_to_imm(x);
+fn test_vmsleu(sew: u64, lmul: i64, avl: u64, imm: i64) {
+    fn op(lhs: &[u8], imm: i64, result: &mut [u8], sew: u64, lmul: i64, avl: u64) {
+        vmsop_vi(lhs, imm, result, sew, avl, lmul, |imm| unsafe {
             match imm {
                 -16 => {
                     rvv_asm!("vmsleu.vi v24, v8, -16");
@@ -430,10 +424,11 @@ fn test_vmsleu(sew: u64, lmul: i64, avl: u64) {
             }
         });
     }
-    run_vmsop_vx(
+    run_vmsop_vi(
         sew,
         lmul,
         avl,
+        imm,
         expected_leu,
         op,
         WideningCategory::None,
@@ -441,8 +436,7 @@ fn test_vmsleu(sew: u64, lmul: i64, avl: u64) {
     );
 }
 
-fn expected_le(lhs: &[u8], x: u64, result: &mut [u8], index: usize) {
-    let imm = shrink_to_imm(x);
+fn expected_le(lhs: &[u8], imm: i64, result: &mut [u8], index: usize) {
     let res = match lhs.len() {
         8 => {
             let l = i64::from_le_bytes(lhs.try_into().unwrap());
@@ -467,10 +461,9 @@ fn expected_le(lhs: &[u8], x: u64, result: &mut [u8], index: usize) {
     };
     set_bit_in_slice(result, index, res);
 }
-fn test_vmsle(sew: u64, lmul: i64, avl: u64) {
-    fn op(lhs: &[u8], x: u64, result: &mut [u8], sew: u64, lmul: i64, avl: u64) {
-        vmsop_vx(lhs, x, result, sew, avl, lmul, |x| unsafe {
-            let imm = shrink_to_imm(x);
+fn test_vmsle(sew: u64, lmul: i64, avl: u64, imm: i64) {
+    fn op(lhs: &[u8], imm: i64, result: &mut [u8], sew: u64, lmul: i64, avl: u64) {
+        vmsop_vi(lhs, imm, result, sew, avl, lmul, |imm| unsafe {
             match imm {
                 -16 => {
                     rvv_asm!("vmsle.vi v24, v8, -16");
@@ -574,10 +567,11 @@ fn test_vmsle(sew: u64, lmul: i64, avl: u64) {
             }
         });
     }
-    run_vmsop_vx(
+    run_vmsop_vi(
         sew,
         lmul,
         avl,
+        imm,
         expected_le,
         op,
         WideningCategory::None,
@@ -585,8 +579,7 @@ fn test_vmsle(sew: u64, lmul: i64, avl: u64) {
     );
 }
 
-fn expected_gtu(lhs: &[u8], x: u64, result: &mut [u8], index: usize) {
-    let imm = shrink_to_imm(x);
+fn expected_gtu(lhs: &[u8], imm: i64, result: &mut [u8], index: usize) {
     let res = match lhs.len() {
         8 => {
             let l = u64::from_le_bytes(lhs.try_into().unwrap());
@@ -611,10 +604,9 @@ fn expected_gtu(lhs: &[u8], x: u64, result: &mut [u8], index: usize) {
     };
     set_bit_in_slice(result, index, res);
 }
-fn test_vmsgtu(sew: u64, lmul: i64, avl: u64) {
-    fn op(lhs: &[u8], x: u64, result: &mut [u8], sew: u64, lmul: i64, avl: u64) {
-        vmsop_vx(lhs, x, result, sew, avl, lmul, |x| unsafe {
-            let imm = shrink_to_imm(x);
+fn test_vmsgtu(sew: u64, lmul: i64, avl: u64, imm: i64) {
+    fn op(lhs: &[u8], imm: i64, result: &mut [u8], sew: u64, lmul: i64, avl: u64) {
+        vmsop_vi(lhs, imm, result, sew, avl, lmul, |imm| unsafe {
             match imm {
                 -16 => {
                     rvv_asm!("vmsgtu.vi v24, v8, -16");
@@ -718,10 +710,11 @@ fn test_vmsgtu(sew: u64, lmul: i64, avl: u64) {
             }
         });
     }
-    run_vmsop_vx(
+    run_vmsop_vi(
         sew,
         lmul,
         avl,
+        imm,
         expected_gtu,
         op,
         WideningCategory::None,
@@ -729,12 +722,11 @@ fn test_vmsgtu(sew: u64, lmul: i64, avl: u64) {
     );
 }
 
-fn expected_gt(lhs: &[u8], x: u64, result: &mut [u8], index: usize) {
-    let imm = shrink_to_imm(x);
+fn expected_gt(lhs: &[u8], imm: i64, result: &mut [u8], index: usize) {
     let res = match lhs.len() {
         8 => {
             let l = i64::from_le_bytes(lhs.try_into().unwrap());
-            if l > imm as i64 {
+            if l > imm {
                 1
             } else {
                 0
@@ -755,10 +747,9 @@ fn expected_gt(lhs: &[u8], x: u64, result: &mut [u8], index: usize) {
     };
     set_bit_in_slice(result, index, res);
 }
-fn test_vmsgt(sew: u64, lmul: i64, avl: u64) {
-    fn op(lhs: &[u8], x: u64, result: &mut [u8], sew: u64, lmul: i64, avl: u64) {
-        vmsop_vx(lhs, x, result, sew, avl, lmul, |x| unsafe {
-            let imm = shrink_to_imm(x);
+fn test_vmsgt(sew: u64, lmul: i64, avl: u64, imm: i64) {
+    fn op(lhs: &[u8], imm: i64, result: &mut [u8], sew: u64, lmul: i64, avl: u64) {
+        vmsop_vi(lhs, imm, result, sew, avl, lmul, |imm| unsafe {
             match imm {
                 -16 => {
                     rvv_asm!("vmsgt.vi v24, v8, -16");
@@ -862,10 +853,11 @@ fn test_vmsgt(sew: u64, lmul: i64, avl: u64) {
             }
         });
     }
-    run_vmsop_vx(
+    run_vmsop_vi(
         sew,
         lmul,
         avl,
+        imm,
         expected_gt,
         op,
         WideningCategory::None,
@@ -874,15 +866,20 @@ fn test_vmsgt(sew: u64, lmul: i64, avl: u64) {
 }
 
 pub fn test_vmsop_vi() {
+    let mut imm = -16;
     for sew in [64, 256] {
         for lmul in [-8, -2, 1, 4, 8] {
             for avl in avl_iterator(sew, 4) {
-                test_vmseq(sew, lmul, avl);
-                test_vmsne(sew, lmul, avl);
-                test_vmsleu(sew, lmul, avl);
-                test_vmsle(sew, lmul, avl);
-                test_vmsgtu(sew, lmul, avl);
-                test_vmsgt(sew, lmul, avl);
+                test_vmseq(sew, lmul, avl, imm);
+                test_vmsne(sew, lmul, avl, imm);
+                test_vmsleu(sew, lmul, avl, imm);
+                test_vmsle(sew, lmul, avl, imm);
+                test_vmsgtu(sew, lmul, avl, imm);
+                test_vmsgt(sew, lmul, avl, imm);
+                imm += 1;
+                if imm > 15 {
+                    imm = -16;
+                }
             }
         }
     }

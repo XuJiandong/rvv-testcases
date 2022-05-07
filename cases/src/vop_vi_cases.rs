@@ -1,13 +1,12 @@
 use core::arch::asm;
 use core::convert::TryInto;
 use rvv_asm::rvv_asm;
-use rvv_testcases::intrinsic::vop_vx;
-use rvv_testcases::misc::{avl_iterator, shrink_to_imm, Widening, U256};
-use rvv_testcases::runner::{run_vop_vx, WideningCategory};
+use rvv_testcases::intrinsic::vop_vi;
+use rvv_testcases::misc::{avl_iterator, Widening, U256};
+use rvv_testcases::runner::{run_vop_vi, WideningCategory};
 
-fn expected_op_add(lhs: &[u8], x: u64, result: &mut [u8]) {
+fn expected_op_add(lhs: &[u8], imm: i64, result: &mut [u8]) {
     assert!(lhs.len() == result.len());
-    let imm = shrink_to_imm(x);
     match lhs.len() {
         1 => {
             let (r, _) = lhs[0].overflowing_add(imm as u8);
@@ -47,12 +46,10 @@ fn expected_op_add(lhs: &[u8], x: u64, result: &mut [u8]) {
         }
     }
 }
-
-fn test_vadd_vi(sew: u64, lmul: i64, avl: u64) {
+fn test_vadd_vi(sew: u64, lmul: i64, avl: u64, imm: i64) {
     // test combinations of lmul, sew, avl, etc
-    fn add(lhs: &[u8], x: u64, result: &mut [u8], sew: u64, lmul: i64, avl: u64) {
-        vop_vx(lhs, x, result, sew, avl, lmul, |x: u64| unsafe {
-            let imm = shrink_to_imm(x);
+    fn add(lhs: &[u8], imm: i64, result: &mut [u8], sew: u64, lmul: i64, avl: u64) {
+        vop_vi(lhs, imm, result, sew, avl, lmul, |imm| unsafe {
             match imm {
                 15 => {
                     rvv_asm!("vadd.vi v24, v8, 15");
@@ -156,10 +153,11 @@ fn test_vadd_vi(sew: u64, lmul: i64, avl: u64) {
             }
         });
     }
-    run_vop_vx(
+    run_vop_vi(
         sew,
         lmul,
         avl,
+        imm,
         expected_op_add,
         add,
         WideningCategory::None,
@@ -167,9 +165,8 @@ fn test_vadd_vi(sew: u64, lmul: i64, avl: u64) {
     );
 }
 
-fn expected_op_sub(lhs: &[u8], x: u64, result: &mut [u8]) {
+fn expected_op_sub(lhs: &[u8], imm: i64, result: &mut [u8]) {
     assert!(lhs.len() == result.len());
-    let imm = shrink_to_imm(x);
     match lhs.len() {
         1 => {
             let (r, _) = (imm as u8).overflowing_sub(lhs[0]);
@@ -212,11 +209,9 @@ fn expected_op_sub(lhs: &[u8], x: u64, result: &mut [u8]) {
         }
     }
 }
-
-fn test_vrsub_vi(sew: u64, lmul: i64, avl: u64) {
-    fn sub(lhs: &[u8], x: u64, result: &mut [u8], sew: u64, lmul: i64, avl: u64) {
-        vop_vx(lhs, x, result, sew, avl, lmul, |x: u64| unsafe {
-            let imm = shrink_to_imm(x);
+fn test_vrsub_vi(sew: u64, lmul: i64, avl: u64, imm: i64) {
+    fn sub(lhs: &[u8], imm: i64, result: &mut [u8], sew: u64, lmul: i64, avl: u64) {
+        vop_vi(lhs, imm, result, sew, avl, lmul, |imm| unsafe {
             match imm {
                 15 => {
                     rvv_asm!("vrsub.vi v24, v8, 15");
@@ -320,10 +315,11 @@ fn test_vrsub_vi(sew: u64, lmul: i64, avl: u64) {
             }
         });
     }
-    run_vop_vx(
+    run_vop_vi(
         sew,
         lmul,
         avl,
+        imm,
         expected_op_sub,
         sub,
         WideningCategory::None,
@@ -331,9 +327,8 @@ fn test_vrsub_vi(sew: u64, lmul: i64, avl: u64) {
     );
 }
 
-fn expected_op_and(lhs: &[u8], x: u64, result: &mut [u8]) {
+fn expected_op_and(lhs: &[u8], imm: i64, result: &mut [u8]) {
     assert!(lhs.len() == result.len());
-    let imm = shrink_to_imm(x);
     match lhs.len() {
         1 => {
             result[0] = lhs[0] & imm as u8;
@@ -372,11 +367,9 @@ fn expected_op_and(lhs: &[u8], x: u64, result: &mut [u8]) {
         }
     }
 }
-
-fn test_vand_vi(sew: u64, lmul: i64, avl: u64) {
-    fn and(lhs: &[u8], x: u64, result: &mut [u8], sew: u64, lmul: i64, avl: u64) {
-        vop_vx(lhs, x, result, sew, avl, lmul, |x: u64| unsafe {
-            let imm = shrink_to_imm(x);
+fn test_vand_vi(sew: u64, lmul: i64, avl: u64, imm: i64) {
+    fn and(lhs: &[u8], imm: i64, result: &mut [u8], sew: u64, lmul: i64, avl: u64) {
+        vop_vi(lhs, imm, result, sew, avl, lmul, |imm| unsafe {
             match imm {
                 15 => {
                     rvv_asm!("vand.vi v24, v8, 15");
@@ -480,10 +473,11 @@ fn test_vand_vi(sew: u64, lmul: i64, avl: u64) {
             }
         });
     }
-    run_vop_vx(
+    run_vop_vi(
         sew,
         lmul,
         avl,
+        imm,
         expected_op_and,
         and,
         WideningCategory::None,
@@ -491,9 +485,8 @@ fn test_vand_vi(sew: u64, lmul: i64, avl: u64) {
     );
 }
 
-fn expected_op_or(lhs: &[u8], x: u64, result: &mut [u8]) {
+fn expected_op_or(lhs: &[u8], imm: i64, result: &mut [u8]) {
     assert!(lhs.len() == result.len());
-    let imm = shrink_to_imm(x);
     match lhs.len() {
         1 => {
             result[0] = lhs[0] | imm as u8;
@@ -532,11 +525,9 @@ fn expected_op_or(lhs: &[u8], x: u64, result: &mut [u8]) {
         }
     }
 }
-
-fn test_vor_vi(sew: u64, lmul: i64, avl: u64) {
-    fn or(lhs: &[u8], x: u64, result: &mut [u8], sew: u64, lmul: i64, avl: u64) {
-        vop_vx(lhs, x, result, sew, avl, lmul, |x: u64| unsafe {
-            let imm = shrink_to_imm(x);
+fn test_vor_vi(sew: u64, lmul: i64, avl: u64, imm: i64) {
+    fn or(lhs: &[u8], imm: i64, result: &mut [u8], sew: u64, lmul: i64, avl: u64) {
+        vop_vi(lhs, imm, result, sew, avl, lmul, |imm| unsafe {
             match imm {
                 15 => {
                     rvv_asm!("vor.vi v24, v8, 15");
@@ -640,10 +631,11 @@ fn test_vor_vi(sew: u64, lmul: i64, avl: u64) {
             }
         });
     }
-    run_vop_vx(
+    run_vop_vi(
         sew,
         lmul,
         avl,
+        imm,
         expected_op_or,
         or,
         WideningCategory::None,
@@ -651,9 +643,8 @@ fn test_vor_vi(sew: u64, lmul: i64, avl: u64) {
     );
 }
 
-fn expected_op_xor(lhs: &[u8], x: u64, result: &mut [u8]) {
+fn expected_op_xor(lhs: &[u8], imm: i64, result: &mut [u8]) {
     assert!(lhs.len() == result.len());
-    let imm = shrink_to_imm(x);
     match lhs.len() {
         1 => {
             result[0] = lhs[0] ^ imm as u8;
@@ -692,11 +683,9 @@ fn expected_op_xor(lhs: &[u8], x: u64, result: &mut [u8]) {
         }
     }
 }
-
-fn test_vxor_vi(sew: u64, lmul: i64, avl: u64) {
-    fn xor(lhs: &[u8], x: u64, result: &mut [u8], sew: u64, lmul: i64, avl: u64) {
-        vop_vx(lhs, x, result, sew, avl, lmul, |x: u64| unsafe {
-            let imm = shrink_to_imm(x);
+fn test_vxor_vi(sew: u64, lmul: i64, avl: u64, imm: i64) {
+    fn xor(lhs: &[u8], imm: i64, result: &mut [u8], sew: u64, lmul: i64, avl: u64) {
+        vop_vi(lhs, imm, result, sew, avl, lmul, |imm| unsafe {
             match imm {
                 15 => {
                     rvv_asm!("vxor.vi v24, v8, 15");
@@ -801,10 +790,11 @@ fn test_vxor_vi(sew: u64, lmul: i64, avl: u64) {
         });
     }
 
-    run_vop_vx(
+    run_vop_vi(
         sew,
         lmul,
         avl,
+        imm,
         expected_op_xor,
         xor,
         WideningCategory::None,
@@ -813,14 +803,19 @@ fn test_vxor_vi(sew: u64, lmul: i64, avl: u64) {
 }
 
 pub fn test_vop_vi() {
+    let mut imm = -16;
     for sew in [8, 32, 64, 128, 256] {
         for lmul in [-2, 1, 4, 8] {
             for avl in avl_iterator(sew, 4) {
-                test_vadd_vi(sew, lmul, avl);
-                test_vrsub_vi(sew, lmul, avl);
-                test_vand_vi(sew, lmul, avl);
-                test_vor_vi(sew, lmul, avl);
-                test_vxor_vi(sew, lmul, avl);
+                test_vadd_vi(sew, lmul, avl, imm);
+                test_vrsub_vi(sew, lmul, avl, imm);
+                test_vand_vi(sew, lmul, avl, imm);
+                test_vor_vi(sew, lmul, avl, imm);
+                test_vxor_vi(sew, lmul, avl, imm);
+                imm += 1;
+                if imm > 15 {
+                    imm = -16;
+                }
             }
         }
     }

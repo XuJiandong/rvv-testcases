@@ -857,6 +857,40 @@ where
 }
 
 #[inline(never)]
+pub fn vmsop_vi<F>(lhs: &[u8], x: i64, result: &mut [u8], sew: u64, avl: u64, lmul: i64, op: F)
+where
+    F: Fn(i64),
+{
+    let mut avl = avl;
+    let mut lhs = lhs;
+
+    let sew_bytes = sew / 8;
+
+    let mut index = 0;
+    loop {
+        let vl = vsetvl(avl as u64, sew, lmul);
+        vle_v8(sew, lhs);
+
+        op(x);
+
+        let mut temp = [0u8; VLEN / 8];
+        vs1r_v24(&mut temp);
+        for i in 0..vl {
+            let bit = get_bit_in_slice(&temp[..], i as usize);
+            set_bit_in_slice(result, index, bit);
+            index += 1;
+        }
+
+        avl -= vl;
+        if avl == 0 {
+            break;
+        }
+        let offset = (vl * sew_bytes) as usize;
+        lhs = &lhs[offset..];
+    }
+}
+
+#[inline(never)]
 pub fn vop_nv<F>(
     lhs: &[u8],
     rhs: &[u8],
@@ -916,6 +950,34 @@ where
         vle_v8(sew, lhs);
 
         op(x);
+
+        vse_v24(sew, result);
+
+        avl -= vl;
+        if avl == 0 {
+            break;
+        }
+        let offset = (vl * sew_bytes) as usize;
+        result = &mut result[offset..];
+        lhs = &lhs[offset..];
+    }
+}
+
+#[inline(never)]
+pub fn vop_vi<F>(lhs: &[u8], imm: i64, result: &mut [u8], sew: u64, avl: u64, lmul: i64, op: F)
+where
+    F: Fn(i64),
+{
+    let mut avl = avl;
+    let mut lhs = lhs;
+    let mut result = result;
+
+    let sew_bytes = sew / 8;
+    loop {
+        let vl = vsetvl(avl as u64, sew, lmul);
+        vle_v8(sew, lhs);
+
+        op(imm);
 
         vse_v24(sew, result);
 
