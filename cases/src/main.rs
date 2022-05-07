@@ -155,11 +155,7 @@ fn program_entry(argc: u64, argv: *const *const u8) -> i8 {
     );
 
     test_case!(
-        single_width_integer_multiply_add_cases::test_single_width_integer_multiply_add,
-        test_pattern
-    );
-    test_case!(
-        single_width_integer_multiply_add_cases::test_widening_width_uinteger_multiply_add,
+        single_width_integer_multiply_add_cases::test_widening_width_multiply_add,
         test_pattern
     );
     test_case!(vsub_cases::test_vsub, test_pattern);

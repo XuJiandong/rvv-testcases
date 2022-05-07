@@ -392,3 +392,19 @@ pub fn add_i512(a: &[u8; 64], b: &[u8; 64]) -> [u8; 64] {
 
     r
 }
+
+#[macro_export]
+macro_rules! conver_with_single {
+    ($func_name: ident, $name: ident, $half:ident) => {
+        pub fn $func_name(d: $half) -> $name {
+            if d.is_negative() {
+                $name(d, $half::MAX_U)
+            } else {
+                $name::from(d)
+            }
+        }
+    };
+}
+
+conver_with_single!(conver_to_i512, E512, E256);
+conver_with_single!(conver_to_i256, E256, E128);

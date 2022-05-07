@@ -4,7 +4,7 @@ use eint::{Eint, E256};
 use rvv_asm::rvv_asm;
 use rvv_testcases::{
     intrinsic::{vop_vv, vop_vx},
-    misc::{avl_iterator, shrink_to_imm},
+    misc::{avl_iterator, shrink_to_imm_u},
     runner::{run_vop_vv, run_vop_vx, ExpectedOp, WideningCategory},
 };
 
@@ -116,20 +116,62 @@ fn test_vssrl_vv(sew: u64, lmul: i64, avl: u64) {
 }
 
 fn expected_op_vssrl_vi(lhs: &[u8], x: u64, result: &mut [u8]) {
-    let mut imm = shrink_to_imm(x);
-    if imm < 0 {
-        imm = 0;
-    }
+    let imm = shrink_to_imm_u(x);
     expected_op_vssrl_vx(lhs, imm as u64, result);
 }
 fn test_vssrl_vi(sew: u64, lmul: i64, avl: u64) {
     fn op(lhs: &[u8], x: u64, result: &mut [u8], sew: u64, lmul: i64, avl: u64) {
         vop_vx(lhs, x, result, sew, avl, lmul, |x: u64| unsafe {
-            let mut imm = shrink_to_imm(x);
-            if imm < 0 {
-                imm = 0;
-            }
+            let imm = shrink_to_imm_u(x);
             match imm {
+                31 => {
+                    rvv_asm!("vssrl.vi v24, v8, 31");
+                }
+                30 => {
+                    rvv_asm!("vssrl.vi v24, v8, 30");
+                }
+                29 => {
+                    rvv_asm!("vssrl.vi v24, v8, 29");
+                }
+                28 => {
+                    rvv_asm!("vssrl.vi v24, v8, 28");
+                }
+                27 => {
+                    rvv_asm!("vssrl.vi v24, v8, 27");
+                }
+                26 => {
+                    rvv_asm!("vssrl.vi v24, v8, 26");
+                }
+                25 => {
+                    rvv_asm!("vssrl.vi v24, v8, 25");
+                }
+                24 => {
+                    rvv_asm!("vssrl.vi v24, v8, 24");
+                }
+                23 => {
+                    rvv_asm!("vssrl.vi v24, v8, 23");
+                }
+                22 => {
+                    rvv_asm!("vssrl.vi v24, v8, 22");
+                }
+                21 => {
+                    rvv_asm!("vssrl.vi v24, v8, 21");
+                }
+                20 => {
+                    rvv_asm!("vssrl.vi v24, v8, 20");
+                }
+                19 => {
+                    rvv_asm!("vssrl.vi v24, v8, 19");
+                }
+                18 => {
+                    rvv_asm!("vssrl.vi v24, v8, 18");
+                }
+                17 => {
+                    rvv_asm!("vssrl.vi v24, v8, 17");
+                }
+                16 => {
+                    rvv_asm!("vssrl.vi v24, v8, 16");
+                }
                 15 => {
                     rvv_asm!("vssrl.vi v24, v8, 15");
                 }
@@ -303,20 +345,62 @@ fn test_vssra_vv(sew: u64, lmul: i64, avl: u64) {
 }
 
 fn expected_op_vssra_vi(lhs: &[u8], x: u64, result: &mut [u8]) {
-    let mut imm = shrink_to_imm(x);
-    if imm < 0 {
-        imm = 0;
-    }
+    let imm = shrink_to_imm_u(x);
     expected_op_vssra_vx(lhs, imm as u64, result);
 }
 fn test_vssra_vi(sew: u64, lmul: i64, avl: u64) {
     fn op(lhs: &[u8], x: u64, result: &mut [u8], sew: u64, lmul: i64, avl: u64) {
         vop_vx(lhs, x, result, sew, avl, lmul, |x: u64| unsafe {
-            let mut imm = shrink_to_imm(x);
-            if imm < 0 {
-                imm = 0;
-            }
+            let imm = shrink_to_imm_u(x);
             match imm {
+                31 => {
+                    rvv_asm!("vssra.vi v24, v8, 31");
+                }
+                30 => {
+                    rvv_asm!("vssra.vi v24, v8, 30");
+                }
+                29 => {
+                    rvv_asm!("vssra.vi v24, v8, 29");
+                }
+                28 => {
+                    rvv_asm!("vssra.vi v24, v8, 28");
+                }
+                27 => {
+                    rvv_asm!("vssra.vi v24, v8, 27");
+                }
+                26 => {
+                    rvv_asm!("vssra.vi v24, v8, 26");
+                }
+                25 => {
+                    rvv_asm!("vssra.vi v24, v8, 25");
+                }
+                24 => {
+                    rvv_asm!("vssra.vi v24, v8, 24");
+                }
+                23 => {
+                    rvv_asm!("vssra.vi v24, v8, 23");
+                }
+                22 => {
+                    rvv_asm!("vssra.vi v24, v8, 22");
+                }
+                21 => {
+                    rvv_asm!("vssra.vi v24, v8, 21");
+                }
+                20 => {
+                    rvv_asm!("vssra.vi v24, v8, 20");
+                }
+                19 => {
+                    rvv_asm!("vssra.vi v24, v8, 19");
+                }
+                18 => {
+                    rvv_asm!("vssra.vi v24, v8, 18");
+                }
+                17 => {
+                    rvv_asm!("vssra.vi v24, v8, 17");
+                }
+                16 => {
+                    rvv_asm!("vssra.vi v24, v8, 16");
+                }
                 15 => {
                     rvv_asm!("vssra.vi v24, v8, 15");
                 }

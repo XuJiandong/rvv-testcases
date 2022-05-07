@@ -1004,6 +1004,7 @@ where
     loop {
         let vl = vsetvl(avl as u64, sew, lmul);
         vle_v8(sew, lhs);
+        vle_v24(sew * 2, result);
 
         op(x);
 
