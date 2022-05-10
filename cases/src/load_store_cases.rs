@@ -555,13 +555,8 @@ fn load_whole_v8(whole: usize, whole_len: usize, buf: &[u8]) {
     }
 }
 
-fn get_whole_expected(
-    load_whole: usize,
-    load_whole_len: usize,
-    store_whole: usize,
-    mem: &[u8],
-) -> Vec<u8> {
-    let load_len = VLEN / 8 / (load_whole_len / 8) * load_whole;
+fn get_whole_expected(load_whole: usize, store_whole: usize, mem: &[u8]) -> Vec<u8> {
+    let load_len = VLEN / 8 * load_whole;
     let mut data = [0x55u8; 2048];
     data[..load_len].copy_from_slice(&mem[..load_len]);
 
@@ -605,7 +600,7 @@ fn check_whole(
     let mut result = [0u8; 2048];
     store_whole_v8(store_whole, &mut result);
 
-    let expected = get_whole_expected(load_whole, load_whole_len, store_whole, &mem);
+    let expected = get_whole_expected(load_whole, store_whole, &mem);
     if result != expected.as_slice() {
         log!(
             "Failed on test_whole_load_store vl{}re{}.v vs{}r.v, sew = {}, lmul = {}",
@@ -620,6 +615,7 @@ fn check_whole(
             result,
             expected
         );
+        log!("More infomation: mem: {:0>2X?}", mem);
         panic!("Abort");
     }
 }
