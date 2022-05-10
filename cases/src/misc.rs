@@ -125,22 +125,6 @@ macro_rules! test_case {
     }};
 }
 
-// -16 to 15
-pub fn shrink_to_imm(x: u64) -> i8 {
-    let x2 = (x & 0b11111) as u64;
-    if x2 < 16 {
-        x2 as i8
-    } else {
-        x2 as i8 - 32
-    }
-}
-
-// 0 to 15
-pub fn shrink_to_imm_u(x: u64) -> u8 {
-    let x2 = (x & 0b11111) as u64;
-    (x2 % 16) as u8
-}
-
 pub fn avl_iterator(sew: u64, target_lmul: i64) -> Vec<u64> {
     if target_lmul > 0 {
         let avl = target_lmul as u64 * VLEN as u64 / sew as u64;

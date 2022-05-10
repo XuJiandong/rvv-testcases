@@ -28,7 +28,6 @@ mod single_width_shift_cases;
 mod vector_compress_cases;
 mod vector_element_index_cases;
 mod vector_iota_cases;
-mod vmsleu_vv_cases;
 mod vsub_cases;
 mod widening_integer_reduction_cases;
 
@@ -159,7 +158,6 @@ fn program_entry(argc: u64, argv: *const *const u8) -> i8 {
         test_pattern
     );
     test_case!(vsub_cases::test_vsub, test_pattern);
-    test_case!(vmsleu_vv_cases::test_vmsleu_vv, test_pattern);
     test_case!(
         count_population_in_mask_cases::test_count_population_in_mask,
         test_pattern

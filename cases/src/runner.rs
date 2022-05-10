@@ -130,7 +130,7 @@ pub fn run_vop_vv<T>(
             result[expected_range.clone()]
                 .copy_from_slice(&expected_before[expected_range.clone()]);
         }
-        
+
         match expected_op {
             ExpectedOp::Normal(ref mut op) => {
                 op(
@@ -575,9 +575,85 @@ pub fn run_vmsop_vx<T1, T2>(
                 sew, desc, i, res, exp
             );
             log!(
-                "more information, lhs = {:?}, rhs = {:?}, lmul = {}, avl = {}",
+                "more information, lhs = {:0>2X?}, rhs = {:?}, lmul = {}, avl = {}",
                 left,
                 right,
+                lmul,
+                avl
+            );
+            panic!("Abort");
+        }
+    }
+    if is_verbose() {
+        log!("finished");
+    }
+}
+
+pub fn run_vmsop_vi<T1, T2>(
+    sew: u64,
+    lmul: i64,
+    avl: u64,
+    imm: i64,
+    mut expected_op: T1,
+    mut v_op: T2,
+    _: WideningCategory,
+    desc: &str,
+) where
+    T1: FnMut(&[u8], i64, &mut [u8], usize),
+    T2: FnMut(&[u8], i64, &mut [u8], u64, i64, u64),
+{
+    if is_verbose() {
+        log!(
+            "run with sew = {}, lmul = {}, avl = {}, desc = {}",
+            sew,
+            lmul,
+            avl,
+            desc
+        );
+    }
+    let vl = vsetvl(avl as u64, sew, lmul);
+    if vl == 0 {
+        return;
+    }
+
+    let avl_bytes = (sew / 8 * avl) as usize;
+    let sew_bytes = (sew / 8) as usize;
+
+    let mut lhs = Vec::<u8>::new();
+    lhs.resize(avl_bytes, 0);
+
+    let mut expected = Vec::<u8>::new();
+    let mut result = Vec::<u8>::new();
+
+    let result_avl_bytes = ceiling(avl as usize, 8);
+    result.resize(result_avl_bytes, 0);
+    expected.resize(result_avl_bytes, 0);
+
+    let mut rng = BestNumberRng::default();
+    for i in 0..avl as usize {
+        let range = i * sew_bytes..(i + 1) * sew_bytes;
+
+        rng.fill(&mut lhs[range.clone()]);
+
+        expected_op(&lhs[range.clone()], imm, &mut expected, i);
+    }
+    v_op(lhs.as_slice(), imm, result.as_mut_slice(), sew, lmul, avl);
+
+    for i in 0..avl as usize {
+        let range = i * sew_bytes..(i + 1) * sew_bytes;
+        let left = &lhs[range.clone()];
+
+        let res = get_bit_in_slice(result.as_slice(), i);
+        let exp = get_bit_in_slice(expected.as_slice(), i);
+        if res != exp {
+            log!(
+                "[sew = {}, describe = {}] unexpected values found at index {} (nth-element): {:?} (result) {:?} (expected)",
+                sew, desc, i, res, exp
+            );
+            log!(
+                "more information, lhs = {:0>2X?}, rhs = {:?}, lmul = {}, avl = {}",
+                left,
+                imm,
                 lmul,
                 avl
             );
@@ -695,6 +771,122 @@ pub fn run_vop_vx<T1, T2>(
                 "more information, lhs = {:0>2X?}, rhs = {:0>2X?}, lmul = {}, avl = {}",
                 left,
                 right,
+                lmul,
+                avl
+            );
+            panic!("Abort");
+        }
+    }
+    if is_verbose() {
+        log!("finished");
+    }
+}
+
+pub fn run_vop_vi<T1, T2>(
+    sew: u64,
+    lmul: i64,
+    avl: u64,
+    imm: i64,
+    mut expected_op: T1,
+    mut v_op: T2,
+    cat: WideningCategory,
+    desc: &str,
+) where
+    T1: FnMut(&[u8], i64, &mut [u8]),
+    T2: FnMut(&[u8], i64, &mut [u8], u64, i64, u64),
+{
+    if is_verbose() {
+        log!(
+            "run with sew = {}, lmul = {}, avl = {}, desc = {}",
+            sew,
+            lmul,
+            avl,
+            desc
+        );
+    }
+
+    let avl_bytes = (sew / 8 * avl) as usize;
+    let sew_bytes = (sew / 8) as usize;
+    let mut lhs = Vec::<u8>::new();
+    let mut expected = Vec::<u8>::new();
+    let mut result = Vec::<u8>::new();
+
+    match cat {
+        WideningCategory::VdVs2 => {
+            expected.resize(avl_bytes * 2, 0);
+            result.resize(avl_bytes * 2, 0);
+            lhs.resize(avl_bytes * 2, 0);
+        }
+        WideningCategory::VdOnly => {
+            expected.resize(avl_bytes * 2, 0);
+            result.resize(avl_bytes * 2, 0);
+            lhs.resize(avl_bytes, 0);
+        }
+        WideningCategory::Vs2Only => {
+            expected.resize(avl_bytes, 0);
+            result.resize(avl_bytes, 0);
+            lhs.resize(avl_bytes * 2, 0);
+        }
+        _ => {
+            expected.resize(avl_bytes, 0);
+            result.resize(avl_bytes, 0);
+            lhs.resize(avl_bytes, 0);
+        }
+    }
+
+    let mut rng = BestNumberRng::default();
+
+    for i in 0..avl as usize {
+        let range = i * sew_bytes..(i + 1) * sew_bytes;
+        let lhs_range = match cat {
+            WideningCategory::VdVs2 => i * sew_bytes * 2..(i + 1) * sew_bytes * 2,
+            WideningCategory::Vs2Only => i * sew_bytes * 2..(i + 1) * sew_bytes * 2,
+            _ => range.clone(),
+        };
+        let expected_range = match cat {
+            WideningCategory::VdVs2 | WideningCategory::VdOnly => {
+                i * sew_bytes * 2..(i + 1) * sew_bytes * 2
+            }
+            _ => range.clone(),
+        };
+        rng.fill(&mut lhs[lhs_range.clone()]);
+        expected_op(
+            &lhs[lhs_range.clone()],
+            imm,
+            &mut expected[expected_range.clone()],
+        );
+    }
+
+    v_op(lhs.as_slice(), imm, result.as_mut_slice(), sew, lmul, avl);
+
+    for i in 0..avl as usize {
+        let range = i * sew_bytes..(i + 1) * sew_bytes;
+
+        let expected_range = match cat {
+            WideningCategory::VdVs2 | WideningCategory::VdOnly => {
+                i * sew_bytes * 2..(i + 1) * sew_bytes * 2
+            }
+            _ => range.clone(),
+        };
+        let lhs_range = match cat {
+            WideningCategory::VdVs2 => i * sew_bytes * 2..(i + 1) * sew_bytes * 2,
+            WideningCategory::Vs2Only => i * sew_bytes * 2..(i + 1) * sew_bytes * 2,
+            _ => range.clone(),
+        };
+
+        let left = &lhs[lhs_range.clone()];
+
+        let res = &result[expected_range.clone()];
+        let exp = &expected[expected_range.clone()];
+        if res != exp {
+            log!(
+                "[sew = {}, describe = {}] unexpected values found at index {} (nth-element): {:0>2X?} (result) {:0>2X?} (expected)",
+                sew, desc, i, res, exp
+            );
+            log!(
+                "more information, lhs = {:0>2X?}, rhs = {:0>2X?}, lmul = {}, avl = {}",
+                left,
+                imm,
                 lmul,
                 avl
             );

@@ -3,9 +3,9 @@ use core::{arch::asm, convert::TryInto};
 use eint::{Eint, E256};
 use rvv_asm::rvv_asm;
 use rvv_testcases::{
-    intrinsic::{vop_vv, vop_vx},
-    misc::{avl_iterator, shrink_to_imm_u},
-    runner::{run_vop_vv, run_vop_vx, ExpectedOp, WideningCategory},
+    intrinsic::{vop_vi, vop_vv, vop_vx},
+    misc::avl_iterator,
+    runner::{run_vop_vi, run_vop_vv, run_vop_vx, ExpectedOp, WideningCategory},
 };
 
 fn expected_op_vssrl_vx(lhs: &[u8], x: u64, result: &mut [u8]) {
@@ -115,14 +115,12 @@ fn test_vssrl_vv(sew: u64, lmul: i64, avl: u64) {
     );
 }
 
-fn expected_op_vssrl_vi(lhs: &[u8], x: u64, result: &mut [u8]) {
-    let imm = shrink_to_imm_u(x);
+fn expected_op_vssrl_vi(lhs: &[u8], imm: i64, result: &mut [u8]) {
     expected_op_vssrl_vx(lhs, imm as u64, result);
 }
-fn test_vssrl_vi(sew: u64, lmul: i64, avl: u64) {
-    fn op(lhs: &[u8], x: u64, result: &mut [u8], sew: u64, lmul: i64, avl: u64) {
-        vop_vx(lhs, x, result, sew, avl, lmul, |x: u64| unsafe {
-            let imm = shrink_to_imm_u(x);
+fn test_vssrl_vi(sew: u64, lmul: i64, avl: u64, imm: i64) {
+    fn op(lhs: &[u8], imm: i64, result: &mut [u8], sew: u64, lmul: i64, avl: u64) {
+        vop_vi(lhs, imm, result, sew, avl, lmul, |imm| unsafe {
             match imm {
                 31 => {
                     rvv_asm!("vssrl.vi v24, v8, 31");
@@ -226,10 +224,11 @@ fn test_vssrl_vi(sew: u64, lmul: i64, avl: u64) {
             }
         });
     }
-    run_vop_vx(
+    run_vop_vi(
         sew,
         lmul,
         avl,
+        imm,
         expected_op_vssrl_vi,
         op,
         WideningCategory::None,
@@ -344,14 +343,12 @@ fn test_vssra_vv(sew: u64, lmul: i64, avl: u64) {
     );
 }
 
-fn expected_op_vssra_vi(lhs: &[u8], x: u64, result: &mut [u8]) {
-    let imm = shrink_to_imm_u(x);
+fn expected_op_vssra_vi(lhs: &[u8], imm: i64, result: &mut [u8]) {
     expected_op_vssra_vx(lhs, imm as u64, result);
 }
-fn test_vssra_vi(sew: u64, lmul: i64, avl: u64) {
-    fn op(lhs: &[u8], x: u64, result: &mut [u8], sew: u64, lmul: i64, avl: u64) {
-        vop_vx(lhs, x, result, sew, avl, lmul, |x: u64| unsafe {
-            let imm = shrink_to_imm_u(x);
+fn test_vssra_vi(sew: u64, lmul: i64, avl: u64, imm: i64) {
+    fn op(lhs: &[u8], imm: i64, result: &mut [u8], sew: u64, lmul: i64, avl: u64) {
+        vop_vi(lhs, imm, result, sew, avl, lmul, |imm| unsafe {
             match imm {
                 31 => {
                     rvv_asm!("vssra.vi v24, v8, 31");
@@ -455,10 +452,11 @@ fn test_vssra_vi(sew: u64, lmul: i64, avl: u64) {
             }
         });
     }
-    run_vop_vx(
+    run_vop_vi(
         sew,
         lmul,
         avl,
+        imm,
         expected_op_vssra_vi,
         op,
         WideningCategory::None,
@@ -467,16 +465,22 @@ fn test_vssra_vi(sew: u64, lmul: i64, avl: u64) {
 }
 
 pub fn test_single_with_scaling_shift() {
+    let mut imm = 0;
     for sew in [8, 16, 32, 64, 128, 256] {
         for lmul in [-2, 1, 4, 8] {
             for avl in avl_iterator(sew, 4) {
                 test_vssrl_vx(sew, lmul, avl);
                 test_vssrl_vv(sew, lmul, avl);
-                test_vssrl_vi(sew, lmul, avl);
+                test_vssrl_vi(sew, lmul, avl, imm);
 
                 test_vssra_vx(sew, lmul, avl);
                 test_vssra_vv(sew, lmul, avl);
-                test_vssra_vi(sew, lmul, avl);
+                test_vssra_vi(sew, lmul, avl, imm);
+
+                imm += 1;
+                if imm > 31 {
+                    imm = 0;
+                }
             }
         }
     }
