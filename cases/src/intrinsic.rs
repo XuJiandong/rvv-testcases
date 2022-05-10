@@ -424,7 +424,12 @@ pub fn vle_v24(sew: u64, buf: &[u8]) {
 }
 
 pub fn vse_v24(sew: u64, buf: &mut [u8]) {
-    assert!(get_rvv_len() <= buf.len() as u64);
+    assert!(
+        get_rvv_len() <= buf.len() as u64,
+        "buf too small, buf len: {}, rvv len: {}",
+        buf.len(),
+        get_rvv_len()
+    );
     let p = buf.as_ptr();
     unsafe {
         match sew {
