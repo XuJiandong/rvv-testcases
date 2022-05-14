@@ -907,6 +907,7 @@ pub enum InstructionArgsType {
     VectorBit,
     Scalar,
     Immediate,
+    UImmediate,
     None,
 }
 
@@ -942,6 +943,9 @@ pub struct ExpectedParam {
 #[derive(Clone, Copy)]
 enum VectorCallbackType {
     None(fn(&mut ExpectedParam)),
+    VV(fn(&mut [u8], &[u8], &[u8])),
+    VX(fn(&mut [u8], &[u8], u64)),
+    VI(fn(&mut [u8], &[u8], i64)),
     VVM(fn(&mut [u8], &[u8], &[u8], bool)),
     VXM(fn(&mut [u8], &[u8], u64, bool)),
     VIM(fn(&mut [u8], &[u8], i64, bool)),
@@ -970,11 +974,10 @@ impl RunOpConfig {
     fn get_args_len(t: InstructionArgsType, vl: usize) -> usize {
         match t {
             InstructionArgsType::None => 1,
-            InstructionArgsType::Immediate => 8,
-            InstructionArgsType::Scalar => 8,
             InstructionArgsType::Vector => vl,
             InstructionArgsType::Vector2 => vl * 2,
             InstructionArgsType::VectorBit => vl,
+            _ => 8,
         }
     }
 
@@ -1016,25 +1019,29 @@ impl ExpectedParam {
         };
 
         let mut rng = BestNumberRng::default();
+        d.mask.resize(VLEN / 8, 0xFF);
         rng.fill(d.mask.as_mut_slice());
-        d.mask.resize(VLEN / 8, 0);
 
         d.lhs.resize(config.get_left_len(avl_bytes), 0);
-        if config.args1_type == InstructionArgsType::Immediate {
+        if config.args1_type == InstructionArgsType::Immediate
+            || config.args1_type == InstructionArgsType::UImmediate
+        {
             d.lhs.copy_from_slice(&config.immediate_val.to_le_bytes());
         } else {
             rng.fill(d.lhs.as_mut_slice());
         }
 
         d.rhs.resize(config.get_right_len(avl_bytes), 0);
-        if config.args2_type == InstructionArgsType::Immediate {
+        if config.args2_type == InstructionArgsType::Immediate
+            || config.args2_type == InstructionArgsType::UImmediate
+        {
             d.rhs.copy_from_slice(&config.immediate_val.to_le_bytes());
         } else {
             rng.fill(d.rhs.as_mut_slice());
         }
 
         d.res.resize(config.get_vd_len(avl_bytes), 0);
-        //rng.fill(d.res.as_mut_slice());
+        rng.fill(d.res.as_mut_slice());
 
         d
     }
@@ -1084,11 +1091,20 @@ impl ExpectedParam {
     }
 
     pub fn get_mask(&self) -> bool {
-        get_bit_in_slice(&self.mask, self.index) == 1
+        match self.mask_type {
+            MaskType::Enable => {
+                get_bit_in_slice(&self.mask, self.index % self.theoretically_vl) == 1
+            }
+            MaskType::AsParam => {
+                get_bit_in_slice(&self.mask, self.index % self.theoretically_vl) == 1
+            }
+            MaskType::Disable => true,
+        }
     }
 
     pub fn get_rvv_left(&self) -> &[u8] {
         if self.lhs_type == InstructionArgsType::Immediate
+            || self.lhs_type == InstructionArgsType::UImmediate
             || self.lhs_type == InstructionArgsType::Scalar
         {
             self.lhs.as_slice()
@@ -1108,6 +1124,7 @@ impl ExpectedParam {
 
     pub fn get_rvv_right(&self) -> &[u8] {
         if self.rhs_type == InstructionArgsType::Immediate
+            || self.rhs_type == InstructionArgsType::UImmediate
             || self.rhs_type == InstructionArgsType::Scalar
         {
             self.rhs.as_slice()
@@ -1127,6 +1144,7 @@ impl ExpectedParam {
 
     pub fn get_rvv_result_range(&self) -> Range<usize> {
         if self.res_type == InstructionArgsType::Immediate
+            || self.res_type == InstructionArgsType::UImmediate
             || self.res_type == InstructionArgsType::Scalar
         {
             0..self.res.len()
@@ -1143,6 +1161,25 @@ impl ExpectedParam {
             begin..end
         }
     }
+
+    fn get_sew(sew: u64, t: InstructionArgsType) -> u64 {
+        match t {
+            InstructionArgsType::Vector2 => sew * 2,
+            _ => sew,
+        }
+    }
+
+    fn get_left_sew(&self, sew: u64) -> u64 {
+        ExpectedParam::get_sew(sew, self.lhs_type)
+    }
+
+    fn get_right_sew(&self, sew: u64) -> u64 {
+        ExpectedParam::get_sew(sew, self.rhs_type)
+    }
+
+    fn get_result_sew(&self, sew: u64) -> u64 {
+        ExpectedParam::get_sew(sew, self.res_type)
+    }
 }
 
 fn get_args_range(t: InstructionArgsType, sew_bytes: usize, index: usize) -> Range<usize> {
@@ -1150,13 +1187,12 @@ fn get_args_range(t: InstructionArgsType, sew_bytes: usize, index: usize) -> Ran
         InstructionArgsType::None => {
             panic!("Can not get range for here")
         }
-        InstructionArgsType::Immediate => 0..8,
-        InstructionArgsType::Scalar => 0..8,
         InstructionArgsType::Vector => index * sew_bytes..(index + 1) * sew_bytes,
         InstructionArgsType::Vector2 => index * sew_bytes * 2..(index + 1) * sew_bytes * 2,
         InstructionArgsType::VectorBit => {
             panic!("VectorBit can not get range for here")
         }
+        _ => 0..8,
     }
 }
 
@@ -1176,20 +1212,22 @@ fn run_rvv_op(exp_param: &mut ExpectedParam, res: &mut [u8], op: fn(&[u8], &[u8]
         avl -= vl as i64;
 
         let l = if exp_param.lhs_type == InstructionArgsType::Immediate
+            || exp_param.lhs_type == InstructionArgsType::UImmediate
             || exp_param.lhs_type == InstructionArgsType::Scalar
         {
             exp_param.lhs.as_slice()
         } else {
-            vle_v8(sew, &exp_param.get_rvv_left());
+            vle_v8(exp_param.get_left_sew(sew), &exp_param.get_rvv_left());
             &empty_buf
         };
 
         let r = if exp_param.rhs_type == InstructionArgsType::Immediate
+            || exp_param.rhs_type == InstructionArgsType::UImmediate
             || exp_param.rhs_type == InstructionArgsType::Scalar
         {
             exp_param.rhs.as_slice()
         } else {
-            vle_v16(sew, exp_param.get_rvv_right());
+            vle_v16(exp_param.get_right_sew(sew), exp_param.get_rvv_right());
             &empty_buf
         };
 
@@ -1198,9 +1236,9 @@ fn run_rvv_op(exp_param: &mut ExpectedParam, res: &mut [u8], op: fn(&[u8], &[u8]
         }
 
         let res_range = exp_param.get_rvv_result_range();
-        vle_v24(sew, &res[res_range.clone()]);
+        vle_v24(exp_param.get_result_sew(sew), &res[res_range.clone()]);
         op.clone()(l, r, mask_type);
-        vse_v24(sew, &mut res[res_range.clone()]);
+        vse_v24(exp_param.get_result_sew(sew), &mut res[res_range.clone()]);
 
         exp_param.count += 1;
     }
@@ -1229,16 +1267,41 @@ fn run_op(config: &RunOpConfig, desc: &str) {
     exp_param.theoretically_vl = vl as usize;
     let expected_before = exp_param.res.clone();
     let mut result = exp_param.res.clone();
-
     for i in 0..config.avl as usize {
+        exp_param.index = i;
         if config.mask_type == MaskType::Enable && !exp_param.get_mask() {
             continue;
         }
-
-        exp_param.index = i;
         match config.expected_op_ext {
             VectorCallbackType::None(op) => {
                 op(&mut exp_param);
+            }
+            VectorCallbackType::VV(op) => {
+                let mut res = exp_param.get_result();
+                op(
+                    res.as_mut_slice(),
+                    exp_param.get_left().as_slice(),
+                    exp_param.get_right().as_slice(),
+                );
+                exp_param.set_result(&res);
+            }
+            VectorCallbackType::VX(op) => {
+                let mut res = exp_param.get_result();
+                op(
+                    res.as_mut_slice(),
+                    exp_param.get_left().as_slice(),
+                    exp_param.get_right_u64(),
+                );
+                exp_param.set_result(&res);
+            }
+            VectorCallbackType::VI(op) => {
+                let mut res = exp_param.get_result();
+                op(
+                    res.as_mut_slice(),
+                    exp_param.get_left().as_slice(),
+                    exp_param.get_right_u64() as i64,
+                );
+                exp_param.set_result(&res);
             }
             VectorCallbackType::VVM(op) => {
                 let mut res = exp_param.get_result();
@@ -1370,12 +1433,22 @@ fn run_op(config: &RunOpConfig, desc: &str) {
                 config.lmul,
                 config.avl
             );
-            // log!("more infomation, expected: {:0>2X?} \nresult: {:0>2X?}", exp_param.res, result);
+            //log!("more infomation, expected: {:0>2X?} \nresult: {:0>2X?} \nmask: {:0>2X?}", exp_param.res, result, exp_param.mask);
             panic!("Abort");
         }
     }
     if is_verbose() {
         log!("finished");
+    }
+}
+
+fn get_imm_begin(l: InstructionArgsType, r: InstructionArgsType) -> i64 {
+    if l == InstructionArgsType::Immediate || r == InstructionArgsType::Immediate {
+        -16
+    } else if l == InstructionArgsType::UImmediate || r == InstructionArgsType::UImmediate {
+        0
+    } else {
+        0
     }
 }
 
@@ -1391,7 +1464,8 @@ fn run_template_ext(
     desc: &str,
 ) {
     let mut enable_mask = true;
-    let mut imm = -16;
+    let imm_begin = get_imm_begin(left_type, right_type);
+    let mut imm = imm_begin;
     for sew in sews {
         for lmul in lmuls {
             for avl in avl_iterator(sew.clone(), 2) {
@@ -1420,10 +1494,12 @@ fn run_template_ext(
 
                 if left_type == InstructionArgsType::Immediate
                     || right_type == InstructionArgsType::Immediate
+                    || left_type == InstructionArgsType::UImmediate
+                    || right_type == InstructionArgsType::UImmediate
                 {
                     imm += 1;
-                    if imm == 16 {
-                        imm = -16
+                    if imm == imm_begin + 32 {
+                        imm = imm_begin
                     }
                 }
             }
@@ -1629,6 +1705,76 @@ pub fn run_template_mvi(
         MaskType::Disable,
         rvv_op,
         VectorCallbackType::MVI(expected_op),
+        sews,
+        lmuls,
+        desc,
+    );
+}
+
+pub fn run_template_wv(
+    expected_op: fn(&mut [u8], &[u8], &[u8]),
+    rvv_op: fn(&[u8], &[u8], MaskType),
+    sews: &[u64],
+    lmuls: &[i64],
+    enable_mask: bool,
+    desc: &str,
+) {
+    run_template_ext(
+        InstructionArgsType::Vector,
+        InstructionArgsType::Vector2,
+        InstructionArgsType::Vector,
+        if enable_mask {
+            MaskType::Enable
+        } else {
+            MaskType::Disable
+        },
+        rvv_op,
+        VectorCallbackType::VV(expected_op),
+        sews,
+        lmuls,
+        desc,
+    );
+}
+
+pub fn run_template_wx(
+    expected_op: fn(&mut [u8], &[u8], u64),
+    rvv_op: fn(&[u8], &[u8], MaskType),
+    sews: &[u64],
+    lmuls: &[i64],
+    enable_mask: bool,
+    desc: &str,
+) {
+    run_template_ext(
+        InstructionArgsType::Vector,
+        InstructionArgsType::Vector2,
+        InstructionArgsType::Scalar,
+        if enable_mask {
+            MaskType::Enable
+        } else {
+            MaskType::Disable
+        },
+        rvv_op,
+        VectorCallbackType::VX(expected_op),
+        sews,
+        lmuls,
+        desc,
+    );
+}
+
+pub fn run_template_wi(
+    expected_op: fn(&mut [u8], &[u8], i64),
+    rvv_op: fn(&[u8], &[u8], MaskType),
+    sews: &[u64],
+    lmuls: &[i64],
+    desc: &str,
+) {
+    run_template_ext(
+        InstructionArgsType::Vector,
+        InstructionArgsType::Vector2,
+        InstructionArgsType::UImmediate,
+        MaskType::Disable,
+        rvv_op,
+        VectorCallbackType::VI(expected_op),
         sews,
         lmuls,
         desc,
