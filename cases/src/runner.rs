@@ -1780,3 +1780,78 @@ pub fn run_template_wi(
         desc,
     );
 }
+
+pub fn run_template_vv(
+    expected_op: fn(&mut [u8], &[u8], &[u8]),
+    rvv_op: fn(&[u8], &[u8], MaskType),
+    sews: &[u64],
+    lmuls: &[i64],
+    enable_mask: bool,
+    desc: &str,
+) {
+    run_template_ext(
+        InstructionArgsType::Vector,
+        InstructionArgsType::Vector,
+        InstructionArgsType::Vector,
+        if enable_mask {
+            MaskType::Enable
+        } else {
+            MaskType::Disable
+        },
+        rvv_op,
+        VectorCallbackType::VV(expected_op),
+        sews,
+        lmuls,
+        desc,
+    );
+}
+
+pub fn run_template_vx(
+    expected_op: fn(&mut [u8], &[u8], u64),
+    rvv_op: fn(&[u8], &[u8], MaskType),
+    sews: &[u64],
+    lmuls: &[i64],
+    enable_mask: bool,
+    desc: &str,
+) {
+    run_template_ext(
+        InstructionArgsType::Vector,
+        InstructionArgsType::Vector,
+        InstructionArgsType::Scalar,
+        if enable_mask {
+            MaskType::Enable
+        } else {
+            MaskType::Disable
+        },
+        rvv_op,
+        VectorCallbackType::VX(expected_op),
+        sews,
+        lmuls,
+        desc,
+    );
+}
+
+pub fn run_template_vi(
+    expected_op: fn(&mut [u8], &[u8], i64),
+    rvv_op: fn(&[u8], &[u8], MaskType),
+    sews: &[u64],
+    lmuls: &[i64],
+    single: bool,
+    desc: &str,
+) {
+    run_template_ext(
+        InstructionArgsType::Vector,
+        InstructionArgsType::Vector,
+        if single {
+            InstructionArgsType::Immediate
+        } else {
+            InstructionArgsType::UImmediate
+        },
+        MaskType::Disable,
+        rvv_op,
+        VectorCallbackType::VI(expected_op),
+        sews,
+        lmuls,
+        desc,
+    );
+}
