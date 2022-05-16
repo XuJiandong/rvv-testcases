@@ -3,7 +3,7 @@ use core::{arch::asm, convert::TryInto};
 use eint::{Eint, E256, E512};
 use rvv_asm::rvv_asm;
 use rvv_testcases::{
-    intrinsic::{vop_vv_destructive, vop_vv_destructive_wide, vwop_vx},
+    intrinsic::{vop_vv_destructive, vop_vv_destructive_wide, vop_vx, vwop_vx},
     misc::{avl_iterator, conver_to_i512},
     runner::{run_vop_vv, run_vop_vx, ExpectedOp, WideningCategory},
 };
@@ -12,10 +12,10 @@ fn expected_op_macc_vv(lhs: &[u8], rhs: &[u8], result: &mut [u8]) {
     assert!(lhs.len() == rhs.len() && rhs.len() == result.len());
     match lhs.len() {
         8 => {
-            let l = u64::from_le_bytes(lhs.try_into().unwrap());
-            let r = u64::from_le_bytes(rhs.try_into().unwrap());
+            let l = i64::from_le_bytes(lhs.try_into().unwrap());
+            let r = i64::from_le_bytes(rhs.try_into().unwrap());
 
-            let extra = u64::from_le_bytes(result.try_into().unwrap());
+            let extra = i64::from_le_bytes(result.try_into().unwrap());
             let (res, _) = l.overflowing_mul(r);
             let (res2, _) = res.overflowing_add(extra);
             result.copy_from_slice(&res2.to_le_bytes());
@@ -48,6 +48,311 @@ fn test_vmacc_vv(sew: u64, lmul: i64, avl: u64) {
         macc,
         WideningCategory::None,
         "vmacc.vv",
+    );
+}
+
+fn expected_op_macc_vx(lhs: &[u8], x: u64, result: &mut [u8]) {
+    assert!(lhs.len() == result.len());
+    match lhs.len() {
+        8 => {
+            let l = i64::from_le_bytes(lhs.try_into().unwrap());
+
+            let extra = i64::from_le_bytes(result.try_into().unwrap());
+            let (res, _) = l.overflowing_mul(x as i64);
+            let (res2, _) = res.overflowing_add(extra);
+            result.copy_from_slice(&res2.to_le_bytes());
+        }
+        32 => {
+            let l = E256::get(lhs);
+            let r = E256::from(x as i64);
+
+            let extra = E256::get(&result);
+            let (res, _) = l.overflowing_mul_s(r);
+            let (res2, _) = res.overflowing_add_s(extra);
+            res2.put(result);
+        }
+        _ => {
+            panic!("Invalid sew");
+        }
+    }
+}
+fn test_vmacc_vx(sew: u64, lmul: i64, avl: u64) {
+    fn op(lhs: &[u8], x: u64, result: &mut [u8], sew: u64, lmul: i64, avl: u64) {
+        vop_vx(lhs, x, result, sew, avl, lmul, |x: u64| unsafe {
+            rvv_asm!("mv t0, {}", 
+                     "vmacc.vx v24, v8, t0",
+                     in (reg) x);
+        });
+    }
+    run_vop_vx(
+        sew,
+        lmul,
+        avl,
+        expected_op_macc_vx,
+        op,
+        WideningCategory::None,
+        "vmacc.vx",
+    );
+}
+
+fn expected_op_nmsac_vv(lhs: &[u8], rhs: &[u8], result: &mut [u8]) {
+    assert!(lhs.len() == rhs.len() && rhs.len() == result.len());
+    match lhs.len() {
+        8 => {
+            let l = u64::from_le_bytes(lhs.try_into().unwrap());
+            let r = u64::from_le_bytes(rhs.try_into().unwrap());
+
+            let extra = u64::from_le_bytes(result.try_into().unwrap());
+            let (res, _) = l.overflowing_mul(r);
+            let (res2, _) = extra.overflowing_sub(res);
+            result.copy_from_slice(&res2.to_le_bytes());
+        }
+        32 => {
+            let l = E256::get(lhs);
+            let r = E256::get(rhs);
+
+            let extra = E256::get(&result);
+            let (res, _) = l.overflowing_mul_s(r);
+            let (res2, _) = extra.overflowing_sub_s(res);
+            res2.put(result);
+        }
+        _ => {
+            panic!("Invalid sew");
+        }
+    }
+}
+fn test_vnmsac_vv(sew: u64, lmul: i64, avl: u64) {
+    fn op(lhs: &[u8], rhs: &[u8], result: &mut [u8], sew: u64, lmul: i64, avl: u64) {
+        vop_vv_destructive(lhs, rhs, result, sew, avl, lmul, || unsafe {
+            rvv_asm!("vnmsac.vv v24, v8, v16");
+        });
+    }
+    run_vop_vv(
+        sew,
+        lmul,
+        avl,
+        ExpectedOp::Normal(Box::new(expected_op_nmsac_vv)),
+        op,
+        WideningCategory::None,
+        "vnmsac.vv",
+    );
+}
+
+fn expected_op_nmsac_vx(lhs: &[u8], x: u64, result: &mut [u8]) {
+    assert!(lhs.len() == result.len());
+    match lhs.len() {
+        8 => {
+            let l = i64::from_le_bytes(lhs.try_into().unwrap());
+
+            let extra = i64::from_le_bytes(result.try_into().unwrap());
+            let (res, _) = l.overflowing_mul(x as i64);
+            let (res2, _) = extra.overflowing_sub(res);
+            result.copy_from_slice(&res2.to_le_bytes());
+        }
+        32 => {
+            let l = E256::get(lhs);
+            let r = E256::from(x as i64);
+
+            let extra = E256::get(&result);
+            let (res, _) = l.overflowing_mul_s(r);
+            let (res2, _) = extra.overflowing_sub_s(res);
+            res2.put(result);
+        }
+        _ => {
+            panic!("Invalid sew");
+        }
+    }
+}
+fn test_vnmsac_vx(sew: u64, lmul: i64, avl: u64) {
+    fn op(lhs: &[u8], x: u64, result: &mut [u8], sew: u64, lmul: i64, avl: u64) {
+        vop_vx(lhs, x, result, sew, avl, lmul, |x: u64| unsafe {
+            rvv_asm!("mv t0, {}", 
+                     "vnmsac.vx v24, v8, t0",
+                     in (reg) x);
+        });
+    }
+    run_vop_vx(
+        sew,
+        lmul,
+        avl,
+        expected_op_nmsac_vx,
+        op,
+        WideningCategory::None,
+        "vnmsac.vx",
+    );
+}
+
+fn expected_op_madd_vv(lhs: &[u8], rhs: &[u8], result: &mut [u8]) {
+    assert!(lhs.len() == rhs.len() && rhs.len() == result.len());
+    match lhs.len() {
+        8 => {
+            let l = i64::from_le_bytes(lhs.try_into().unwrap());
+            let r = i64::from_le_bytes(rhs.try_into().unwrap());
+
+            let extra = i64::from_le_bytes(result.try_into().unwrap());
+            let (res, _) = extra.overflowing_mul(r);
+            let (res2, _) = res.overflowing_add(l);
+            result.copy_from_slice(&res2.to_le_bytes());
+        }
+        32 => {
+            let l = E256::get(lhs);
+            let r = E256::get(rhs);
+
+            let extra = E256::get(&result);
+            let (res, _) = extra.overflowing_mul_s(r);
+            let (res2, _) = res.overflowing_add_s(l);
+            res2.put(result);
+        }
+        _ => {
+            panic!("Invalid sew");
+        }
+    }
+}
+fn test_vmadd_vv(sew: u64, lmul: i64, avl: u64) {
+    fn op(lhs: &[u8], rhs: &[u8], result: &mut [u8], sew: u64, lmul: i64, avl: u64) {
+        vop_vv_destructive(lhs, rhs, result, sew, avl, lmul, || unsafe {
+            rvv_asm!("vmadd.vv v24, v8, v16");
+        });
+    }
+    run_vop_vv(
+        sew,
+        lmul,
+        avl,
+        ExpectedOp::Normal(Box::new(expected_op_madd_vv)),
+        op,
+        WideningCategory::None,
+        "vmadd.vv",
+    );
+}
+
+fn expected_op_madd_vx(lhs: &[u8], x: u64, result: &mut [u8]) {
+    assert!(lhs.len() == result.len());
+    match lhs.len() {
+        8 => {
+            let l = i64::from_le_bytes(lhs.try_into().unwrap());
+
+            let extra = i64::from_le_bytes(result.try_into().unwrap());
+            let (res, _) = extra.overflowing_mul(x as i64);
+            let (res2, _) = res.overflowing_add(l);
+            result.copy_from_slice(&res2.to_le_bytes());
+        }
+        32 => {
+            let l = E256::get(lhs);
+            let r = E256::from(x as i64);
+
+            let extra = E256::get(&result);
+            let (res, _) = extra.overflowing_mul_s(r);
+            let (res2, _) = res.overflowing_add_s(l);
+            res2.put(result);
+        }
+        _ => {
+            panic!("Invalid sew");
+        }
+    }
+}
+fn test_vmadd_vx(sew: u64, lmul: i64, avl: u64) {
+    fn op(lhs: &[u8], x: u64, result: &mut [u8], sew: u64, lmul: i64, avl: u64) {
+        vop_vx(lhs, x, result, sew, avl, lmul, |x: u64| unsafe {
+            rvv_asm!("mv t0, {}", 
+                     "vmadd.vx v24, v8, t0",
+                     in (reg) x);
+        });
+    }
+    run_vop_vx(
+        sew,
+        lmul,
+        avl,
+        expected_op_madd_vx,
+        op,
+        WideningCategory::None,
+        "vmadd.vx",
+    );
+}
+
+fn expected_op_nmsub_vv(lhs: &[u8], rhs: &[u8], result: &mut [u8]) {
+    assert!(lhs.len() == rhs.len() && rhs.len() == result.len());
+    match lhs.len() {
+        8 => {
+            let l = i64::from_le_bytes(lhs.try_into().unwrap());
+            let r = i64::from_le_bytes(rhs.try_into().unwrap());
+            let extra = i64::from_le_bytes(result.try_into().unwrap());
+
+            let (res, _) = r.overflowing_mul(extra);
+            let (res2, _) = l.overflowing_sub(res);
+            result.copy_from_slice(&res2.to_le_bytes());
+        }
+        32 => {
+            let l = E256::get(lhs);
+            let r = E256::get(rhs);
+            let extra = E256::get(&result);
+
+            let (res, _) = r.overflowing_mul_s(extra);
+            let (res2, _) = l.overflowing_sub_s(res);
+            res2.put(result);
+        }
+        _ => {
+            panic!("Invalid sew");
+        }
+    }
+}
+fn test_vnmsub_vv(sew: u64, lmul: i64, avl: u64) {
+    fn op(lhs: &[u8], rhs: &[u8], result: &mut [u8], sew: u64, lmul: i64, avl: u64) {
+        vop_vv_destructive(lhs, rhs, result, sew, avl, lmul, || unsafe {
+            rvv_asm!("vnmsub.vv v24, v8, v16");
+        });
+    }
+    run_vop_vv(
+        sew,
+        lmul,
+        avl,
+        ExpectedOp::Normal(Box::new(expected_op_nmsub_vv)),
+        op,
+        WideningCategory::None,
+        "vnmsub.vv",
+    );
+}
+
+fn expected_op_nmsub_vx(lhs: &[u8], x: u64, result: &mut [u8]) {
+    assert!(lhs.len() == result.len());
+    match lhs.len() {
+        8 => {
+            let l = i64::from_le_bytes(lhs.try_into().unwrap());
+            let extra = i64::from_le_bytes(result.try_into().unwrap());
+
+            let (res, _) = (x as  i64).overflowing_mul(extra);
+            let (res2, _) = l.overflowing_sub(res);
+            result.copy_from_slice(&res2.to_le_bytes());
+        }
+        32 => {
+            let l = E256::get(lhs);
+            let r = E256::from(x as i64);
+            let extra = E256::get(&result);
+
+            let (res, _) = r.overflowing_mul_s(extra);
+            let (res2, _) = l.overflowing_sub_s(res);
+            res2.put(result);
+        }
+        _ => {
+            panic!("Invalid sew");
+        }
+    }
+}
+fn test_vnmsub_vx(sew: u64, lmul: i64, avl: u64) {
+    fn op(lhs: &[u8], x: u64, result: &mut [u8], sew: u64, lmul: i64, avl: u64) {
+        vop_vx(lhs, x, result, sew, avl, lmul, |x: u64| unsafe {
+            rvv_asm!("mv t0, {}", 
+                     "vnmsub.vx v24, v8, t0",
+                     in (reg) x);
+        });
+    }
+    run_vop_vx(
+        sew,
+        lmul,
+        avl,
+        expected_op_nmsub_vx,
+        op,
+        WideningCategory::None,
+        "vnmsub.vx",
     );
 }
 
@@ -332,7 +637,7 @@ fn expected_op_wmaccus_vx(lhs: &[u8], rhs: u64, result: &mut [u8]) {
     match lhs.len() {
         8 => {
             let l = i64::from_le_bytes(lhs.try_into().unwrap()) as i128;
-            let r = rhs  as i128;
+            let r = rhs as i128;
             let extra = i128::from_le_bytes(result.try_into().unwrap());
 
             let res1 = l.wrapping_mul(r);
@@ -375,6 +680,16 @@ pub fn test_widening_width_multiply_add() {
         for lmul in [-4, -2, 1, 2, 4] {
             for avl in avl_iterator(sew, 4) {
                 test_vmacc_vv(sew, lmul, avl);
+                test_vmacc_vx(sew, lmul, avl);
+
+                test_vnmsac_vv(sew, lmul, avl);
+                test_vnmsac_vx(sew, lmul, avl);
+
+                test_vmadd_vv(sew, lmul, avl);
+                test_vmadd_vx(sew, lmul, avl);
+
+                test_vnmsub_vv(sew, lmul, avl);
+                test_vnmsub_vx(sew, lmul, avl);
 
                 test_vwmaccu_vv(sew, lmul, avl);
                 test_vwmaccu_vx(sew, lmul, avl);

@@ -424,7 +424,12 @@ pub fn vle_v24(sew: u64, buf: &[u8]) {
 }
 
 pub fn vse_v24(sew: u64, buf: &mut [u8]) {
-    assert!(get_rvv_len() <= buf.len() as u64);
+    assert!(
+        get_rvv_len() <= buf.len() as u64,
+        "buf too small, buf len: {}, rvv len: {}",
+        buf.len(),
+        get_rvv_len()
+    );
     let p = buf.as_ptr();
     unsafe {
         match sew {
@@ -917,7 +922,7 @@ pub fn vop_nv<F>(
 
     loop {
         let vl = vsetvl(avl as u64, sew, lmul);
-        vle_v8(sew, lhs);
+        vle_v8(sew / n as u64, lhs);
         vle_v16(sew / n as u64, rhs);
 
         op();
@@ -948,6 +953,7 @@ where
     loop {
         let vl = vsetvl(avl as u64, sew, lmul);
         vle_v8(sew, lhs);
+        vle_v24(sew, result);
 
         op(x);
 
