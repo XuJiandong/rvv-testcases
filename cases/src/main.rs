@@ -29,6 +29,7 @@ mod single_width_shift_cases;
 mod vector_compress_cases;
 mod vector_element_index_cases;
 mod vector_iota_cases;
+mod vsetvl_cases;
 mod vsub_cases;
 mod widening_integer_reduction_cases;
 
@@ -75,6 +76,8 @@ fn program_entry(argc: u64, argv: *const *const u8) -> i8 {
             set_verbose(true)
         }
     }
+    test_case!(vsetvl_cases::test_vsetvl, test_pattern);
+    
     test_case!(misc_cases::test_add, test_pattern);
     test_case!(misc_cases::test_add_array, test_pattern);
     test_case!(vop_vv_cases::test_vop_vv, test_pattern);
