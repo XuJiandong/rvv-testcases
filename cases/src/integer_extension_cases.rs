@@ -9,7 +9,7 @@ use rvv_testcases::{
 };
 
 // use ckb_std::syscalls::debug;
-// use rvv_testcases::log;2
+// use rvv_testcases::log;
 
 fn expected_op_vzext_vf2(lhs: &[u8], _: &[u8], result: &mut [u8]) {
     assert_eq!(lhs.len(), result.len() / 2);

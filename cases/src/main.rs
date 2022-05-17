@@ -15,6 +15,7 @@ mod integer_scalar_move_cases;
 mod load_store_cases;
 mod mask_register_logical_cases;
 mod misc_cases;
+mod narrowing_fixed_point_clip_cases;
 mod narrowing_integer_right_shift_cases;
 mod set_before_first_cases;
 mod set_including_first_cases;
@@ -203,5 +204,10 @@ fn program_entry(argc: u64, argv: *const *const u8) -> i8 {
         single_saturating_add_subtract_cases::test_single_saturating_add_subtract,
         test_pattern
     );
+    test_case!(
+        narrowing_fixed_point_clip_cases::test_narrowing_fixed_point_clip,
+        test_pattern
+    );
+
     0
 }
