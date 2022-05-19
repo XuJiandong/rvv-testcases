@@ -6,7 +6,7 @@ use core::ops::Range;
 use ckb_std::syscalls::debug;
 use rand::{Rng, RngCore};
 
-use crate::intrinsic::{vl1r_v0, vle_v16, vle_v24, vle_v8, vse_v24, vsetvl};
+use crate::intrinsic::{vl1r_v0, clean_cache_v8, clean_cache_v16, vle_v16, vle_v24, vle_v8, vse_v24, vsetvl};
 use crate::misc::{avl_iterator, VLEN};
 use crate::rng::{new_random01_vec, new_random_vec};
 
@@ -1117,7 +1117,6 @@ impl ExpectedParam {
             if end > self.lhs.len() {
                 end = self.lhs.len();
             }
-
             &self.lhs[begin..end]
         }
     }
@@ -1180,6 +1179,28 @@ impl ExpectedParam {
     fn get_result_sew(&self, sew: u64) -> u64 {
         ExpectedParam::get_sew(sew, self.res_type)
     }
+
+    pub fn get_vl(&self) -> usize {
+        let total_vl = match self.res_type {
+            InstructionArgsType::Vector => self.res.len() / self.sew_bytes,
+            InstructionArgsType::Vector2 => self.res.len() / self.sew_bytes / 2,
+            _ => panic!("Abort"),
+        };
+
+        let rem = total_vl % self.theoretically_vl;
+        let total_vl = total_vl / self.theoretically_vl;
+        if self.count < total_vl {
+            self.theoretically_vl
+        } else if self.count == total_vl {
+            if rem == 0 {
+                self.theoretically_vl
+            } else {
+                rem
+            }
+        } else {
+            rem
+        }
+    }
 }
 
 fn get_args_range(t: InstructionArgsType, sew_bytes: usize, index: usize) -> Range<usize> {
@@ -1194,6 +1215,10 @@ fn get_args_range(t: InstructionArgsType, sew_bytes: usize, index: usize) -> Ran
         }
         _ => 0..8,
     }
+}
+
+fn clean_v() {
+    
 }
 
 fn run_rvv_op(exp_param: &mut ExpectedParam, res: &mut [u8], op: fn(&[u8], &[u8], MaskType)) {
@@ -1211,12 +1236,15 @@ fn run_rvv_op(exp_param: &mut ExpectedParam, res: &mut [u8], op: fn(&[u8], &[u8]
         }
         avl -= vl as i64;
 
+        clean_v();
+
         let l = if exp_param.lhs_type == InstructionArgsType::Immediate
             || exp_param.lhs_type == InstructionArgsType::UImmediate
             || exp_param.lhs_type == InstructionArgsType::Scalar
         {
             exp_param.lhs.as_slice()
         } else {
+            clean_cache_v8();
             vle_v8(exp_param.get_left_sew(sew), &exp_param.get_rvv_left());
             &empty_buf
         };
@@ -1227,6 +1255,7 @@ fn run_rvv_op(exp_param: &mut ExpectedParam, res: &mut [u8], op: fn(&[u8], &[u8]
         {
             exp_param.rhs.as_slice()
         } else {
+            clean_cache_v16();
             vle_v16(exp_param.get_right_sew(sew), exp_param.get_rvv_right());
             &empty_buf
         };
@@ -1269,6 +1298,7 @@ fn run_op(config: &RunOpConfig, desc: &str) {
     let mut result = exp_param.res.clone();
     for i in 0..config.avl as usize {
         exp_param.index = i;
+        exp_param.count = i / vl as usize;
         if config.mask_type == MaskType::Enable && !exp_param.get_mask() {
             continue;
         }

@@ -547,6 +547,30 @@ pub fn vsm_v_v8(buf: &mut [u8]) {
     }
 }
 
+pub fn clean_cache_v8() {
+    let temp_buffer = [0u8; 2048];
+    let p = temp_buffer.as_ptr();
+    unsafe {
+        rvv_asm!("mv t0, {}", "vl8re8.v v8, (t0)", in (reg) p);
+    }
+}
+
+pub fn clean_cache_v16() {
+    let temp_buffer = [0u8; 2048];
+    let p = temp_buffer.as_ptr();
+    unsafe {
+        rvv_asm!("mv t0, {}", "vl8re8.v v16, (t0)", in (reg) p);
+    }
+}
+
+pub fn clean_cache_v24() {
+    let temp_buffer = [0u8; 2048];
+    let p = temp_buffer.as_ptr();
+    unsafe {
+        rvv_asm!("mv t0, {}", "vl8re8.v v24, (t0)", in (reg) p);
+    }
+}
+
 //
 // format
 // <vd>op_<vs2><vs1>

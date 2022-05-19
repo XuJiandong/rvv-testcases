@@ -9,6 +9,7 @@ use rvv_testcases::intrinsic::{vs1r_v24, vsetvl};
 use rvv_testcases::log;
 use rvv_testcases::misc::{get_bit_in_slice, is_verbose, U1024, U256, U512, VLEN};
 use rvv_testcases::rng::BestNumberRng;
+use rvv_testcases::runner::{run_template, ExpectedParam, InstructionArgsType, MaskType};
 
 fn to_wide(vs1: &[u8], wide: usize) -> Vec<u32> {
     let wide = wide / 8;
@@ -221,100 +222,181 @@ pub fn test_vrgatherei16_vv() {
     vrgather_vv(128, true, true);
 }
 
-fn rgather_vx(vd: &[u8], v2: &[u8], rs: u64, vm: &[u8], wide: usize) -> Vec<u8> {
-    let mut result: Vec<u8> = Vec::new();
-    result.resize(vd.len(), 0);
-    result.copy_from_slice(vd);
+static mut ZERO_BUFFER: Vec<u8> = Vec::new();
 
-    let wide = wide / 8;
-    let length = vd.len() / wide;
-
-    for i in 0..length {
-        if get_bit_in_slice(vm, i) == 0 {
-            continue;
+fn expected_op_vrgather(exp_param: &mut ExpectedParam) {
+    let x = exp_param.get_right_u64() as usize % 31;
+    if (x + 1) > exp_param.get_vl() {
+        unsafe {
+            exp_param.set_result(&ZERO_BUFFER[..exp_param.sew_bytes]);
         }
-
-        let pos = rs as usize * wide;
-
-        if pos >= vd.len() {
-            for j in 0..wide {
-                result[i * wide + j] = 0;
-            }
-        } else {
-            result[i * wide..(i + 1) * wide].copy_from_slice(&v2[pos..pos + wide]);
-        }
+    } else {
+        let data = ExpectedParam::get_data_by_sclice(
+            &exp_param.lhs,
+            exp_param.lhs_type,
+            exp_param.sew_bytes,
+            exp_param.count * exp_param.theoretically_vl + x,
+        );
+        exp_param.set_result(&data);
     }
-
-    result
 }
 
-fn vrgatherer_vx(wide: usize) {
-    if is_verbose() {
-        log!("test vrgather.vx");
-    }
-    let mut mask = [0xFFu8; VLEN / 8];
-    let mut expected_before = [0u8; VLEN / 8];
-    let mut vs1 = [0u8; VLEN / 8];
-    let mut vs2 = [0u8; VLEN / 8];
-    let mut result = [0u8; VLEN / 8];
+fn test_vrgather_vx() {
+    fn rvv_op(_: &[u8], rhs: &[u8], mask_type: MaskType) {
+        let x = u64::from_le_bytes(rhs.try_into().unwrap()) % 31;
 
-    let mut rng = BestNumberRng::default();
-
-    rng.fill(&mut mask[..]);
-    rng.fill(&mut vs1[..]);
-    rng.fill(&mut vs2[..]);
-    rng.fill(&mut expected_before[..]);
-
-    let rs1: u64 = 11;
-
-    let expected = rgather_vx(&expected_before, &vs2, rs1, &mask, wide);
-    let expected = expected.as_slice();
-
-    let vl = vsetvl((VLEN / wide) as u64, wide as u64, 1) as usize;
-    assert_eq!(vl, (VLEN / wide) as usize);
-
-    unsafe {
-        rvv_asm!(
-            "mv t0, {}", "vl1re8.v v0, (t0)",
-            "mv t0, {}", "vl1re8.v v8, (t0)",
-            "mv t0, {}", "vl1re8.v v2, (t0)",
-            "mv t0, {}", "vl1re8.v v24, (t0)",
-            in (reg) mask.as_ptr(),in (reg) vs1.as_ptr(),
-            in (reg) vs2.as_ptr(),
-            in (reg) expected_before.as_ptr()
-        );
-
-        rvv_asm!(
-            "mv t0, {}",
-            "vrgather.vx v24, v2, t0, v0.t",
-            in (reg) rs1
-        );
+        unsafe {
+            match mask_type {
+                MaskType::Enable => {
+                    rvv_asm!("mv t0, {}", "vrgather.vx v24, v8, t0, v0.t", in (reg) x);
+                }
+                MaskType::Disable => {
+                    rvv_asm!("mv t0, {}", "vrgather.vx v24, v8, t0", in (reg) x);
+                }
+                _ => panic!("Abort"),
+            };
+        }
     }
 
-    vs1r_v24(&mut result[..]);
+    run_template(
+        InstructionArgsType::Vector,
+        InstructionArgsType::Vector,
+        InstructionArgsType::Scalar,
+        MaskType::Enable,
+        expected_op_vrgather,
+        rvv_op,
+        &[64, 256],
+        &[-8, -2, 1, 4, 8],
+        "vrgather.vx",
+    );
+}
 
-    if result != expected {
-        log!(
-            "[describe = vrgather.vx] unexpected values found: \nresult = {:0>2X?} \nexpected = {:0>2X?}",
-            result,
-            expected
-        );
-        log!(
-            "more information, \nvs1 = {:0>2X?}, \nvs2 = {:0>2X?}, \nmask = {:0>2X?}, \nexpected_befor = {:0>2X?}",
-            vs1,
-            vs2,
-            mask,
-            expected_before
-        );
-        panic!("Abort");
+fn test_vrgather_vi() {
+    fn rvv_op(_: &[u8], rhs: &[u8], _: MaskType) {
+        let imm = i64::from_le_bytes(rhs.try_into().unwrap());
+
+        unsafe {
+            match imm {
+                0 => {
+                    rvv_asm!("vrgather.vi v24, v8, 0");
+                }
+                1 => {
+                    rvv_asm!("vrgather.vi v24, v8, 1");
+                }
+                2 => {
+                    rvv_asm!("vrgather.vi v24, v8, 2");
+                }
+                3 => {
+                    rvv_asm!("vrgather.vi v24, v8, 3");
+                }
+                4 => {
+                    rvv_asm!("vrgather.vi v24, v8, 4");
+                }
+                5 => {
+                    rvv_asm!("vrgather.vi v24, v8, 5");
+                }
+                6 => {
+                    rvv_asm!("vrgather.vi v24, v8, 6");
+                }
+                7 => {
+                    rvv_asm!("vrgather.vi v24, v8, 7");
+                }
+                8 => {
+                    rvv_asm!("vrgather.vi v24, v8, 8");
+                }
+                9 => {
+                    rvv_asm!("vrgather.vi v24, v8, 9");
+                }
+                10 => {
+                    rvv_asm!("vrgather.vi v24, v8, 10");
+                }
+                11 => {
+                    rvv_asm!("vrgather.vi v24, v8, 11");
+                }
+                12 => {
+                    rvv_asm!("vrgather.vi v24, v8, 12");
+                }
+                13 => {
+                    rvv_asm!("vrgather.vi v24, v8, 13");
+                }
+                14 => {
+                    rvv_asm!("vrgather.vi v24, v8, 14");
+                }
+                15 => {
+                    rvv_asm!("vrgather.vi v24, v8, 15");
+                }
+                16 => {
+                    rvv_asm!("vrgather.vi v24, v8, 16");
+                }
+                17 => {
+                    rvv_asm!("vrgather.vi v24, v8, 17");
+                }
+                18 => {
+                    rvv_asm!("vrgather.vi v24, v8, 18");
+                }
+                19 => {
+                    rvv_asm!("vrgather.vi v24, v8, 19");
+                }
+                20 => {
+                    rvv_asm!("vrgather.vi v24, v8, 20");
+                }
+                21 => {
+                    rvv_asm!("vrgather.vi v24, v8, 21");
+                }
+                22 => {
+                    rvv_asm!("vrgather.vi v24, v8, 22");
+                }
+                23 => {
+                    rvv_asm!("vrgather.vi v24, v8, 23");
+                }
+                24 => {
+                    rvv_asm!("vrgather.vi v24, v8, 24");
+                }
+                25 => {
+                    rvv_asm!("vrgather.vi v24, v8, 25");
+                }
+                26 => {
+                    rvv_asm!("vrgather.vi v24, v8, 26");
+                }
+                27 => {
+                    rvv_asm!("vrgather.vi v24, v8, 27");
+                }
+                28 => {
+                    rvv_asm!("vrgather.vi v24, v8, 28");
+                }
+                29 => {
+                    rvv_asm!("vrgather.vi v24, v8, 29");
+                }
+                30 => {
+                    rvv_asm!("vrgather.vi v24, v8, 30");
+                }
+                31 => {
+                    rvv_asm!("vrgather.vi v24, v8, 31");
+                }
+                _ => {
+                    panic!("Abort");
+                }
+            }
+        }
     }
-    if is_verbose() {
-        log!("finished");
-    }
+
+    run_template(
+        InstructionArgsType::Vector,
+        InstructionArgsType::Vector,
+        InstructionArgsType::UImmediate,
+        MaskType::Disable,
+        expected_op_vrgather,
+        rvv_op,
+        &[64, 256],
+        &[-8, -2, 1, 4, 8],
+        "vrgather.vi",
+    );
 }
 
 pub fn test_vrgatherer_vx() {
-    vrgatherer_vx(8);
-    vrgatherer_vx(16);
-    vrgatherer_vx(128);
+    unsafe {
+        ZERO_BUFFER.resize(128, 0);
+    }
+    test_vrgather_vx();
+    test_vrgather_vi();
 }
