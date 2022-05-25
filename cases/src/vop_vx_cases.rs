@@ -3,9 +3,10 @@ use core::cmp::Ordering::{Greater, Less};
 use core::convert::TryInto;
 use eint::{Eint, E128, E256};
 use rvv_asm::rvv_asm;
-use rvv_testcases::intrinsic::vop_vx;
-use rvv_testcases::misc::{avl_iterator, Widening, U256};
-use rvv_testcases::runner::{run_vop_vx, WideningCategory};
+use rvv_testcases::{
+    misc::{Widening, U256},
+    runner::{run_template_v_vx, MaskType},
+};
 
 fn expected_op_add(lhs: &[u8], x: u64, result: &mut [u8]) {
     assert_eq!(lhs.len(), result.len());
@@ -38,24 +39,22 @@ fn expected_op_add(lhs: &[u8], x: u64, result: &mut [u8]) {
         }
     }
 }
-
-fn test_vadd_vx(sew: u64, lmul: i64, avl: u64) {
-    fn add(lhs: &[u8], x: u64, result: &mut [u8], sew: u64, lmul: i64, avl: u64) {
-        vop_vx(lhs, x, result, sew, avl, lmul, |x: u64| unsafe {
-            rvv_asm!("mv t0, {}", 
-                     "vadd.vx v24, v8, t0",
-                     in (reg) x);
-        });
+fn test_vadd_vx() {
+    fn op(_: &[u8], rhs: &[u8], mask_type: MaskType) {
+        let x = u64::from_le_bytes(rhs.try_into().unwrap());
+        unsafe {
+            match mask_type {
+                MaskType::Enable => {
+                    rvv_asm!("mv t0, {}", "vadd.vx v24, v8, t0, v0.t", in (reg) x);
+                }
+                MaskType::Disable => {
+                    rvv_asm!("mv t0, {}", "vadd.vx v24, v8, t0", in (reg) x);
+                }
+                _ => panic!("Abort"),
+            }
+        }
     }
-    run_vop_vx(
-        sew,
-        lmul,
-        avl,
-        expected_op_add,
-        add,
-        WideningCategory::None,
-        "vadd.vx",
-    );
+    run_template_v_vx(expected_op_add, op, true, "vadd.vx");
 }
 
 fn expected_op_sub(lhs: &[u8], x: u64, result: &mut [u8]) {
@@ -90,24 +89,22 @@ fn expected_op_sub(lhs: &[u8], x: u64, result: &mut [u8]) {
         }
     }
 }
-
-fn test_vsub_vx(sew: u64, lmul: i64, avl: u64) {
-    fn sub(lhs: &[u8], x: u64, result: &mut [u8], sew: u64, lmul: i64, avl: u64) {
-        vop_vx(lhs, x, result, sew, avl, lmul, |x: u64| unsafe {
-            rvv_asm!("mv t0, {}", 
-                     "vsub.vx v24, v8, t0",
-                     in (reg) x);
-        });
+fn test_vsub_vx() {
+    fn op(_: &[u8], rhs: &[u8], mask_type: MaskType) {
+        let x = u64::from_le_bytes(rhs.try_into().unwrap());
+        unsafe {
+            match mask_type {
+                MaskType::Enable => {
+                    rvv_asm!("mv t0, {}", "vsub.vx v24, v8, t0, v0.t", in (reg) x);
+                }
+                MaskType::Disable => {
+                    rvv_asm!("mv t0, {}", "vsub.vx v24, v8, t0", in (reg) x);
+                }
+                _ => panic!("Abort"),
+            }
+        }
     }
-    run_vop_vx(
-        sew,
-        lmul,
-        avl,
-        expected_op_sub,
-        sub,
-        WideningCategory::None,
-        "vsub.vx",
-    );
+    run_template_v_vx(expected_op_sub, op, true, "vsub.vx");
 }
 
 fn expected_op_rsub(lhs: &[u8], x: u64, result: &mut [u8]) {
@@ -143,24 +140,22 @@ fn expected_op_rsub(lhs: &[u8], x: u64, result: &mut [u8]) {
         }
     }
 }
-
-fn test_vrsub_vx(sew: u64, lmul: i64, avl: u64) {
-    fn rsub(lhs: &[u8], x: u64, result: &mut [u8], sew: u64, lmul: i64, avl: u64) {
-        vop_vx(lhs, x, result, sew, avl, lmul, |x: u64| unsafe {
-            rvv_asm!("mv t0, {}", 
-                     "vrsub.vx v24, v8, t0",
-                     in (reg) x);
-        });
+fn test_vrsub_vx() {
+    fn op(_: &[u8], rhs: &[u8], mask_type: MaskType) {
+        let x = u64::from_le_bytes(rhs.try_into().unwrap());
+        unsafe {
+            match mask_type {
+                MaskType::Enable => {
+                    rvv_asm!("mv t0, {}", "vrsub.vx v24, v8, t0, v0.t", in (reg) x);
+                }
+                MaskType::Disable => {
+                    rvv_asm!("mv t0, {}", "vrsub.vx v24, v8, t0", in (reg) x);
+                }
+                _ => panic!("Abort"),
+            }
+        }
     }
-    run_vop_vx(
-        sew,
-        lmul,
-        avl,
-        expected_op_rsub,
-        rsub,
-        WideningCategory::None,
-        "vrsub.vx",
-    );
+    run_template_v_vx(expected_op_rsub, op, true, "vrsub.vx");
 }
 
 fn expected_op_and(lhs: &[u8], x: u64, result: &mut [u8]) {
@@ -194,24 +189,22 @@ fn expected_op_and(lhs: &[u8], x: u64, result: &mut [u8]) {
         }
     }
 }
-
-fn test_vand_vx(sew: u64, lmul: i64, avl: u64) {
-    fn and(lhs: &[u8], x: u64, result: &mut [u8], sew: u64, lmul: i64, avl: u64) {
-        vop_vx(lhs, x, result, sew, avl, lmul, |x: u64| unsafe {
-            rvv_asm!("mv t0, {}", 
-                     "vand.vx v24, v8, t0",
-                     in (reg) x);
-        });
+fn test_vand_vx() {
+    fn op(_: &[u8], rhs: &[u8], mask_type: MaskType) {
+        let x = u64::from_le_bytes(rhs.try_into().unwrap());
+        unsafe {
+            match mask_type {
+                MaskType::Enable => {
+                    rvv_asm!("mv t0, {}", "vand.vx v24, v8, t0, v0.t", in (reg) x);
+                }
+                MaskType::Disable => {
+                    rvv_asm!("mv t0, {}", "vand.vx v24, v8, t0", in (reg) x);
+                }
+                _ => panic!("Abort"),
+            }
+        }
     }
-    run_vop_vx(
-        sew,
-        lmul,
-        avl,
-        expected_op_and,
-        and,
-        WideningCategory::None,
-        "vand.vx",
-    );
+    run_template_v_vx(expected_op_and, op, true, "vand.vx");
 }
 
 fn expected_op_or(lhs: &[u8], x: u64, result: &mut [u8]) {
@@ -245,24 +238,22 @@ fn expected_op_or(lhs: &[u8], x: u64, result: &mut [u8]) {
         }
     }
 }
-
-fn test_vor_vx(sew: u64, lmul: i64, avl: u64) {
-    fn or(lhs: &[u8], x: u64, result: &mut [u8], sew: u64, lmul: i64, avl: u64) {
-        vop_vx(lhs, x, result, sew, avl, lmul, |x: u64| unsafe {
-            rvv_asm!("mv t0, {}", 
-                     "vor.vx v24, v8, t0",
-                     in (reg) x);
-        });
+fn test_vor_vx() {
+    fn op(_: &[u8], rhs: &[u8], mask_type: MaskType) {
+        let x = u64::from_le_bytes(rhs.try_into().unwrap());
+        unsafe {
+            match mask_type {
+                MaskType::Enable => {
+                    rvv_asm!("mv t0, {}", "vor.vx v24, v8, t0, v0.t", in (reg) x);
+                }
+                MaskType::Disable => {
+                    rvv_asm!("mv t0, {}", "vor.vx v24, v8, t0", in (reg) x);
+                }
+                _ => panic!("Abort"),
+            }
+        }
     }
-    run_vop_vx(
-        sew,
-        lmul,
-        avl,
-        expected_op_or,
-        or,
-        WideningCategory::None,
-        "vor.vx",
-    );
+    run_template_v_vx(expected_op_or, op, true, "vor.vx");
 }
 
 fn expected_op_xor(lhs: &[u8], x: u64, result: &mut [u8]) {
@@ -296,24 +287,22 @@ fn expected_op_xor(lhs: &[u8], x: u64, result: &mut [u8]) {
         }
     }
 }
-
-fn test_vxor_vx(sew: u64, lmul: i64, avl: u64) {
-    fn xor(lhs: &[u8], x: u64, result: &mut [u8], sew: u64, lmul: i64, avl: u64) {
-        vop_vx(lhs, x, result, sew, avl, lmul, |x: u64| unsafe {
-            rvv_asm!("mv t0, {}", 
-                     "vxor.vx v24, v8, t0",
-                     in (reg) x);
-        });
+fn test_vxor_vx() {
+    fn op(_: &[u8], rhs: &[u8], mask_type: MaskType) {
+        let x = u64::from_le_bytes(rhs.try_into().unwrap());
+        unsafe {
+            match mask_type {
+                MaskType::Enable => {
+                    rvv_asm!("mv t0, {}", "vxor.vx v24, v8, t0, v0.t", in (reg) x);
+                }
+                MaskType::Disable => {
+                    rvv_asm!("mv t0, {}", "vxor.vx v24, v8, t0", in (reg) x);
+                }
+                _ => panic!("Abort"),
+            }
+        }
     }
-    run_vop_vx(
-        sew,
-        lmul,
-        avl,
-        expected_op_xor,
-        xor,
-        WideningCategory::None,
-        "vxor.vx",
-    );
+    run_template_v_vx(expected_op_xor, op, true, "vxor.vx");
 }
 
 fn expected_op_mul(lhs: &[u8], x: u64, result: &mut [u8]) {
@@ -348,24 +337,22 @@ fn expected_op_mul(lhs: &[u8], x: u64, result: &mut [u8]) {
         }
     }
 }
-
-fn test_vmul_vx(sew: u64, lmul: i64, avl: u64) {
-    fn op(lhs: &[u8], x: u64, result: &mut [u8], sew: u64, lmul: i64, avl: u64) {
-        vop_vx(lhs, x, result, sew, avl, lmul, |x: u64| unsafe {
-            rvv_asm!("mv t0, {}", 
-                     "vmul.vx v24, v8, t0",
-                     in (reg) x);
-        });
+fn test_vmul_vx() {
+    fn op(_: &[u8], rhs: &[u8], mask_type: MaskType) {
+        let x = u64::from_le_bytes(rhs.try_into().unwrap());
+        unsafe {
+            match mask_type {
+                MaskType::Enable => {
+                    rvv_asm!("mv t0, {}", "vmul.vx v24, v8, t0, v0.t", in (reg) x);
+                }
+                MaskType::Disable => {
+                    rvv_asm!("mv t0, {}", "vmul.vx v24, v8, t0", in (reg) x);
+                }
+                _ => panic!("Abort"),
+            }
+        }
     }
-    run_vop_vx(
-        sew,
-        lmul,
-        avl,
-        expected_op_mul,
-        op,
-        WideningCategory::None,
-        "vmul.vx",
-    );
+    run_template_v_vx(expected_op_mul, op, true, "vmul.vx");
 }
 
 fn expected_op_mulh(lhs: &[u8], x: u64, result: &mut [u8]) {
@@ -402,25 +389,22 @@ fn expected_op_mulh(lhs: &[u8], x: u64, result: &mut [u8]) {
         }
     }
 }
-
-fn test_vmulh_vx(sew: u64, lmul: i64, avl: u64) {
-    fn op(lhs: &[u8], x: u64, result: &mut [u8], sew: u64, lmul: i64, avl: u64) {
-        vop_vx(lhs, x, result, sew, avl, lmul, |x: u64| unsafe {
-            rvv_asm!("mv t0, {}", 
-                     "vmulh.vx v24, v8, t0",
-                     in (reg) x);
-        });
+fn test_vmulh_vx() {
+    fn op(_: &[u8], rhs: &[u8], mask_type: MaskType) {
+        let x = u64::from_le_bytes(rhs.try_into().unwrap());
+        unsafe {
+            match mask_type {
+                MaskType::Enable => {
+                    rvv_asm!("mv t0, {}", "vmulh.vx v24, v8, t0, v0.t", in (reg) x);
+                }
+                MaskType::Disable => {
+                    rvv_asm!("mv t0, {}", "vmulh.vx v24, v8, t0", in (reg) x);
+                }
+                _ => panic!("Abort"),
+            }
+        }
     }
-
-    run_vop_vx(
-        sew,
-        lmul,
-        avl,
-        expected_op_mulh,
-        op,
-        WideningCategory::None,
-        "vmulh.vx",
-    );
+    run_template_v_vx(expected_op_mulh, op, true, "vmulh.vx");
 }
 
 fn expected_op_mulhu(lhs: &[u8], x: u64, result: &mut [u8]) {
@@ -456,25 +440,22 @@ fn expected_op_mulhu(lhs: &[u8], x: u64, result: &mut [u8]) {
         }
     }
 }
-
-fn test_vmulhu_vx(sew: u64, lmul: i64, avl: u64) {
-    fn op(lhs: &[u8], x: u64, result: &mut [u8], sew: u64, lmul: i64, avl: u64) {
-        vop_vx(lhs, x, result, sew, avl, lmul, |x: u64| unsafe {
-            rvv_asm!("mv t0, {}", 
-                     "vmulhu.vx v24, v8, t0",
-                     in (reg) x);
-        });
+fn test_vmulhu_vx() {
+    fn op(_: &[u8], rhs: &[u8], mask_type: MaskType) {
+        let x = u64::from_le_bytes(rhs.try_into().unwrap());
+        unsafe {
+            match mask_type {
+                MaskType::Enable => {
+                    rvv_asm!("mv t0, {}", "vmulhu.vx v24, v8, t0, v0.t", in (reg) x);
+                }
+                MaskType::Disable => {
+                    rvv_asm!("mv t0, {}", "vmulhu.vx v24, v8, t0", in (reg) x);
+                }
+                _ => panic!("Abort"),
+            }
+        }
     }
-
-    run_vop_vx(
-        sew,
-        lmul,
-        avl,
-        expected_op_mulhu,
-        op,
-        WideningCategory::None,
-        "vmulhu.vx",
-    );
+    run_template_v_vx(expected_op_mulhu, op, true, "vmulhu.vx");
 }
 
 fn expected_op_mulhsu(lhs: &[u8], x: u64, result: &mut [u8]) {
@@ -510,25 +491,22 @@ fn expected_op_mulhsu(lhs: &[u8], x: u64, result: &mut [u8]) {
         }
     }
 }
-
-fn test_vmulhsu_vx(sew: u64, lmul: i64, avl: u64) {
-    fn op(lhs: &[u8], x: u64, result: &mut [u8], sew: u64, lmul: i64, avl: u64) {
-        vop_vx(lhs, x, result, sew, avl, lmul, |x: u64| unsafe {
-            rvv_asm!("mv t0, {}", 
-                     "vmulhsu.vx v24, v8, t0",
-                     in (reg) x);
-        });
+fn test_vmulhsu_vx() {
+    fn op(_: &[u8], rhs: &[u8], mask_type: MaskType) {
+        let x = u64::from_le_bytes(rhs.try_into().unwrap());
+        unsafe {
+            match mask_type {
+                MaskType::Enable => {
+                    rvv_asm!("mv t0, {}", "vmulhsu.vx v24, v8, t0, v0.t", in (reg) x);
+                }
+                MaskType::Disable => {
+                    rvv_asm!("mv t0, {}", "vmulhsu.vx v24, v8, t0", in (reg) x);
+                }
+                _ => panic!("Abort"),
+            }
+        }
     }
-
-    run_vop_vx(
-        sew,
-        lmul,
-        avl,
-        expected_op_mulhsu,
-        op,
-        WideningCategory::None,
-        "vmulhsu.vx",
-    );
+    run_template_v_vx(expected_op_mulhsu, op, true, "vmulhsu.vx");
 }
 
 fn expected_op_divu(lhs: &[u8], x: u64, result: &mut [u8]) {
@@ -588,25 +566,22 @@ fn expected_op_divu(lhs: &[u8], x: u64, result: &mut [u8]) {
         }
     }
 }
-
-fn test_vdivu_vx(sew: u64, lmul: i64, avl: u64) {
-    fn op(lhs: &[u8], x: u64, result: &mut [u8], sew: u64, lmul: i64, avl: u64) {
-        vop_vx(lhs, x, result, sew, avl, lmul, |x: u64| unsafe {
-            rvv_asm!("mv t0, {}", 
-                     "vdivu.vx v24, v8, t0",
-                     in (reg) x);
-        });
+fn test_vdivu_vx() {
+    fn op(_: &[u8], rhs: &[u8], mask_type: MaskType) {
+        let x = u64::from_le_bytes(rhs.try_into().unwrap());
+        unsafe {
+            match mask_type {
+                MaskType::Enable => {
+                    rvv_asm!("mv t0, {}", "vdivu.vx v24, v8, t0, v0.t", in (reg) x);
+                }
+                MaskType::Disable => {
+                    rvv_asm!("mv t0, {}", "vdivu.vx v24, v8, t0", in (reg) x);
+                }
+                _ => panic!("Abort"),
+            }
+        }
     }
-
-    run_vop_vx(
-        sew,
-        lmul,
-        avl,
-        expected_op_divu,
-        op,
-        WideningCategory::None,
-        "vdivu.vx",
-    );
+    run_template_v_vx(expected_op_divu, op, true, "vdivu.vx");
 }
 
 fn expected_op_div(lhs: &[u8], x: u64, result: &mut [u8]) {
@@ -666,25 +641,22 @@ fn expected_op_div(lhs: &[u8], x: u64, result: &mut [u8]) {
         }
     }
 }
-
-fn test_vdiv_vx(sew: u64, lmul: i64, avl: u64) {
-    fn op(lhs: &[u8], x: u64, result: &mut [u8], sew: u64, lmul: i64, avl: u64) {
-        vop_vx(lhs, x, result, sew, avl, lmul, |x: u64| unsafe {
-            rvv_asm!("mv t0, {}", 
-                     "vdiv.vx v24, v8, t0",
-                     in (reg) x);
-        });
+fn test_vdiv_vx() {
+    fn op(_: &[u8], rhs: &[u8], mask_type: MaskType) {
+        let x = u64::from_le_bytes(rhs.try_into().unwrap());
+        unsafe {
+            match mask_type {
+                MaskType::Enable => {
+                    rvv_asm!("mv t0, {}", "vdiv.vx v24, v8, t0, v0.t", in (reg) x);
+                }
+                MaskType::Disable => {
+                    rvv_asm!("mv t0, {}", "vdiv.vx v24, v8, t0", in (reg) x);
+                }
+                _ => panic!("Abort"),
+            }
+        }
     }
-
-    run_vop_vx(
-        sew,
-        lmul,
-        avl,
-        expected_op_div,
-        op,
-        WideningCategory::None,
-        "vdiv.vx",
-    );
+    run_template_v_vx(expected_op_div, op, true, "vdiv.vx");
 }
 
 fn expected_op_remu(lhs: &[u8], x: u64, result: &mut [u8]) {
@@ -744,25 +716,22 @@ fn expected_op_remu(lhs: &[u8], x: u64, result: &mut [u8]) {
         }
     }
 }
-
-fn test_vremu_vx(sew: u64, lmul: i64, avl: u64) {
-    fn op(lhs: &[u8], x: u64, result: &mut [u8], sew: u64, lmul: i64, avl: u64) {
-        vop_vx(lhs, x, result, sew, avl, lmul, |x: u64| unsafe {
-            rvv_asm!("mv t0, {}", 
-                     "vremu.vx v24, v8, t0",
-                     in (reg) x);
-        });
+fn test_vremu_vx() {
+    fn op(_: &[u8], rhs: &[u8], mask_type: MaskType) {
+        let x = u64::from_le_bytes(rhs.try_into().unwrap());
+        unsafe {
+            match mask_type {
+                MaskType::Enable => {
+                    rvv_asm!("mv t0, {}", "vremu.vx v24, v8, t0, v0.t", in (reg) x);
+                }
+                MaskType::Disable => {
+                    rvv_asm!("mv t0, {}", "vremu.vx v24, v8, t0", in (reg) x);
+                }
+                _ => panic!("Abort"),
+            }
+        }
     }
-
-    run_vop_vx(
-        sew,
-        lmul,
-        avl,
-        expected_op_remu,
-        op,
-        WideningCategory::None,
-        "vremu.vx",
-    );
+    run_template_v_vx(expected_op_remu, op, true, "vremu.vx");
 }
 
 fn expected_op_rem(lhs: &[u8], x: u64, result: &mut [u8]) {
@@ -823,25 +792,22 @@ fn expected_op_rem(lhs: &[u8], x: u64, result: &mut [u8]) {
         }
     }
 }
-
-fn test_vrem_vx(sew: u64, lmul: i64, avl: u64) {
-    fn op(lhs: &[u8], x: u64, result: &mut [u8], sew: u64, lmul: i64, avl: u64) {
-        vop_vx(lhs, x, result, sew, avl, lmul, |x: u64| unsafe {
-            rvv_asm!("mv t0, {}", 
-                     "vrem.vx v24, v8, t0",
-                     in (reg) x);
-        });
+fn test_vrem_vx() {
+    fn op(_: &[u8], rhs: &[u8], mask_type: MaskType) {
+        let x = u64::from_le_bytes(rhs.try_into().unwrap());
+        unsafe {
+            match mask_type {
+                MaskType::Enable => {
+                    rvv_asm!("mv t0, {}", "vrem.vx v24, v8, t0, v0.t", in (reg) x);
+                }
+                MaskType::Disable => {
+                    rvv_asm!("mv t0, {}", "vrem.vx v24, v8, t0", in (reg) x);
+                }
+                _ => panic!("Abort"),
+            }
+        }
     }
-
-    run_vop_vx(
-        sew,
-        lmul,
-        avl,
-        expected_op_rem,
-        op,
-        WideningCategory::None,
-        "vrem.vx",
-    );
+    run_template_v_vx(expected_op_rem, op, true, "vrem.vx");
 }
 
 fn expected_op_minu(lhs: &[u8], x: u64, result: &mut [u8]) {
@@ -884,7 +850,7 @@ fn expected_op_minu(lhs: &[u8], x: u64, result: &mut [u8]) {
             if l.cmp_u(&r) == Less {
                 result.copy_from_slice(lhs);
             } else {
-                result[..8].copy_from_slice(x.to_le_bytes().as_slice());
+                r.put(result);
             }
         }
         _ => {
@@ -892,25 +858,22 @@ fn expected_op_minu(lhs: &[u8], x: u64, result: &mut [u8]) {
         }
     }
 }
-
-fn test_vminu_vx(sew: u64, lmul: i64, avl: u64) {
-    fn op(lhs: &[u8], x: u64, result: &mut [u8], sew: u64, lmul: i64, avl: u64) {
-        vop_vx(lhs, x, result, sew, avl, lmul, |x: u64| unsafe {
-            rvv_asm!("mv t0, {}", 
-                     "vminu.vx v24, v8, t0",
-                     in (reg) x);
-        });
+fn test_vminu_vx() {
+    fn op(_: &[u8], rhs: &[u8], mask_type: MaskType) {
+        let x = u64::from_le_bytes(rhs.try_into().unwrap());
+        unsafe {
+            match mask_type {
+                MaskType::Enable => {
+                    rvv_asm!("mv t0, {}", "vminu.vx v24, v8, t0, v0.t", in (reg) x);
+                }
+                MaskType::Disable => {
+                    rvv_asm!("mv t0, {}", "vminu.vx v24, v8, t0", in (reg) x);
+                }
+                _ => panic!("Abort"),
+            }
+        }
     }
-
-    run_vop_vx(
-        sew,
-        lmul,
-        avl,
-        expected_op_minu,
-        op,
-        WideningCategory::None,
-        "vminu.vx",
-    );
+    run_template_v_vx(expected_op_minu, op, true, "vminu.vx");
 }
 
 fn expected_op_min(lhs: &[u8], x: u64, result: &mut [u8]) {
@@ -965,25 +928,22 @@ fn expected_op_min(lhs: &[u8], x: u64, result: &mut [u8]) {
         }
     }
 }
-
-fn test_vmin_vx(sew: u64, lmul: i64, avl: u64) {
-    fn op(lhs: &[u8], x: u64, result: &mut [u8], sew: u64, lmul: i64, avl: u64) {
-        vop_vx(lhs, x, result, sew, avl, lmul, |x: u64| unsafe {
-            rvv_asm!("mv t0, {}", 
-                     "vmin.vx v24, v8, t0",
-                     in (reg) x);
-        });
+fn test_vmin_vx() {
+    fn op(_: &[u8], rhs: &[u8], mask_type: MaskType) {
+        let x = u64::from_le_bytes(rhs.try_into().unwrap());
+        unsafe {
+            match mask_type {
+                MaskType::Enable => {
+                    rvv_asm!("mv t0, {}", "vmin.vx v24, v8, t0, v0.t", in (reg) x);
+                }
+                MaskType::Disable => {
+                    rvv_asm!("mv t0, {}", "vmin.vx v24, v8, t0", in (reg) x);
+                }
+                _ => panic!("Abort"),
+            }
+        }
     }
-
-    run_vop_vx(
-        sew,
-        lmul,
-        avl,
-        expected_op_min,
-        op,
-        WideningCategory::None,
-        "vmin.vx",
-    );
+    run_template_v_vx(expected_op_min, op, true, "vmin.vx");
 }
 
 fn expected_op_maxu(lhs: &[u8], x: u64, result: &mut [u8]) {
@@ -1034,25 +994,22 @@ fn expected_op_maxu(lhs: &[u8], x: u64, result: &mut [u8]) {
         }
     }
 }
-
-fn test_vmaxu_vx(sew: u64, lmul: i64, avl: u64) {
-    fn op(lhs: &[u8], x: u64, result: &mut [u8], sew: u64, lmul: i64, avl: u64) {
-        vop_vx(lhs, x, result, sew, avl, lmul, |x: u64| unsafe {
-            rvv_asm!("mv t0, {}", 
-                     "vmaxu.vx v24, v8, t0",
-                     in (reg) x);
-        });
+fn test_vmaxu_vx() {
+    fn op(_: &[u8], rhs: &[u8], mask_type: MaskType) {
+        let x = u64::from_le_bytes(rhs.try_into().unwrap());
+        unsafe {
+            match mask_type {
+                MaskType::Enable => {
+                    rvv_asm!("mv t0, {}", "vmaxu.vx v24, v8, t0, v0.t", in (reg) x);
+                }
+                MaskType::Disable => {
+                    rvv_asm!("mv t0, {}", "vmaxu.vx v24, v8, t0", in (reg) x);
+                }
+                _ => panic!("Abort"),
+            }
+        }
     }
-
-    run_vop_vx(
-        sew,
-        lmul,
-        avl,
-        expected_op_maxu,
-        op,
-        WideningCategory::None,
-        "vmaxu.vx",
-    );
+    run_template_v_vx(expected_op_maxu, op, true, "vmaxu.vx");
 }
 
 fn expected_op_max(lhs: &[u8], x: u64, result: &mut [u8]) {
@@ -1107,25 +1064,22 @@ fn expected_op_max(lhs: &[u8], x: u64, result: &mut [u8]) {
         }
     }
 }
-
-fn test_vmax_vx(sew: u64, lmul: i64, avl: u64) {
-    fn op(lhs: &[u8], x: u64, result: &mut [u8], sew: u64, lmul: i64, avl: u64) {
-        vop_vx(lhs, x, result, sew, avl, lmul, |x: u64| unsafe {
-            rvv_asm!("mv t0, {}", 
-                     "vmax.vx v24, v8, t0",
-                     in (reg) x);
-        });
+fn test_vmax_vx() {
+    fn op(_: &[u8], rhs: &[u8], mask_type: MaskType) {
+        let x = u64::from_le_bytes(rhs.try_into().unwrap());
+        unsafe {
+            match mask_type {
+                MaskType::Enable => {
+                    rvv_asm!("mv t0, {}", "vmax.vx v24, v8, t0, v0.t", in (reg) x);
+                }
+                MaskType::Disable => {
+                    rvv_asm!("mv t0, {}", "vmax.vx v24, v8, t0", in (reg) x);
+                }
+                _ => panic!("Abort"),
+            }
+        }
     }
-
-    run_vop_vx(
-        sew,
-        lmul,
-        avl,
-        expected_op_max,
-        op,
-        WideningCategory::None,
-        "vmax.vx",
-    );
+    run_template_v_vx(expected_op_max, op, true, "vmax.vx");
 }
 
 fn expected_op_smul(lhs: &[u8], x: u64, result: &mut [u8]) {
@@ -1170,52 +1124,42 @@ fn expected_op_smul(lhs: &[u8], x: u64, result: &mut [u8]) {
         }
     }
 }
-
-fn test_vsmul_vx(sew: u64, lmul: i64, avl: u64) {
-    fn op(lhs: &[u8], x: u64, result: &mut [u8], sew: u64, lmul: i64, avl: u64) {
-        vop_vx(lhs, x, result, sew, avl, lmul, |x: u64| unsafe {
-            rvv_asm!("mv t0, {}", 
-                     "vsmul.vx v24, v8, t0",
-                     in (reg) x);
-        });
-    }
-
-    run_vop_vx(
-        sew,
-        lmul,
-        avl,
-        expected_op_smul,
-        op,
-        WideningCategory::None,
-        "vsmul.vx",
-    );
-}
-
-pub fn test_vop_vx() {
-    // test combinations of lmul, sew, avl, etc
-    for sew in [8, 16, 32, 64, 256] {
-        for lmul in [-2, 1, 4, 8] {
-            for avl in avl_iterator(sew, 4) {
-                test_vadd_vx(sew, lmul, avl);
-                test_vsub_vx(sew, lmul, avl);
-                test_vrsub_vx(sew, lmul, avl);
-                test_vand_vx(sew, lmul, avl);
-                test_vor_vx(sew, lmul, avl);
-                test_vxor_vx(sew, lmul, avl);
-                test_vmul_vx(sew, lmul, avl);
-                test_vmulh_vx(sew, lmul, avl);
-                test_vmulhu_vx(sew, lmul, avl);
-                test_vmulhsu_vx(sew, lmul, avl);
-                test_vdivu_vx(sew, lmul, avl);
-                test_vdiv_vx(sew, lmul, avl);
-                test_vremu_vx(sew, lmul, avl);
-                test_vrem_vx(sew, lmul, avl);
-                test_vminu_vx(sew, lmul, avl);
-                test_vmin_vx(sew, lmul, avl);
-                test_vmaxu_vx(sew, lmul, avl);
-                test_vmax_vx(sew, lmul, avl);
-                test_vsmul_vx(sew, lmul, avl);
+fn test_vsmul_vx() {
+    fn op(_: &[u8], rhs: &[u8], mask_type: MaskType) {
+        let x = u64::from_le_bytes(rhs.try_into().unwrap());
+        unsafe {
+            match mask_type {
+                MaskType::Enable => {
+                    rvv_asm!("mv t0, {}", "vsmul.vx v24, v8, t0, v0.t", in (reg) x);
+                }
+                MaskType::Disable => {
+                    rvv_asm!("mv t0, {}", "vsmul.vx v24, v8, t0", in (reg) x);
+                }
+                _ => panic!("Abort"),
             }
         }
     }
+    run_template_v_vx(expected_op_smul, op, true, "vsmul.vx");
+}
+
+pub fn test_vop_vx() {
+    test_vadd_vx();
+    test_vsub_vx();
+    test_vrsub_vx();
+    test_vand_vx();
+    test_vor_vx();
+    test_vxor_vx();
+    test_vmul_vx();
+    test_vmulh_vx();
+    test_vmulhu_vx();
+    test_vmulhsu_vx();
+    test_vdivu_vx();
+    test_vdiv_vx();
+    test_vremu_vx();
+    test_vrem_vx();
+    test_vminu_vx();
+    test_vmin_vx();
+    test_vmaxu_vx();
+    test_vmax_vx();
+    test_vsmul_vx();
 }

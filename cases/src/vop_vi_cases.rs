@@ -1,9 +1,8 @@
 use core::arch::asm;
 use core::convert::TryInto;
 use rvv_asm::rvv_asm;
-use rvv_testcases::intrinsic::vop_vi;
-use rvv_testcases::misc::{avl_iterator, Widening, U256};
-use rvv_testcases::runner::{run_vop_vi, WideningCategory};
+use rvv_testcases::misc::{Widening, U256};
+use rvv_testcases::runner::{run_template_v_vi, MaskType};
 
 fn expected_op_add(lhs: &[u8], imm: i64, result: &mut [u8]) {
     assert!(lhs.len() == result.len());
@@ -46,10 +45,11 @@ fn expected_op_add(lhs: &[u8], imm: i64, result: &mut [u8]) {
         }
     }
 }
-fn test_vadd_vi(sew: u64, lmul: i64, avl: u64, imm: i64) {
+fn test_vadd_vi() {
     // test combinations of lmul, sew, avl, etc
-    fn add(lhs: &[u8], imm: i64, result: &mut [u8], sew: u64, lmul: i64, avl: u64) {
-        vop_vi(lhs, imm, result, sew, avl, lmul, |imm| unsafe {
+    fn op(_: &[u8], rhs: &[u8], _: MaskType) {
+        let imm = i64::from_le_bytes(rhs.try_into().unwrap());
+        unsafe {
             match imm {
                 15 => {
                     rvv_asm!("vadd.vi v24, v8, 15");
@@ -151,18 +151,9 @@ fn test_vadd_vi(sew: u64, lmul: i64, avl: u64, imm: i64) {
                     panic!("can't support this immediate: {}", imm);
                 }
             }
-        });
+        }
     }
-    run_vop_vi(
-        sew,
-        lmul,
-        avl,
-        imm,
-        expected_op_add,
-        add,
-        WideningCategory::None,
-        "vadd.vi",
-    );
+    run_template_v_vi(expected_op_add, op, true, "vadd.vi");
 }
 
 fn expected_op_sub(lhs: &[u8], imm: i64, result: &mut [u8]) {
@@ -209,9 +200,10 @@ fn expected_op_sub(lhs: &[u8], imm: i64, result: &mut [u8]) {
         }
     }
 }
-fn test_vrsub_vi(sew: u64, lmul: i64, avl: u64, imm: i64) {
-    fn sub(lhs: &[u8], imm: i64, result: &mut [u8], sew: u64, lmul: i64, avl: u64) {
-        vop_vi(lhs, imm, result, sew, avl, lmul, |imm| unsafe {
+fn test_vrsub_vi() {
+    fn op(_: &[u8], rhs: &[u8], _: MaskType) {
+        let imm = i64::from_le_bytes(rhs.try_into().unwrap());
+        unsafe {
             match imm {
                 15 => {
                     rvv_asm!("vrsub.vi v24, v8, 15");
@@ -313,18 +305,10 @@ fn test_vrsub_vi(sew: u64, lmul: i64, avl: u64, imm: i64) {
                     panic!("can't support this immediate: {}", imm);
                 }
             }
-        });
+        }
     }
-    run_vop_vi(
-        sew,
-        lmul,
-        avl,
-        imm,
-        expected_op_sub,
-        sub,
-        WideningCategory::None,
-        "vrsub.vi",
-    );
+
+    run_template_v_vi(expected_op_sub, op, true, "vrsub.vi");
 }
 
 fn expected_op_and(lhs: &[u8], imm: i64, result: &mut [u8]) {
@@ -367,9 +351,10 @@ fn expected_op_and(lhs: &[u8], imm: i64, result: &mut [u8]) {
         }
     }
 }
-fn test_vand_vi(sew: u64, lmul: i64, avl: u64, imm: i64) {
-    fn and(lhs: &[u8], imm: i64, result: &mut [u8], sew: u64, lmul: i64, avl: u64) {
-        vop_vi(lhs, imm, result, sew, avl, lmul, |imm| unsafe {
+fn test_vand_vi() {
+    fn op(_: &[u8], rhs: &[u8], _: MaskType) {
+        let imm = i64::from_le_bytes(rhs.try_into().unwrap());
+        unsafe {
             match imm {
                 15 => {
                     rvv_asm!("vand.vi v24, v8, 15");
@@ -471,18 +456,9 @@ fn test_vand_vi(sew: u64, lmul: i64, avl: u64, imm: i64) {
                     panic!("can't support this immediate: {}", imm);
                 }
             }
-        });
+        }
     }
-    run_vop_vi(
-        sew,
-        lmul,
-        avl,
-        imm,
-        expected_op_and,
-        and,
-        WideningCategory::None,
-        "vand.vi",
-    );
+    run_template_v_vi(expected_op_and, op, true, "vand.vi");
 }
 
 fn expected_op_or(lhs: &[u8], imm: i64, result: &mut [u8]) {
@@ -525,9 +501,10 @@ fn expected_op_or(lhs: &[u8], imm: i64, result: &mut [u8]) {
         }
     }
 }
-fn test_vor_vi(sew: u64, lmul: i64, avl: u64, imm: i64) {
-    fn or(lhs: &[u8], imm: i64, result: &mut [u8], sew: u64, lmul: i64, avl: u64) {
-        vop_vi(lhs, imm, result, sew, avl, lmul, |imm| unsafe {
+fn test_vor_vi() {
+    fn op(_: &[u8], rhs: &[u8], _: MaskType) {
+        let imm = i64::from_le_bytes(rhs.try_into().unwrap());
+        unsafe {
             match imm {
                 15 => {
                     rvv_asm!("vor.vi v24, v8, 15");
@@ -629,18 +606,9 @@ fn test_vor_vi(sew: u64, lmul: i64, avl: u64, imm: i64) {
                     panic!("can't support this immediate: {}", imm);
                 }
             }
-        });
+        }
     }
-    run_vop_vi(
-        sew,
-        lmul,
-        avl,
-        imm,
-        expected_op_or,
-        or,
-        WideningCategory::None,
-        "vor.vi",
-    );
+    run_template_v_vi(expected_op_or, op, true, "vor.vi");
 }
 
 fn expected_op_xor(lhs: &[u8], imm: i64, result: &mut [u8]) {
@@ -683,9 +651,10 @@ fn expected_op_xor(lhs: &[u8], imm: i64, result: &mut [u8]) {
         }
     }
 }
-fn test_vxor_vi(sew: u64, lmul: i64, avl: u64, imm: i64) {
-    fn xor(lhs: &[u8], imm: i64, result: &mut [u8], sew: u64, lmul: i64, avl: u64) {
-        vop_vi(lhs, imm, result, sew, avl, lmul, |imm| unsafe {
+fn test_vxor_vi() {
+    fn op(_: &[u8], rhs: &[u8], _: MaskType) {
+        let imm = i64::from_le_bytes(rhs.try_into().unwrap());
+        unsafe {
             match imm {
                 15 => {
                     rvv_asm!("vxor.vi v24, v8, 15");
@@ -787,36 +756,16 @@ fn test_vxor_vi(sew: u64, lmul: i64, avl: u64, imm: i64) {
                     panic!("can't support this immediate: {}", imm);
                 }
             }
-        });
+        }
     }
 
-    run_vop_vi(
-        sew,
-        lmul,
-        avl,
-        imm,
-        expected_op_xor,
-        xor,
-        WideningCategory::None,
-        "vxor.vi",
-    );
+    run_template_v_vi(expected_op_xor, op, true, "vxor.vi");
 }
 
 pub fn test_vop_vi() {
-    let mut imm = -16;
-    for sew in [8, 32, 64, 128, 256] {
-        for lmul in [-2, 1, 4, 8] {
-            for avl in avl_iterator(sew, 4) {
-                test_vadd_vi(sew, lmul, avl, imm);
-                test_vrsub_vi(sew, lmul, avl, imm);
-                test_vand_vi(sew, lmul, avl, imm);
-                test_vor_vi(sew, lmul, avl, imm);
-                test_vxor_vi(sew, lmul, avl, imm);
-                imm += 1;
-                if imm > 15 {
-                    imm = -16;
-                }
-            }
-        }
-    }
+    test_vadd_vi();
+    test_vrsub_vi();
+    test_vand_vi();
+    test_vor_vi();
+    test_vxor_vi();
 }

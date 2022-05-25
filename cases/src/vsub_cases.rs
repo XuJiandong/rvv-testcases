@@ -1,12 +1,10 @@
 use core::arch::asm;
 use core::convert::TryInto;
-
-use alloc::boxed::Box;
 use rvv_asm::rvv_asm;
-use rvv_testcases::intrinsic::vop_vv;
-
-use rvv_testcases::misc::{avl_iterator, U1024, U256, U512};
-use rvv_testcases::runner::{run_vop_vv, ExpectedOp, WideningCategory};
+use rvv_testcases::{
+    misc::{U1024, U256, U512},
+    runner::{run_template_v_vv, MaskType},
+};
 
 fn expected_op_sub(lhs: &[u8], rhs: &[u8], result: &mut [u8]) {
     assert!(lhs.len() == rhs.len() && rhs.len() == result.len());
@@ -56,23 +54,18 @@ fn expected_op_sub(lhs: &[u8], rhs: &[u8], result: &mut [u8]) {
 }
 
 pub fn test_vsub() {
-    fn add(lhs: &[u8], rhs: &[u8], result: &mut [u8], sew: u64, lmul: i64, avl: u64) {
-        vop_vv(lhs, rhs, result, sew, avl, lmul, || unsafe {
-            rvv_asm!("vsub.vv v24, v8, v16");
-        });
-    }
-    let sew = 256u64;
-    for lmul in [-8, -2, 1, 4, 8] {
-        for avl in avl_iterator(sew, 4) {
-            run_vop_vv(
-                sew,
-                lmul,
-                avl,
-                ExpectedOp::Normal(Box::new(expected_op_sub)),
-                add,
-                WideningCategory::None,
-                "vsub.vv",
-            );
+    fn op(_: &[u8], _: &[u8], mask_type: MaskType) {
+        unsafe {
+            match mask_type {
+                MaskType::Enable => {
+                    rvv_asm!("vsub.vv v24, v8, v16, v0.t");
+                }
+                MaskType::Disable => {
+                    rvv_asm!("vsub.vv v24, v8, v16");
+                }
+                _ => panic!("Abort"),
+            }
         }
     }
+    run_template_v_vv(expected_op_sub, op, true, "vsub.vv");
 }

@@ -3,10 +3,10 @@ use eint::{Eint, E256, E512};
 use rvv_asm::rvv_asm;
 use rvv_testcases::{
     misc::conver_to_i512,
-    runner::{run_template_wi, run_template_wv, run_template_wx, MaskType},
+    runner::{run_template_v_wi, run_template_v_wv, run_template_v_wx, MaskType},
 };
 
-fn expected_op_vnclipu(result: &mut [u8], lhs: &[u8], x: u64) {
+fn expected_op_vnclipu(lhs: &[u8], x: u64, result: &mut [u8]) {
     assert_eq!(lhs.len(), result.len() * 2);
 
     match result.len() {
@@ -38,7 +38,7 @@ fn expected_op_vnclipu(result: &mut [u8], lhs: &[u8], x: u64) {
     }
 }
 fn test_vnclipu_wv() {
-    fn exp_op(result: &mut [u8], lhs: &[u8], rhs: &[u8]) {
+    fn exp_op(lhs: &[u8], rhs: &[u8], result: &mut [u8]) {
         let x = match rhs.len() {
             8 => u64::from_le_bytes(rhs.try_into().unwrap()),
             32 => E256::get(rhs).u64(),
@@ -46,7 +46,7 @@ fn test_vnclipu_wv() {
                 panic!("unsupported length: {}", rhs.len());
             }
         };
-        expected_op_vnclipu(result, lhs, x)
+        expected_op_vnclipu(lhs, x, result)
     }
     fn op(_: &[u8], _: &[u8], mask_type: MaskType) {
         unsafe {
@@ -62,7 +62,7 @@ fn test_vnclipu_wv() {
         }
     }
 
-    run_template_wv(exp_op, op, &[64, 256], &[-2, 1, 2], true, "vnclipu.wv");
+    run_template_v_wv(exp_op, op, true, "vnclipu.wv");
 }
 fn test_vnclipu_wx() {
     fn op(_: &[u8], rhs: &[u8], mask_type: MaskType) {
@@ -80,18 +80,11 @@ fn test_vnclipu_wx() {
         }
     }
 
-    run_template_wx(
-        expected_op_vnclipu,
-        op,
-        &[64, 256],
-        &[-2, 1, 2],
-        true,
-        "vnclipu.wx",
-    );
+    run_template_v_wx(expected_op_vnclipu, op, true, "vnclipu.wx");
 }
 fn test_vnclipu_wi() {
-    fn exp_op(result: &mut [u8], lhs: &[u8], x: i64) {
-        expected_op_vnclipu(result, lhs, x as u64);
+    fn exp_op(lhs: &[u8], x: i64, result: &mut [u8]) {
+        expected_op_vnclipu(lhs, x as u64, result);
     }
     fn op(_: &[u8], rhs: &[u8], _: MaskType) {
         let imm = i64::from_le_bytes(rhs.try_into().unwrap());
@@ -200,10 +193,10 @@ fn test_vnclipu_wi() {
         }
     }
 
-    run_template_wi(exp_op, op, &[64, 256], &[-2, 1, 2], "vnclipu.wi");
+    run_template_v_wi(exp_op, op, "vnclipu.wi");
 }
 
-fn expected_op_vnclip(result: &mut [u8], lhs: &[u8], x: u64) {
+fn expected_op_vnclip(lhs: &[u8], x: u64, result: &mut [u8]) {
     assert_eq!(lhs.len(), result.len() * 2);
 
     match result.len() {
@@ -239,7 +232,7 @@ fn expected_op_vnclip(result: &mut [u8], lhs: &[u8], x: u64) {
     }
 }
 fn test_vnclip_wv() {
-    fn exp_op(result: &mut [u8], lhs: &[u8], rhs: &[u8]) {
+    fn exp_op(lhs: &[u8], rhs: &[u8], result: &mut [u8]) {
         let x = match rhs.len() {
             8 => u64::from_le_bytes(rhs.try_into().unwrap()),
             32 => E256::get(rhs).u64(),
@@ -247,7 +240,7 @@ fn test_vnclip_wv() {
                 panic!("unsupported length: {}", rhs.len());
             }
         };
-        expected_op_vnclip(result, lhs, x)
+        expected_op_vnclip(lhs, x, result)
     }
     fn op(_: &[u8], _: &[u8], mask_type: MaskType) {
         unsafe {
@@ -263,7 +256,7 @@ fn test_vnclip_wv() {
         }
     }
 
-    run_template_wv(exp_op, op, &[64, 256], &[-2, 1, 2], true, "vnclip.wv");
+    run_template_v_wv(exp_op, op, true, "vnclip.wv");
 }
 fn test_vnclip_wx() {
     fn op(_: &[u8], rhs: &[u8], mask_type: MaskType) {
@@ -281,18 +274,11 @@ fn test_vnclip_wx() {
         }
     }
 
-    run_template_wx(
-        expected_op_vnclip,
-        op,
-        &[64, 256],
-        &[-2, 1, 2],
-        true,
-        "vnclip.wx",
-    );
+    run_template_v_wx(expected_op_vnclip, op, true, "vnclip.wx");
 }
 fn test_vnclip_wi() {
-    fn exp_op(result: &mut [u8], lhs: &[u8], x: i64) {
-        expected_op_vnclip(result, lhs, x as u64);
+    fn exp_op(lhs: &[u8], x: i64, result: &mut [u8]) {
+        expected_op_vnclip(lhs, x as u64, result);
     }
     fn op(_: &[u8], rhs: &[u8], _: MaskType) {
         let imm = i64::from_le_bytes(rhs.try_into().unwrap());
@@ -401,7 +387,7 @@ fn test_vnclip_wi() {
         }
     }
 
-    run_template_wi(exp_op, op, &[64, 256], &[-2, 1, 2], "vnclip.wi");
+    run_template_v_wi(exp_op, op, "vnclip.wi");
 }
 
 pub fn test_narrowing_fixed_point_clip() {

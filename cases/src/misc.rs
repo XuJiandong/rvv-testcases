@@ -114,6 +114,16 @@ macro_rules! log {
 }
 
 #[macro_export]
+macro_rules! dbg_log {
+    ($fmt:literal) => {
+        //debug(alloc::format!($fmt));
+    };
+    ($fmt:literal, $($args:expr),+) => {
+        //debug(alloc::format!($fmt, $($args), +));
+    };
+}
+
+#[macro_export]
 macro_rules! test_case {
     ($fun:path, $test_pattern:ident) => {{
         let fun_name = stringify!($fun);
@@ -375,3 +385,13 @@ macro_rules! conver_with_single {
 
 conver_with_single!(conver_to_i512, E512, E256);
 conver_with_single!(conver_to_i256, E256, E128);
+
+#[inline]
+pub fn to_u64(d: &[u8]) -> u64 {
+    u64::from_le_bytes(d.try_into().unwrap())
+}
+
+#[inline]
+pub fn to_i64(d: &[u8]) -> i64 {
+    i64::from_le_bytes(d.try_into().unwrap())
+}

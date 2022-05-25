@@ -6,14 +6,14 @@ use rvv_asm::rvv_asm;
 use rvv_testcases::{
     misc::VLEN,
     rng::BestNumberRng,
-    runner::{run_template_vi, run_template_vv, run_template_vx, MaskType},
+    runner::{run_template_v_vi, run_template_v_vv, run_template_v_vx, MaskType},
 };
 
 use ckb_std::syscalls::debug;
 use rvv_testcases::log;
 
 fn test_vmv_v_v() {
-    fn expected_op(result: &mut [u8], _: &[u8], rhs: &[u8]) {
+    fn expected_op(_: &[u8], rhs: &[u8], result: &mut [u8]) {
         assert!(rhs.len() == result.len());
         result.copy_from_slice(rhs);
     }
@@ -23,18 +23,11 @@ fn test_vmv_v_v() {
         }
     }
 
-    run_template_vv(
-        expected_op,
-        op,
-        &[64, 256],
-        &[-8, -2, 1, 4, 8],
-        false,
-        "vmv.v.v",
-    );
+    run_template_v_vv(expected_op, op, false, "vmv.v.v");
 }
 
 fn test_vmv_v_x() {
-    fn expected_op(result: &mut [u8], _: &[u8], x: u64) {
+    fn expected_op(_: &[u8], x: u64, result: &mut [u8]) {
         match result.len() {
             8 => {
                 result.copy_from_slice(&x.to_le_bytes());
@@ -54,18 +47,11 @@ fn test_vmv_v_x() {
         }
     }
 
-    run_template_vx(
-        expected_op,
-        op,
-        &[64, 256],
-        &[-8, -2, 1, 4, 8],
-        false,
-        "vmv.v.x",
-    );
+    run_template_v_vx(expected_op, op, false, "vmv.v.x");
 }
 
 fn test_vmv_v_i() {
-    fn expected_op(result: &mut [u8], _: &[u8], x: i64) {
+    fn expected_op(_: &[u8], x: i64, result: &mut [u8]) {
         match result.len() {
             8 => {
                 result.copy_from_slice(&x.to_le_bytes());
@@ -185,18 +171,11 @@ fn test_vmv_v_i() {
         }
     }
 
-    run_template_vi(
-        expected_op,
-        op,
-        &[64, 256],
-        &[-8, -2, 1, 4, 8],
-        true,
-        "vmv.v.i",
-    );
+    run_template_v_vi(expected_op, op, true, "vmv.v.i");
 }
 
 fn test_vmv1r_v_v() {
-    fn expected_op(result: &mut [u8], _: &[u8], rhs: &[u8]) {
+    fn expected_op(_: &[u8], rhs: &[u8], result: &mut [u8]) {
         assert!(rhs.len() == result.len());
         result.copy_from_slice(rhs);
     }
@@ -206,14 +185,7 @@ fn test_vmv1r_v_v() {
         }
     }
 
-    run_template_vv(
-        expected_op,
-        op,
-        &[64, 256],
-        &[-8, -2, 1, 4, 8],
-        false,
-        "vmv.v.v",
-    );
+    run_template_v_vv(expected_op, op, false, "vmv.v.v");
 }
 
 fn test_vmv2r_v_v() {
