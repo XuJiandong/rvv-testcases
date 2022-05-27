@@ -1,6 +1,7 @@
 use crate::misc::{compress_into_bits, get_bit_in_slice, set_bit_in_slice};
 
-use super::misc::{create_vtype, VLEN};
+use super::intrinsic_setvl::{v_setivli, v_setvl, v_setvli};
+use super::misc::VLEN;
 use super::runner::WideningCategory;
 use alloc::vec::Vec;
 use core::arch::asm;
@@ -9,30 +10,40 @@ use rvv_asm::rvv_asm;
 // use super::log;
 // use ckb_std::syscalls::debug;
 
-#[inline(never)]
+static mut VSET_TEST_COUNT: u64 = 0;
+static mut RVV_LEN: u64 = 0;
+
+pub fn get_rvv_len() -> u64 {
+    unsafe { RVV_LEN }
+}
+
 pub fn vsetvl(avl: u64, sew: u64, lmul: i64) -> u64 {
-    let vtype = create_vtype(sew, lmul);
-    let mut vl: u64;
+    let count: u64;
     unsafe {
-        rvv_asm!(
-            "mv t1, {0}",
-            "mv t2, {1}",
-            "vsetvl t0, t1, t2",
-            "mv {2}, t0",
-            in (reg) avl,
-            in (reg) vtype,
-            out (reg) vl,
-        );
+        count = VSET_TEST_COUNT;
+        VSET_TEST_COUNT += 1
     }
+
+    let vl = if avl >= 32 {
+        match count % 2 {
+            0 => v_setvl(avl, sew, lmul),
+            1 => v_setvli(avl, sew, lmul),
+            _ => panic!("Abort"),
+        }
+    } else {
+        match count % 3 {
+            0 => v_setvl(avl, sew, lmul),
+            1 => v_setvli(avl, sew, lmul),
+            2 => v_setivli(avl, sew, lmul),
+            _ => panic!("Abort"),
+        }
+    };
+
     unsafe {
         RVV_LEN = vl * (sew >> 3);
     }
-    vl
-}
 
-static mut RVV_LEN: u64 = 0;
-fn get_rvv_len() -> u64 {
-    unsafe { RVV_LEN }
+    vl
 }
 
 // TODO: rvv_asm! doesn't support this
@@ -533,6 +544,30 @@ pub fn vsm_v_v8(buf: &mut [u8]) {
     let p = buf.as_ptr();
     unsafe {
         rvv_asm!("mv t0, {}", "vsm.v v8, (t0)", in (reg) p);
+    }
+}
+
+pub fn clean_cache_v8() {
+    let temp_buffer = [0u8; 2048];
+    let p = temp_buffer.as_ptr();
+    unsafe {
+        rvv_asm!("mv t0, {}", "vl8re8.v v8, (t0)", in (reg) p);
+    }
+}
+
+pub fn clean_cache_v16() {
+    let temp_buffer = [0u8; 2048];
+    let p = temp_buffer.as_ptr();
+    unsafe {
+        rvv_asm!("mv t0, {}", "vl8re8.v v16, (t0)", in (reg) p);
+    }
+}
+
+pub fn clean_cache_v24() {
+    let temp_buffer = [0u8; 2048];
+    let p = temp_buffer.as_ptr();
+    unsafe {
+        rvv_asm!("mv t0, {}", "vl8re8.v v24, (t0)", in (reg) p);
     }
 }
 
