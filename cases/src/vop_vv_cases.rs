@@ -467,7 +467,7 @@ fn expected_op_rem(lhs: &[u8], rhs: &[u8], result: &mut [u8]) {
             if r == 0 {
                 result.copy_from_slice(lhs);
             } else {
-                let res = l % r;
+                let res = l.wrapping_rem( r);
                 result.copy_from_slice(&res.to_le_bytes());
             }
         }

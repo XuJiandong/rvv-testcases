@@ -175,17 +175,45 @@ fn test_vmv_v_i() {
 }
 
 fn test_vmv1r_v_v() {
-    fn expected_op(_: &[u8], rhs: &[u8], result: &mut [u8]) {
-        assert!(rhs.len() == result.len());
-        result.copy_from_slice(rhs);
-    }
-    fn op(_: &[u8], _: &[u8], _: MaskType) {
-        unsafe {
-            rvv_asm!("vmv.v.v v24, v16");
-        }
+    let mut rng = BestNumberRng::default();
+
+    let mut buffer = Vec::<u8>::new();
+    buffer.resize(VLEN, 0);
+    rng.fill(buffer.as_mut_slice());
+
+    let mut result = Vec::<u8>::new();
+    result.resize(VLEN, 0);
+    rng.fill(result.as_mut_slice());
+
+    let result2 = result.clone();
+
+    unsafe {
+        rvv_asm!(
+            "mv t0, {}",
+            "vl1re8.v v8, (t0)",
+            in (reg) buffer.as_ptr(),
+
+        );
+
+        rvv_asm!("vmv1r.v v24, v8");
+
+        rvv_asm!(
+            "mv t1, {}",
+            "vs1r.v v24, (t1)",
+            in (reg) result.as_ptr(),
+        );
+
+        rvv_asm!(
+            "mv t2, {}",
+            "vs1r.v v24, (t2)",
+            in (reg) result2.as_ptr(),
+        );
     }
 
-    run_template_v_vv(expected_op, op, false, "vmv.v.v");
+    if buffer != result || buffer != result2 {
+        log!("befor: {:0>2X?}, \nreslut: {:0>2X?}", buffer, result);
+        panic!("Abort");
+    }
 }
 
 fn test_vmv2r_v_v() {

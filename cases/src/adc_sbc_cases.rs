@@ -372,7 +372,7 @@ fn test_vmadc_vim() {
             }
         }
     }
-    run_template_m_vim(expected_op_madc_vim, rvv_op, "vadc.vim");
+    run_template_m_vim(expected_op_madc_vim, rvv_op, "vmadc.vim");
 }
 
 fn test_vmadc_vv() {
