@@ -12,7 +12,6 @@ use crate::intrinsic::{
 };
 use crate::misc::{avl_iterator, VLEN};
 
-use super::dbg_log;
 use super::log;
 use super::misc::{get_bit_in_slice, is_verbose, set_bit_in_slice};
 use super::rng::BestNumberRng;
@@ -130,7 +129,7 @@ impl InstructionArgsType {
             InstructionArgsType::Vector => vl * sew_byte,
             InstructionArgsType::Vector2 => vl * 2 * sew_byte,
             InstructionArgsType::VectorBit => vl * sew_byte,
-            InstructionArgsType::VectorAlway16 => vl * 2 , // The minimum sew is 8, sew * 2 >= 16
+            InstructionArgsType::VectorAlway16 => vl * 2, // The minimum sew is 8, sew * 2 >= 16
             InstructionArgsType::VectorRed => vl * sew_byte,
             InstructionArgsType::VectorRed2 => vl * 2 * sew_byte,
             InstructionArgsType::VectorNarrow2 => vl * sew_byte / 2,
@@ -395,8 +394,8 @@ impl RVVTestData {
 
             assert!(begin < end, "Abort begin: {} < end: {}", begin, end);
 
-            if end > buf.len() * 8 / self.sew_bytes {
-                end = buf.len() * 8 / self.sew_bytes;
+            if end > buf.len() * 8 {
+                end = buf.len() * 8;
             }
             let buf_len = end - begin;
             let buf_len = buf_len / 8 + if buf_len % 8 != 0 { 1 } else { 0 };
@@ -415,7 +414,6 @@ impl RVVTestData {
             if end > buf.len() {
                 end = buf.len();
             }
-            dbg_log!("------type: {}, begin: {}, end: {}", buf_type, begin, end);
             buf[begin..end].to_vec()
         }
     }
@@ -466,7 +464,6 @@ impl RVVTestData {
             if end > self.res_rvv.len() {
                 end = self.res_rvv.len();
             }
-            dbg_log!("-------- begin: {}, end: {}, vl: {}", begin, end, vl);
             self.res_rvv[begin..end].copy_from_slice(src);
         }
     }
@@ -559,19 +556,12 @@ fn run_rvv_op(rvv_data: &mut RVVTestData, op: fn(&[u8], &[u8], MaskType)) {
 
     rvv_data.count = 0;
     while avl > 0 {
-        dbg_log!("----r_rvv 1");
         let vl = vsetvl(avl as u64, rvv_data.sew, rvv_data.lmul) as usize;
         if vl == 0 {
             panic!("Abort")
         }
-        dbg_log!("----r_rvv 2");
         avl -= vl as i64;
 
-        dbg_log!(
-            "----r_rvv 3, lhs_type: {}, lhs: {:0>2X?}",
-            rvv_data.lhs_type,
-            rvv_data.get_rvv_left()
-        );
         let l = if rvv_data.lhs_type == InstructionArgsType::Immediate
             || rvv_data.lhs_type == InstructionArgsType::UImmediate
             || rvv_data.lhs_type == InstructionArgsType::Scalar
@@ -583,11 +573,6 @@ fn run_rvv_op(rvv_data: &mut RVVTestData, op: fn(&[u8], &[u8], MaskType)) {
             &empty_buf
         };
 
-        dbg_log!(
-            "----r_rvv 4, rhs_type: {}, rhs: {:0>2X?}",
-            rvv_data.rhs_type,
-            rvv_data.get_rvv_right()
-        );
         let r = if rvv_data.rhs_type == InstructionArgsType::Immediate
             || rvv_data.rhs_type == InstructionArgsType::UImmediate
             || rvv_data.rhs_type == InstructionArgsType::Scalar
@@ -604,10 +589,7 @@ fn run_rvv_op(rvv_data: &mut RVVTestData, op: fn(&[u8], &[u8], MaskType)) {
             buf.resize(VLEN / 8, 0);
             let mask = rvv_data.get_rvv_mask();
             buf[..mask.len()].copy_from_slice(&mask);
-            dbg_log!("----r_rvv 5, mask: {:0>2X?}", buf);
             vl1r_v0(&buf);
-        } else {
-            dbg_log!("----r_rvv 5");
         }
 
         let (mut result, result_len) = {
@@ -624,22 +606,10 @@ fn run_rvv_op(rvv_data: &mut RVVTestData, op: fn(&[u8], &[u8], MaskType)) {
                 (d, dlen)
             }
         };
-        dbg_log!(
-            "----r_rvv 6, res type: {}, res: {:0>2X?}",
-            rvv_data.res_type,
-            &result[..result_len]
-        );
         vle_v24(rvv_data.get_result_sew(sew), &result);
-        dbg_log!("----r_rvv 7");
         op.clone()(l, r, mask_type);
-        dbg_log!("----r_rvv 8");
         vse_v24(rvv_data.get_result_sew(sew), &mut result);
-
-        dbg_log!("----r_rvv 9, \nres1: {:0>2X?}", &result[..result_len]);
         rvv_data.set_rvv_result(&result[..result_len]);
-
-        dbg_log!("----r_rvv 10, res: {:0>2X?}", rvv_data.res_rvv);
-
         rvv_data.count += 1;
     }
 }
@@ -661,14 +631,11 @@ fn run_op(
         );
     }
 
-    dbg_log!("--r 1");
-
     for i in 0..rvv_data.avl as usize {
         rvv_data.index = i;
         rvv_data.count = i / rvv_data.theoretically_vl as usize;
         if rvv_data.mask_type == MaskType::Enable && !rvv_data.get_mask() {
             masked_op.clone()(rvv_data);
-            dbg_log!("--r 3, is mask, index: {}", i);
             continue;
         }
         match exp_op {
@@ -682,15 +649,6 @@ fn run_op(
                     rvv_data.get_right().as_slice(),
                     res.as_mut_slice(),
                 );
-                dbg_log!(
-                        "--r 3, index: {}, lhs: {:0>2X?}, rhs: {:0>2X?}, res1: {:0>2X?}, res2: {:0>2X?}",
-                        i,
-                        rvv_data.get_left(),
-                        rvv_data.get_right(),
-                        rvv_data.get_result_befor(),
-                        res
-                    );
-
                 rvv_data.set_result_exp(&res);
             }
             VectorCallbackType::VX(op) => {
@@ -820,49 +778,48 @@ fn run_op(
         }
     }
 
-    dbg_log!("--r 4");
     run_rvv_op(rvv_data, rvv_op);
-    dbg_log!("--r 5");
 
-    for i in 0..rvv_data.avl as usize {
-        rvv_data.index = i;
-        rvv_data.count = i / rvv_data.theoretically_vl as usize;
-        let exp = rvv_data.get_result_exp();
-        let res = rvv_data.get_result_rvv();
-        let exp_befor = rvv_data.get_result_befor();
+    if rvv_data.res_exp != rvv_data.res_rvv {
+        for i in 0..rvv_data.avl as usize {
+            rvv_data.index = i;
+            rvv_data.count = i / rvv_data.theoretically_vl as usize;
+            let exp = rvv_data.get_result_exp();
+            let res = rvv_data.get_result_rvv();
+            let exp_befor = rvv_data.get_result_befor();
 
-        if exp != res {
-            log!(
+            if exp != res {
+                log!(
                 "[sew = {}, describe = {}] unexpected values found at index {} \nresult = {:0>2X?} \nexpected = {:0>2X?}",
                 rvv_data.sew, desc, i, res, exp
             );
-            log!(
+                log!(
                 "more information, \nlhs = {:0>2X?} \nrhs = {:0>2X?} \nexpected_before = {:0>2X?}",
                 rvv_data.get_left(),
                 rvv_data.get_right(),
                 exp_befor
             );
 
-            log!(
-                "-lmul = {}, avl = {}, vl = {}, mask = {}",
-                rvv_data.lmul,
-                rvv_data.avl,
-                rvv_data.theoretically_vl,
-                rvv_data.mask_type
-            );
+                log!(
+                    "-lmul = {}, avl = {}, vl = {}, mask = {}",
+                    rvv_data.lmul,
+                    rvv_data.avl,
+                    rvv_data.theoretically_vl,
+                    rvv_data.mask_type
+                );
 
-            log!("-expected: {:0>2X?}", rvv_data.res_exp);
-            log!("-result: {:0>2X?}", rvv_data.res_rvv);
-            log!("-res_before: {:0>2X?}", rvv_data.res_before);
-            if rvv_data.mask_type != MaskType::Disable {
-                log!("-mask = {:0>2X?}", &rvv_data.mask);
+                log!("-expected: {:0>2X?}", rvv_data.res_exp);
+                log!("-result: {:0>2X?}", rvv_data.res_rvv);
+                log!("-res_before: {:0>2X?}", rvv_data.res_before);
+                if rvv_data.mask_type != MaskType::Disable {
+                    log!("-mask = {:0>2X?}", &rvv_data.mask);
+                }
+                log!("-lhs: {:0>2X?}", rvv_data.lhs);
+                log!("-rhs: {:0>2X?}", rvv_data.rhs);
+                panic!("Abort");
             }
-            log!("-lhs: {:0>2X?}", rvv_data.lhs);
-            log!("-rhs: {:0>2X?}", rvv_data.rhs);
-            panic!("Abort");
         }
     }
-    dbg_log!("--r 6");
     if is_verbose() {
         log!("finished");
     }
@@ -898,7 +855,7 @@ fn run_template_ext(
 
     for sew in sews {
         for lmul in lmuls {
-            for avl in avl_iterator(sew.clone(), 2) {
+            for avl in avl_iterator(sew.clone(), *lmul, 2) {
                 if vsetvl(avl, *sew, *lmul) == 0 {
                     continue;
                 }
@@ -927,13 +884,6 @@ fn run_template_ext(
                     lmul.clone(),
                     avl,
                 );
-                dbg_log!(
-                    "-sew: {}, lmul: {}, avl: {}, mask: {}",
-                    sew,
-                    lmul,
-                    avl,
-                    mask_type
-                );
                 rvv_data.rng_fill();
                 if left_type.is_imm() {
                     rvv_data.lhs.copy_from_slice(&imm.to_le_bytes());
@@ -953,6 +903,7 @@ fn run_template_ext(
             }
         }
     }
+    //log!("{}", desc);
 }
 
 fn befor_op_default(_: f64, _: f64, _: u64) -> bool {
