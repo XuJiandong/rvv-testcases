@@ -589,6 +589,7 @@ fn run_rvv_op(rvv_data: &mut RVVTestData, op: fn(&[u8], &[u8], MaskType)) {
             buf.resize(VLEN / 8, 0);
             let mask = rvv_data.get_rvv_mask();
             buf[..mask.len()].copy_from_slice(&mask);
+
             vl1r_v0(&buf);
         }
 
@@ -1256,7 +1257,7 @@ pub fn run_template_v_wi(
         InstructionArgsType::Vector,
         InstructionArgsType::Vector2,
         InstructionArgsType::UImmediate,
-        MaskType::Disable,
+        MaskType::Enable,
         rvv_op,
         VectorCallbackType::VI(expected_op),
         befor_op_wide,
@@ -1314,6 +1315,7 @@ pub fn run_template_v_vx(
 pub fn run_template_v_vi(
     expected_op: fn(&[u8], i64, &mut [u8]),
     rvv_op: fn(&[u8], &[u8], MaskType),
+    enable_mask: bool,
     single: bool,
     desc: &str,
 ) {
@@ -1325,7 +1327,11 @@ pub fn run_template_v_vi(
         } else {
             InstructionArgsType::UImmediate
         },
-        MaskType::Disable,
+        if enable_mask {
+            MaskType::Enable
+        } else {
+            MaskType::Disable
+        },
         rvv_op,
         VectorCallbackType::VI(expected_op),
         befor_op_default,

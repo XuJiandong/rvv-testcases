@@ -80,106 +80,298 @@ fn test_vnsrl_wi() {
     fn exp_op(lhs: &[u8], x: i64, result: &mut [u8]) {
         expected_op_srl(lhs, x as u64, result);
     }
-    fn op(_: &[u8], rhs: &[u8], _: MaskType) {
+    fn op(_: &[u8], rhs: &[u8], mask_type: MaskType) {
         let imm = i64::from_le_bytes(rhs.try_into().unwrap());
         unsafe {
             match imm {
-                0 => {
-                    rvv_asm!("vnsrl.wi v24, v8, 0");
-                }
-                1 => {
-                    rvv_asm!("vnsrl.wi v24, v8, 1");
-                }
-                2 => {
-                    rvv_asm!("vnsrl.wi v24, v8, 2");
-                }
-                3 => {
-                    rvv_asm!("vnsrl.wi v24, v8, 3");
-                }
-                4 => {
-                    rvv_asm!("vnsrl.wi v24, v8, 4");
-                }
-                5 => {
-                    rvv_asm!("vnsrl.wi v24, v8, 5");
-                }
-                6 => {
-                    rvv_asm!("vnsrl.wi v24, v8, 6");
-                }
-                7 => {
-                    rvv_asm!("vnsrl.wi v24, v8, 7");
-                }
-                8 => {
-                    rvv_asm!("vnsrl.wi v24, v8, 8");
-                }
-                9 => {
-                    rvv_asm!("vnsrl.wi v24, v8, 9");
-                }
-                10 => {
-                    rvv_asm!("vnsrl.wi v24, v8, 10");
-                }
-                11 => {
-                    rvv_asm!("vnsrl.wi v24, v8, 11");
-                }
-                12 => {
-                    rvv_asm!("vnsrl.wi v24, v8, 12");
-                }
-                13 => {
-                    rvv_asm!("vnsrl.wi v24, v8, 13");
-                }
-                14 => {
-                    rvv_asm!("vnsrl.wi v24, v8, 14");
-                }
-                15 => {
-                    rvv_asm!("vnsrl.wi v24, v8, 15");
-                }
-                16 => {
-                    rvv_asm!("vnsrl.wi v24, v8, 16");
-                }
-                17 => {
-                    rvv_asm!("vnsrl.wi v24, v8, 17");
-                }
-                18 => {
-                    rvv_asm!("vnsrl.wi v24, v8, 18");
-                }
-                19 => {
-                    rvv_asm!("vnsrl.wi v24, v8, 19");
-                }
-                20 => {
-                    rvv_asm!("vnsrl.wi v24, v8, 20");
-                }
-                21 => {
-                    rvv_asm!("vnsrl.wi v24, v8, 21");
-                }
-                22 => {
-                    rvv_asm!("vnsrl.wi v24, v8, 22");
-                }
-                23 => {
-                    rvv_asm!("vnsrl.wi v24, v8, 23");
-                }
-                24 => {
-                    rvv_asm!("vnsrl.wi v24, v8, 24");
-                }
-                25 => {
-                    rvv_asm!("vnsrl.wi v24, v8, 25");
-                }
-                26 => {
-                    rvv_asm!("vnsrl.wi v24, v8, 26");
-                }
-                27 => {
-                    rvv_asm!("vnsrl.wi v24, v8, 27");
-                }
-                28 => {
-                    rvv_asm!("vnsrl.wi v24, v8, 28");
-                }
-                29 => {
-                    rvv_asm!("vnsrl.wi v24, v8, 29");
-                }
-                30 => {
-                    rvv_asm!("vnsrl.wi v24, v8, 30");
-                }
-                31 => {
-                    rvv_asm!("vnsrl.wi v24, v8, 31");
-                }
+                0 => match mask_type {
+                    MaskType::Enable => {
+                        rvv_asm!("vnsrl.wi v24, v8, 0, v0.t");
+                    }
+                    MaskType::Disable => {
+                        rvv_asm!("vnsrl.wi v24, v8, 0");
+                    }
+                    _ => panic!("Abort"),
+                },
+                1 => match mask_type {
+                    MaskType::Enable => {
+                        rvv_asm!("vnsrl.wi v24, v8, 1, v0.t");
+                    }
+                    MaskType::Disable => {
+                        rvv_asm!("vnsrl.wi v24, v8, 1");
+                    }
+                    _ => panic!("Abort"),
+                },
+                2 => match mask_type {
+                    MaskType::Enable => {
+                        rvv_asm!("vnsrl.wi v24, v8, 2, v0.t");
+                    }
+                    MaskType::Disable => {
+                        rvv_asm!("vnsrl.wi v24, v8, 2");
+                    }
+                    _ => panic!("Abort"),
+                },
+                3 => match mask_type {
+                    MaskType::Enable => {
+                        rvv_asm!("vnsrl.wi v24, v8, 3, v0.t");
+                    }
+                    MaskType::Disable => {
+                        rvv_asm!("vnsrl.wi v24, v8, 3");
+                    }
+                    _ => panic!("Abort"),
+                },
+                4 => match mask_type {
+                    MaskType::Enable => {
+                        rvv_asm!("vnsrl.wi v24, v8, 4, v0.t");
+                    }
+                    MaskType::Disable => {
+                        rvv_asm!("vnsrl.wi v24, v8, 4");
+                    }
+                    _ => panic!("Abort"),
+                },
+                5 => match mask_type {
+                    MaskType::Enable => {
+                        rvv_asm!("vnsrl.wi v24, v8, 5, v0.t");
+                    }
+                    MaskType::Disable => {
+                        rvv_asm!("vnsrl.wi v24, v8, 5");
+                    }
+                    _ => panic!("Abort"),
+                },
+                6 => match mask_type {
+                    MaskType::Enable => {
+                        rvv_asm!("vnsrl.wi v24, v8, 6, v0.t");
+                    }
+                    MaskType::Disable => {
+                        rvv_asm!("vnsrl.wi v24, v8, 6");
+                    }
+                    _ => panic!("Abort"),
+                },
+                7 => match mask_type {
+                    MaskType::Enable => {
+                        rvv_asm!("vnsrl.wi v24, v8, 7, v0.t");
+                    }
+                    MaskType::Disable => {
+                        rvv_asm!("vnsrl.wi v24, v8, 7");
+                    }
+                    _ => panic!("Abort"),
+                },
+                8 => match mask_type {
+                    MaskType::Enable => {
+                        rvv_asm!("vnsrl.wi v24, v8, 8, v0.t");
+                    }
+                    MaskType::Disable => {
+                        rvv_asm!("vnsrl.wi v24, v8, 8");
+                    }
+                    _ => panic!("Abort"),
+                },
+                9 => match mask_type {
+                    MaskType::Enable => {
+                        rvv_asm!("vnsrl.wi v24, v8, 9, v0.t");
+                    }
+                    MaskType::Disable => {
+                        rvv_asm!("vnsrl.wi v24, v8, 9");
+                    }
+                    _ => panic!("Abort"),
+                },
+                10 => match mask_type {
+                    MaskType::Enable => {
+                        rvv_asm!("vnsrl.wi v24, v8, 10, v0.t");
+                    }
+                    MaskType::Disable => {
+                        rvv_asm!("vnsrl.wi v24, v8, 10");
+                    }
+                    _ => panic!("Abort"),
+                },
+                11 => match mask_type {
+                    MaskType::Enable => {
+                        rvv_asm!("vnsrl.wi v24, v8, 11, v0.t");
+                    }
+                    MaskType::Disable => {
+                        rvv_asm!("vnsrl.wi v24, v8, 11");
+                    }
+                    _ => panic!("Abort"),
+                },
+                12 => match mask_type {
+                    MaskType::Enable => {
+                        rvv_asm!("vnsrl.wi v24, v8, 12, v0.t");
+                    }
+                    MaskType::Disable => {
+                        rvv_asm!("vnsrl.wi v24, v8, 12");
+                    }
+                    _ => panic!("Abort"),
+                },
+                13 => match mask_type {
+                    MaskType::Enable => {
+                        rvv_asm!("vnsrl.wi v24, v8, 13, v0.t");
+                    }
+                    MaskType::Disable => {
+                        rvv_asm!("vnsrl.wi v24, v8, 13");
+                    }
+                    _ => panic!("Abort"),
+                },
+                14 => match mask_type {
+                    MaskType::Enable => {
+                        rvv_asm!("vnsrl.wi v24, v8, 14, v0.t");
+                    }
+                    MaskType::Disable => {
+                        rvv_asm!("vnsrl.wi v24, v8, 14");
+                    }
+                    _ => panic!("Abort"),
+                },
+                15 => match mask_type {
+                    MaskType::Enable => {
+                        rvv_asm!("vnsrl.wi v24, v8, 15, v0.t");
+                    }
+                    MaskType::Disable => {
+                        rvv_asm!("vnsrl.wi v24, v8, 15");
+                    }
+                    _ => panic!("Abort"),
+                },
+                16 => match mask_type {
+                    MaskType::Enable => {
+                        rvv_asm!("vnsrl.wi v24, v8, 16, v0.t");
+                    }
+                    MaskType::Disable => {
+                        rvv_asm!("vnsrl.wi v24, v8, 16");
+                    }
+                    _ => panic!("Abort"),
+                },
+                17 => match mask_type {
+                    MaskType::Enable => {
+                        rvv_asm!("vnsrl.wi v24, v8, 17, v0.t");
+                    }
+                    MaskType::Disable => {
+                        rvv_asm!("vnsrl.wi v24, v8, 17");
+                    }
+                    _ => panic!("Abort"),
+                },
+                18 => match mask_type {
+                    MaskType::Enable => {
+                        rvv_asm!("vnsrl.wi v24, v8, 18, v0.t");
+                    }
+                    MaskType::Disable => {
+                        rvv_asm!("vnsrl.wi v24, v8, 18");
+                    }
+                    _ => panic!("Abort"),
+                },
+                19 => match mask_type {
+                    MaskType::Enable => {
+                        rvv_asm!("vnsrl.wi v24, v8, 19, v0.t");
+                    }
+                    MaskType::Disable => {
+                        rvv_asm!("vnsrl.wi v24, v8, 19");
+                    }
+                    _ => panic!("Abort"),
+                },
+                20 => match mask_type {
+                    MaskType::Enable => {
+                        rvv_asm!("vnsrl.wi v24, v8, 20, v0.t");
+                    }
+                    MaskType::Disable => {
+                        rvv_asm!("vnsrl.wi v24, v8, 20");
+                    }
+                    _ => panic!("Abort"),
+                },
+                21 => match mask_type {
+                    MaskType::Enable => {
+                        rvv_asm!("vnsrl.wi v24, v8, 21, v0.t");
+                    }
+                    MaskType::Disable => {
+                        rvv_asm!("vnsrl.wi v24, v8, 21");
+                    }
+                    _ => panic!("Abort"),
+                },
+                22 => match mask_type {
+                    MaskType::Enable => {
+                        rvv_asm!("vnsrl.wi v24, v8, 22, v0.t");
+                    }
+                    MaskType::Disable => {
+                        rvv_asm!("vnsrl.wi v24, v8, 22");
+                    }
+                    _ => panic!("Abort"),
+                },
+                23 => match mask_type {
+                    MaskType::Enable => {
+                        rvv_asm!("vnsrl.wi v24, v8, 23, v0.t");
+                    }
+                    MaskType::Disable => {
+                        rvv_asm!("vnsrl.wi v24, v8, 23");
+                    }
+                    _ => panic!("Abort"),
+                },
+                24 => match mask_type {
+                    MaskType::Enable => {
+                        rvv_asm!("vnsrl.wi v24, v8, 24, v0.t");
+                    }
+                    MaskType::Disable => {
+                        rvv_asm!("vnsrl.wi v24, v8, 24");
+                    }
+                    _ => panic!("Abort"),
+                },
+                25 => match mask_type {
+                    MaskType::Enable => {
+                        rvv_asm!("vnsrl.wi v24, v8, 25, v0.t");
+                    }
+                    MaskType::Disable => {
+                        rvv_asm!("vnsrl.wi v24, v8, 25");
+                    }
+                    _ => panic!("Abort"),
+                },
+                26 => match mask_type {
+                    MaskType::Enable => {
+                        rvv_asm!("vnsrl.wi v24, v8, 26, v0.t");
+                    }
+                    MaskType::Disable => {
+                        rvv_asm!("vnsrl.wi v24, v8, 26");
+                    }
+                    _ => panic!("Abort"),
+                },
+                27 => match mask_type {
+                    MaskType::Enable => {
+                        rvv_asm!("vnsrl.wi v24, v8, 27, v0.t");
+                    }
+                    MaskType::Disable => {
+                        rvv_asm!("vnsrl.wi v24, v8, 27");
+                    }
+                    _ => panic!("Abort"),
+                },
+                28 => match mask_type {
+                    MaskType::Enable => {
+                        rvv_asm!("vnsrl.wi v24, v8, 28, v0.t");
+                    }
+                    MaskType::Disable => {
+                        rvv_asm!("vnsrl.wi v24, v8, 28");
+                    }
+                    _ => panic!("Abort"),
+                },
+                29 => match mask_type {
+                    MaskType::Enable => {
+                        rvv_asm!("vnsrl.wi v24, v8, 29, v0.t");
+                    }
+                    MaskType::Disable => {
+                        rvv_asm!("vnsrl.wi v24, v8, 29");
+                    }
+                    _ => panic!("Abort"),
+                },
+                30 => match mask_type {
+                    MaskType::Enable => {
+                        rvv_asm!("vnsrl.wi v24, v8, 30, v0.t");
+                    }
+                    MaskType::Disable => {
+                        rvv_asm!("vnsrl.wi v24, v8, 30");
+                    }
+                    _ => panic!("Abort"),
+                },
+                31 => match mask_type {
+                    MaskType::Enable => {
+                        rvv_asm!("vnsrl.wi v24, v8, 31, v0.t");
+                    }
+                    MaskType::Disable => {
+                        rvv_asm!("vnsrl.wi v24, v8, 31");
+                    }
+                    _ => panic!("Abort"),
+                },
                 _ => {
                     panic!("Abort");
                 }
@@ -275,106 +467,298 @@ fn test_vnsra_wi() {
     fn exp_op(lhs: &[u8], x: i64, result: &mut [u8]) {
         expected_op_arithmetic(lhs, x as u64, result);
     }
-    fn op(_: &[u8], rhs: &[u8], _: MaskType) {
+    fn op(_: &[u8], rhs: &[u8], mask_type: MaskType) {
         let imm = i64::from_le_bytes(rhs.try_into().unwrap());
         unsafe {
             match imm {
-                0 => {
-                    rvv_asm!("vnsra.wi v24, v8, 0");
-                }
-                1 => {
-                    rvv_asm!("vnsra.wi v24, v8, 1");
-                }
-                2 => {
-                    rvv_asm!("vnsra.wi v24, v8, 2");
-                }
-                3 => {
-                    rvv_asm!("vnsra.wi v24, v8, 3");
-                }
-                4 => {
-                    rvv_asm!("vnsra.wi v24, v8, 4");
-                }
-                5 => {
-                    rvv_asm!("vnsra.wi v24, v8, 5");
-                }
-                6 => {
-                    rvv_asm!("vnsra.wi v24, v8, 6");
-                }
-                7 => {
-                    rvv_asm!("vnsra.wi v24, v8, 7");
-                }
-                8 => {
-                    rvv_asm!("vnsra.wi v24, v8, 8");
-                }
-                9 => {
-                    rvv_asm!("vnsra.wi v24, v8, 9");
-                }
-                10 => {
-                    rvv_asm!("vnsra.wi v24, v8, 10");
-                }
-                11 => {
-                    rvv_asm!("vnsra.wi v24, v8, 11");
-                }
-                12 => {
-                    rvv_asm!("vnsra.wi v24, v8, 12");
-                }
-                13 => {
-                    rvv_asm!("vnsra.wi v24, v8, 13");
-                }
-                14 => {
-                    rvv_asm!("vnsra.wi v24, v8, 14");
-                }
-                15 => {
-                    rvv_asm!("vnsra.wi v24, v8, 15");
-                }
-                16 => {
-                    rvv_asm!("vnsra.wi v24, v8, 16");
-                }
-                17 => {
-                    rvv_asm!("vnsra.wi v24, v8, 17");
-                }
-                18 => {
-                    rvv_asm!("vnsra.wi v24, v8, 18");
-                }
-                19 => {
-                    rvv_asm!("vnsra.wi v24, v8, 19");
-                }
-                20 => {
-                    rvv_asm!("vnsra.wi v24, v8, 20");
-                }
-                21 => {
-                    rvv_asm!("vnsra.wi v24, v8, 21");
-                }
-                22 => {
-                    rvv_asm!("vnsra.wi v24, v8, 22");
-                }
-                23 => {
-                    rvv_asm!("vnsra.wi v24, v8, 23");
-                }
-                24 => {
-                    rvv_asm!("vnsra.wi v24, v8, 24");
-                }
-                25 => {
-                    rvv_asm!("vnsra.wi v24, v8, 25");
-                }
-                26 => {
-                    rvv_asm!("vnsra.wi v24, v8, 26");
-                }
-                27 => {
-                    rvv_asm!("vnsra.wi v24, v8, 27");
-                }
-                28 => {
-                    rvv_asm!("vnsra.wi v24, v8, 28");
-                }
-                29 => {
-                    rvv_asm!("vnsra.wi v24, v8, 29");
-                }
-                30 => {
-                    rvv_asm!("vnsra.wi v24, v8, 30");
-                }
-                31 => {
-                    rvv_asm!("vnsra.wi v24, v8, 31");
-                }
+                0 => match mask_type {
+                    MaskType::Enable => {
+                        rvv_asm!("vnsra.wi v24, v8, 0, v0.t");
+                    }
+                    MaskType::Disable => {
+                        rvv_asm!("vnsra.wi v24, v8, 0");
+                    }
+                    _ => panic!("Abort"),
+                },
+                1 => match mask_type {
+                    MaskType::Enable => {
+                        rvv_asm!("vnsra.wi v24, v8, 1, v0.t");
+                    }
+                    MaskType::Disable => {
+                        rvv_asm!("vnsra.wi v24, v8, 1");
+                    }
+                    _ => panic!("Abort"),
+                },
+                2 => match mask_type {
+                    MaskType::Enable => {
+                        rvv_asm!("vnsra.wi v24, v8, 2, v0.t");
+                    }
+                    MaskType::Disable => {
+                        rvv_asm!("vnsra.wi v24, v8, 2");
+                    }
+                    _ => panic!("Abort"),
+                },
+                3 => match mask_type {
+                    MaskType::Enable => {
+                        rvv_asm!("vnsra.wi v24, v8, 3, v0.t");
+                    }
+                    MaskType::Disable => {
+                        rvv_asm!("vnsra.wi v24, v8, 3");
+                    }
+                    _ => panic!("Abort"),
+                },
+                4 => match mask_type {
+                    MaskType::Enable => {
+                        rvv_asm!("vnsra.wi v24, v8, 4, v0.t");
+                    }
+                    MaskType::Disable => {
+                        rvv_asm!("vnsra.wi v24, v8, 4");
+                    }
+                    _ => panic!("Abort"),
+                },
+                5 => match mask_type {
+                    MaskType::Enable => {
+                        rvv_asm!("vnsra.wi v24, v8, 5, v0.t");
+                    }
+                    MaskType::Disable => {
+                        rvv_asm!("vnsra.wi v24, v8, 5");
+                    }
+                    _ => panic!("Abort"),
+                },
+                6 => match mask_type {
+                    MaskType::Enable => {
+                        rvv_asm!("vnsra.wi v24, v8, 6, v0.t");
+                    }
+                    MaskType::Disable => {
+                        rvv_asm!("vnsra.wi v24, v8, 6");
+                    }
+                    _ => panic!("Abort"),
+                },
+                7 => match mask_type {
+                    MaskType::Enable => {
+                        rvv_asm!("vnsra.wi v24, v8, 7, v0.t");
+                    }
+                    MaskType::Disable => {
+                        rvv_asm!("vnsra.wi v24, v8, 7");
+                    }
+                    _ => panic!("Abort"),
+                },
+                8 => match mask_type {
+                    MaskType::Enable => {
+                        rvv_asm!("vnsra.wi v24, v8, 8, v0.t");
+                    }
+                    MaskType::Disable => {
+                        rvv_asm!("vnsra.wi v24, v8, 8");
+                    }
+                    _ => panic!("Abort"),
+                },
+                9 => match mask_type {
+                    MaskType::Enable => {
+                        rvv_asm!("vnsra.wi v24, v8, 9, v0.t");
+                    }
+                    MaskType::Disable => {
+                        rvv_asm!("vnsra.wi v24, v8, 9");
+                    }
+                    _ => panic!("Abort"),
+                },
+                10 => match mask_type {
+                    MaskType::Enable => {
+                        rvv_asm!("vnsra.wi v24, v8, 10, v0.t");
+                    }
+                    MaskType::Disable => {
+                        rvv_asm!("vnsra.wi v24, v8, 10");
+                    }
+                    _ => panic!("Abort"),
+                },
+                11 => match mask_type {
+                    MaskType::Enable => {
+                        rvv_asm!("vnsra.wi v24, v8, 11, v0.t");
+                    }
+                    MaskType::Disable => {
+                        rvv_asm!("vnsra.wi v24, v8, 11");
+                    }
+                    _ => panic!("Abort"),
+                },
+                12 => match mask_type {
+                    MaskType::Enable => {
+                        rvv_asm!("vnsra.wi v24, v8, 12, v0.t");
+                    }
+                    MaskType::Disable => {
+                        rvv_asm!("vnsra.wi v24, v8, 12");
+                    }
+                    _ => panic!("Abort"),
+                },
+                13 => match mask_type {
+                    MaskType::Enable => {
+                        rvv_asm!("vnsra.wi v24, v8, 13, v0.t");
+                    }
+                    MaskType::Disable => {
+                        rvv_asm!("vnsra.wi v24, v8, 13");
+                    }
+                    _ => panic!("Abort"),
+                },
+                14 => match mask_type {
+                    MaskType::Enable => {
+                        rvv_asm!("vnsra.wi v24, v8, 14, v0.t");
+                    }
+                    MaskType::Disable => {
+                        rvv_asm!("vnsra.wi v24, v8, 14");
+                    }
+                    _ => panic!("Abort"),
+                },
+                15 => match mask_type {
+                    MaskType::Enable => {
+                        rvv_asm!("vnsra.wi v24, v8, 15, v0.t");
+                    }
+                    MaskType::Disable => {
+                        rvv_asm!("vnsra.wi v24, v8, 15");
+                    }
+                    _ => panic!("Abort"),
+                },
+                16 => match mask_type {
+                    MaskType::Enable => {
+                        rvv_asm!("vnsra.wi v24, v8, 16, v0.t");
+                    }
+                    MaskType::Disable => {
+                        rvv_asm!("vnsra.wi v24, v8, 16");
+                    }
+                    _ => panic!("Abort"),
+                },
+                17 => match mask_type {
+                    MaskType::Enable => {
+                        rvv_asm!("vnsra.wi v24, v8, 17, v0.t");
+                    }
+                    MaskType::Disable => {
+                        rvv_asm!("vnsra.wi v24, v8, 17");
+                    }
+                    _ => panic!("Abort"),
+                },
+                18 => match mask_type {
+                    MaskType::Enable => {
+                        rvv_asm!("vnsra.wi v24, v8, 18, v0.t");
+                    }
+                    MaskType::Disable => {
+                        rvv_asm!("vnsra.wi v24, v8, 18");
+                    }
+                    _ => panic!("Abort"),
+                },
+                19 => match mask_type {
+                    MaskType::Enable => {
+                        rvv_asm!("vnsra.wi v24, v8, 19, v0.t");
+                    }
+                    MaskType::Disable => {
+                        rvv_asm!("vnsra.wi v24, v8, 19");
+                    }
+                    _ => panic!("Abort"),
+                },
+                20 => match mask_type {
+                    MaskType::Enable => {
+                        rvv_asm!("vnsra.wi v24, v8, 20, v0.t");
+                    }
+                    MaskType::Disable => {
+                        rvv_asm!("vnsra.wi v24, v8, 20");
+                    }
+                    _ => panic!("Abort"),
+                },
+                21 => match mask_type {
+                    MaskType::Enable => {
+                        rvv_asm!("vnsra.wi v24, v8, 21, v0.t");
+                    }
+                    MaskType::Disable => {
+                        rvv_asm!("vnsra.wi v24, v8, 21");
+                    }
+                    _ => panic!("Abort"),
+                },
+                22 => match mask_type {
+                    MaskType::Enable => {
+                        rvv_asm!("vnsra.wi v24, v8, 22, v0.t");
+                    }
+                    MaskType::Disable => {
+                        rvv_asm!("vnsra.wi v24, v8, 22");
+                    }
+                    _ => panic!("Abort"),
+                },
+                23 => match mask_type {
+                    MaskType::Enable => {
+                        rvv_asm!("vnsra.wi v24, v8, 23, v0.t");
+                    }
+                    MaskType::Disable => {
+                        rvv_asm!("vnsra.wi v24, v8, 23");
+                    }
+                    _ => panic!("Abort"),
+                },
+                24 => match mask_type {
+                    MaskType::Enable => {
+                        rvv_asm!("vnsra.wi v24, v8, 24, v0.t");
+                    }
+                    MaskType::Disable => {
+                        rvv_asm!("vnsra.wi v24, v8, 24");
+                    }
+                    _ => panic!("Abort"),
+                },
+                25 => match mask_type {
+                    MaskType::Enable => {
+                        rvv_asm!("vnsra.wi v24, v8, 25, v0.t");
+                    }
+                    MaskType::Disable => {
+                        rvv_asm!("vnsra.wi v24, v8, 25");
+                    }
+                    _ => panic!("Abort"),
+                },
+                26 => match mask_type {
+                    MaskType::Enable => {
+                        rvv_asm!("vnsra.wi v24, v8, 26, v0.t");
+                    }
+                    MaskType::Disable => {
+                        rvv_asm!("vnsra.wi v24, v8, 26");
+                    }
+                    _ => panic!("Abort"),
+                },
+                27 => match mask_type {
+                    MaskType::Enable => {
+                        rvv_asm!("vnsra.wi v24, v8, 27, v0.t");
+                    }
+                    MaskType::Disable => {
+                        rvv_asm!("vnsra.wi v24, v8, 27");
+                    }
+                    _ => panic!("Abort"),
+                },
+                28 => match mask_type {
+                    MaskType::Enable => {
+                        rvv_asm!("vnsra.wi v24, v8, 28, v0.t");
+                    }
+                    MaskType::Disable => {
+                        rvv_asm!("vnsra.wi v24, v8, 28");
+                    }
+                    _ => panic!("Abort"),
+                },
+                29 => match mask_type {
+                    MaskType::Enable => {
+                        rvv_asm!("vnsra.wi v24, v8, 29, v0.t");
+                    }
+                    MaskType::Disable => {
+                        rvv_asm!("vnsra.wi v24, v8, 29");
+                    }
+                    _ => panic!("Abort"),
+                },
+                30 => match mask_type {
+                    MaskType::Enable => {
+                        rvv_asm!("vnsra.wi v24, v8, 30, v0.t");
+                    }
+                    MaskType::Disable => {
+                        rvv_asm!("vnsra.wi v24, v8, 30");
+                    }
+                    _ => panic!("Abort"),
+                },
+                31 => match mask_type {
+                    MaskType::Enable => {
+                        rvv_asm!("vnsra.wi v24, v8, 31, v0.t");
+                    }
+                    MaskType::Disable => {
+                        rvv_asm!("vnsra.wi v24, v8, 31");
+                    }
+                    _ => panic!("Abort"),
+                },
                 _ => {
                     panic!("Abort");
                 }

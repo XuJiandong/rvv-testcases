@@ -171,7 +171,7 @@ fn test_vmv_v_i() {
         }
     }
 
-    run_template_v_vi(expected_op, op, true, "vmv.v.i");
+    run_template_v_vi(expected_op, op, false, true, "vmv.v.i");
 }
 
 fn test_vmv1r_v_v() {
