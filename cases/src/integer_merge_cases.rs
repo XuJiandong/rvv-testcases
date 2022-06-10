@@ -1,10 +1,10 @@
 use core::{arch::asm, convert::TryInto};
 use eint::{Eint, E256};
 use rvv_asm::rvv_asm;
-use rvv_testcases::runner::{run_template_vim, run_template_vvm, run_template_vxm, MaskType};
+use rvv_testcases::runner::{run_template_v_vim, run_template_v_vvm, run_template_v_vxm, MaskType};
 
 fn test_vmerge_vvm() {
-    fn exp_op(result: &mut [u8], lhs: &[u8], rhs: &[u8], mask: bool) {
+    fn exp_op(lhs: &[u8], rhs: &[u8], result: &mut [u8], mask: bool) {
         if mask {
             result.copy_from_slice(rhs);
         } else {
@@ -17,11 +17,11 @@ fn test_vmerge_vvm() {
         }
     }
 
-    run_template_vvm(exp_op, op, &[64, 256], &[-8, -2, 1, 4, 8], "vmerge.vvm");
+    run_template_v_vvm(exp_op, op, "vmerge.vvm");
 }
 
 fn test_vmerge_vxm() {
-    fn exp_op(result: &mut [u8], lhs: &[u8], x: u64, mask: bool) {
+    fn exp_op(lhs: &[u8], x: u64, result: &mut [u8], mask: bool) {
         if mask {
             match result.len() {
                 8 => result.copy_from_slice(&x.to_le_bytes()),
@@ -39,11 +39,11 @@ fn test_vmerge_vxm() {
         }
     }
 
-    run_template_vxm(exp_op, op, &[64, 256], &[-8, -2, 1, 4, 8], "vmerge.vxm");
+    run_template_v_vxm(exp_op, op, "vmerge.vxm");
 }
 
 fn test_vmerge_vim() {
-    fn exp_op(result: &mut [u8], lhs: &[u8], x: i64, mask: bool) {
+    fn exp_op(lhs: &[u8], x: i64, result: &mut [u8], mask: bool) {
         if mask {
             match result.len() {
                 8 => result.copy_from_slice(&x.to_le_bytes()),
@@ -161,7 +161,7 @@ fn test_vmerge_vim() {
         }
     }
 
-    run_template_vim(exp_op, op, &[64, 256], &[-8, -2, 1, 4, 8], "vmerge.vim");
+    run_template_v_vim(exp_op, op, "vmerge.vim");
 }
 
 pub fn test_integer_merge() {

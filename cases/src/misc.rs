@@ -125,12 +125,24 @@ macro_rules! test_case {
     }};
 }
 
-pub fn avl_iterator(sew: u64, target_lmul: i64) -> Vec<u64> {
-    if target_lmul > 0 {
-        let avl = target_lmul as u64 * VLEN as u64 / sew as u64;
-        vec![avl - 1, avl, avl + 1]
+pub fn avl_iterator(sew: u64, lmul: i64, _: i64) -> Vec<u64> {
+    let lmul = match lmul {
+        -8 => 0.125,
+        -4 => 0.25,
+        -2 => 0.5,
+        1 => 1.0,
+        2 => 2.0,
+        4 => 4.0,
+        8 => 8.0,
+        _ => panic!("Abort"),
+    };
+
+    let ret = VLEN as f64 / sew as f64 * lmul;
+    if ret <= 1.0 {
+        Vec::<u64>::new()
     } else {
-        panic!("TODO")
+        let ret = ret as u64;
+        vec![ret - 1, ret + 1]
     }
 }
 
@@ -375,3 +387,13 @@ macro_rules! conver_with_single {
 
 conver_with_single!(conver_to_i512, E512, E256);
 conver_with_single!(conver_to_i256, E256, E128);
+
+#[inline]
+pub fn to_u64(d: &[u8]) -> u64 {
+    u64::from_le_bytes(d.try_into().unwrap())
+}
+
+#[inline]
+pub fn to_i64(d: &[u8]) -> i64 {
+    i64::from_le_bytes(d.try_into().unwrap())
+}

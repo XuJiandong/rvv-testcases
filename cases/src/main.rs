@@ -77,7 +77,7 @@ fn program_entry(argc: u64, argv: *const *const u8) -> i8 {
         }
     }
     test_case!(vsetvl_cases::test_vsetvl, test_pattern);
-    
+
     test_case!(misc_cases::test_add, test_pattern);
     test_case!(misc_cases::test_add_array, test_pattern);
     test_case!(vop_vv_cases::test_vop_vv, test_pattern);
@@ -117,35 +117,7 @@ fn program_entry(argc: u64, argv: *const *const u8) -> i8 {
     );
 
     test_case!(
-        single_width_integer_reduction_cases::test_vredop_vv,
-        test_pattern
-    );
-    test_case!(
-        single_width_integer_reduction_cases::test_vredop_and_vv,
-        test_pattern
-    );
-    test_case!(
-        single_width_integer_reduction_cases::test_vredop_or_vv,
-        test_pattern
-    );
-    test_case!(
-        single_width_integer_reduction_cases::test_vredop_xor_vv,
-        test_pattern
-    );
-    test_case!(
-        single_width_integer_reduction_cases::test_vredop_minu_vv,
-        test_pattern
-    );
-    test_case!(
-        single_width_integer_reduction_cases::test_vredop_min_vv,
-        test_pattern
-    );
-    test_case!(
-        single_width_integer_reduction_cases::test_vredop_maxu_vv,
-        test_pattern
-    );
-    test_case!(
-        single_width_integer_reduction_cases::test_vredop_max_vv,
+        single_width_integer_reduction_cases::test_vred_op,
         test_pattern
     );
     test_case!(
@@ -190,15 +162,7 @@ fn program_entry(argc: u64, argv: *const *const u8) -> i8 {
     test_case!(vector_compress_cases::test_vector_compress, test_pattern);
     test_case!(vector_slide_cases::test_vector_slide_up, test_pattern);
     test_case!(vector_slide_cases::test_vector_slide_down, test_pattern);
-    test_case!(vector_register_gather_cases::test_vrgather_vv, test_pattern);
-    test_case!(
-        vector_register_gather_cases::test_vrgatherei16_vv,
-        test_pattern
-    );
-    test_case!(
-        vector_register_gather_cases::test_vrgatherer_vx,
-        test_pattern
-    );
+    test_case!(vector_register_gather_cases::test_vrgatherer, test_pattern);
     test_case!(
         single_width_scaling_shift::test_single_with_scaling_shift,
         test_pattern

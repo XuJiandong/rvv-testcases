@@ -1,6 +1,4 @@
-use ckb_std::syscalls::debug;
 use core::arch::asm;
-use rvv_testcases::log;
 
 fn add(lhs: u64, rhs: u64) -> u64 {
     let mut result: u64;
@@ -14,7 +12,6 @@ pub fn test_add() {
     let lhs = 1u64;
     let rhs = 0u64;
     let result = add(lhs, rhs);
-    log!("test_add, result = {}", result);
     assert_eq!(result, lhs + rhs);
 }
 
@@ -50,7 +47,6 @@ pub fn test_add_array() {
     let lhs = [1, 2, 3, 4];
     let rhs = [2, 3, 4, 5];
     add_array(&lhs, &rhs, &mut result);
-    log!("test_add_array, result = {}", result[0]);
     assert_eq!(result[1], 5);
     assert_eq!(result[2], 7);
     assert_eq!(result[3], 9);

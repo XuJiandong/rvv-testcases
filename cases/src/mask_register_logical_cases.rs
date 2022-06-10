@@ -1,225 +1,112 @@
-use alloc::boxed::Box;
-use alloc::vec::Vec;
-use core::iter::zip;
-use core::{arch::asm, ops::Not};
+use core::arch::asm;
 use rvv_asm::rvv_asm;
-use rvv_testcases::{
-    intrinsic::vop_vv,
-    runner::{run_vmop_mm, ExpectedOp},
-};
+use rvv_testcases::runner::{run_template_m_mm, MaskType};
 
-fn expected_op_and(lhs: &[u8], rhs: &[u8], result: &mut [u8]) {
-    assert!(lhs.len() == rhs.len() && rhs.len() == result.len());
-    let mut res = Vec::new();
-    for (l, r) in zip(lhs, rhs) {
-        res.push(l & r);
+fn test_vmand_mm() {
+    fn expected_op(lhs: bool, rhs: bool, result: &mut bool) {
+        *result = lhs & rhs;
     }
-    result.copy_from_slice(res.as_slice());
-}
-
-fn test_vmand_mm(sew: u64) {
-    fn and(lhs: &[u8], rhs: &[u8], result: &mut [u8], sew: u64, lmul: i64, avl: u64) {
-        vop_vv(lhs, rhs, result, sew, avl, lmul, || unsafe {
+    fn op(_: &[u8], _: &[u8], _: MaskType) {
+        unsafe {
             rvv_asm!("vmand.mm v24, v8, v16");
-        });
+        }
     }
-    // vm<op>.mm instructions can only operate on whole V register.
-    run_vmop_mm(
-        sew,
-        1,
-        256,
-        ExpectedOp::Normal(Box::new(expected_op_and)),
-        and,
-        "vmand.mm",
-    );
+    run_template_m_mm(expected_op, op, false, "vmand.mm");
 }
 
-fn expected_op_or(lhs: &[u8], rhs: &[u8], result: &mut [u8]) {
-    assert!(lhs.len() == rhs.len() && rhs.len() == result.len());
-    let mut res = Vec::new();
-    for (l, r) in zip(lhs, rhs) {
-        res.push(l | r);
+fn test_vmor_mm() {
+    fn expected_op(lhs: bool, rhs: bool, result: &mut bool) {
+        *result = lhs | rhs;
     }
-    result.copy_from_slice(res.as_slice());
-}
-
-fn test_vmor_mm(sew: u64) {
-    fn or(lhs: &[u8], rhs: &[u8], result: &mut [u8], sew: u64, lmul: i64, avl: u64) {
-        vop_vv(lhs, rhs, result, sew, avl, lmul, || unsafe {
+    fn op(_: &[u8], _: &[u8], _: MaskType) {
+        unsafe {
             rvv_asm!("vmor.mm v24, v8, v16");
-        });
+        }
     }
-    run_vmop_mm(
-        sew,
-        1,
-        256,
-        ExpectedOp::Normal(Box::new(expected_op_or)),
-        or,
-        "vmor.mm",
-    );
+    run_template_m_mm(expected_op, op, false, "vmor.mm");
 }
 
-fn expected_op_nor(lhs: &[u8], rhs: &[u8], result: &mut [u8]) {
-    assert!(lhs.len() == rhs.len() && rhs.len() == result.len());
-    let mut res = Vec::new();
-    for (l, r) in zip(lhs, rhs) {
-        res.push((l | r).not());
+fn test_vmnor_mm() {
+    fn expected_op(lhs: bool, rhs: bool, result: &mut bool) {
+        *result = !(lhs | rhs);
     }
-    result.copy_from_slice(res.as_slice());
-}
-
-fn test_vmnor_mm(sew: u64) {
-    fn or(lhs: &[u8], rhs: &[u8], result: &mut [u8], sew: u64, lmul: i64, avl: u64) {
-        vop_vv(lhs, rhs, result, sew, avl, lmul, || unsafe {
+    fn op(_: &[u8], _: &[u8], _: MaskType) {
+        unsafe {
             rvv_asm!("vmnor.mm v24, v8, v16");
-        });
+        }
     }
-    run_vmop_mm(
-        sew,
-        1,
-        256,
-        ExpectedOp::Normal(Box::new(expected_op_nor)),
-        or,
-        "vmnor.mm",
-    );
+    run_template_m_mm(expected_op, op, false, "vmnor.mm");
 }
 
-fn expected_op_orn(lhs: &[u8], rhs: &[u8], result: &mut [u8]) {
-    assert!(lhs.len() == rhs.len() && rhs.len() == result.len());
-    let mut res = Vec::new();
-    for (l, r) in zip(lhs, rhs) {
-        res.push(l | r.not());
+fn test_vmorn_mm() {
+    fn expected_op(lhs: bool, rhs: bool, result: &mut bool) {
+        *result = lhs | !rhs;
     }
-    result.copy_from_slice(res.as_slice());
-}
-
-fn test_vmorn_mm(sew: u64) {
-    fn or(lhs: &[u8], rhs: &[u8], result: &mut [u8], sew: u64, lmul: i64, avl: u64) {
-        vop_vv(lhs, rhs, result, sew, avl, lmul, || unsafe {
+    fn op(_: &[u8], _: &[u8], _: MaskType) {
+        unsafe {
             rvv_asm!("vmornot.mm v24, v8, v16");
-        });
+        }
     }
-    run_vmop_mm(
-        sew,
-        1,
-        256,
-        ExpectedOp::Normal(Box::new(expected_op_orn)),
-        or,
-        "vmornot.mm",
-    );
+    run_template_m_mm(expected_op, op, false, "vmornot.mm");
 }
 
-fn expected_op_nand(lhs: &[u8], rhs: &[u8], result: &mut [u8]) {
-    assert!(lhs.len() == rhs.len() && rhs.len() == result.len());
-    let mut res = Vec::new();
-    for (l, r) in zip(lhs, rhs) {
-        res.push((l & r).not());
+fn test_vmnand_mm() {
+    fn expected_op(lhs: bool, rhs: bool, result: &mut bool) {
+        *result = !(lhs & rhs);
     }
-    result.copy_from_slice(res.as_slice());
-}
-
-fn test_vmnand_mm(sew: u64) {
-    fn op(lhs: &[u8], rhs: &[u8], result: &mut [u8], sew: u64, lmul: i64, avl: u64) {
-        vop_vv(lhs, rhs, result, sew, avl, lmul, || unsafe {
+    fn op(_: &[u8], _: &[u8], _: MaskType) {
+        unsafe {
             rvv_asm!("vmnand.mm v24, v8, v16");
-        });
+        }
     }
-    run_vmop_mm(
-        sew,
-        1,
-        256,
-        ExpectedOp::Normal(Box::new(expected_op_nand)),
-        op,
-        "vmnand.mm",
-    );
+    run_template_m_mm(expected_op, op, false, "vmnand.mm");
 }
 
-fn expected_op_andn(lhs: &[u8], rhs: &[u8], result: &mut [u8]) {
-    assert!(lhs.len() == rhs.len() && rhs.len() == result.len());
-    let mut res = Vec::new();
-    for (l, r) in zip(lhs, rhs) {
-        res.push(l & r.not());
+fn test_vmandn_mm() {
+    fn expected_op(lhs: bool, rhs: bool, result: &mut bool) {
+        *result = lhs & !rhs;
     }
-    result.copy_from_slice(res.as_slice());
-}
-
-fn test_vmandn_mm(sew: u64) {
-    fn op(lhs: &[u8], rhs: &[u8], result: &mut [u8], sew: u64, lmul: i64, avl: u64) {
-        vop_vv(lhs, rhs, result, sew, avl, lmul, || unsafe {
+    fn op(_: &[u8], _: &[u8], _: MaskType) {
+        unsafe {
             rvv_asm!("vmandnot.mm v24, v8, v16");
-        });
+        }
     }
-    run_vmop_mm(
-        sew,
-        1,
-        256,
-        ExpectedOp::Normal(Box::new(expected_op_andn)),
-        op,
-        "vmandnot.mm",
-    );
+    run_template_m_mm(expected_op, op, false, "vmandnot.mm");
 }
 
-fn expected_op_xor(lhs: &[u8], rhs: &[u8], result: &mut [u8]) {
-    assert!(lhs.len() == rhs.len() && rhs.len() == result.len());
-    let mut res = Vec::new();
-    for (l, r) in zip(lhs, rhs) {
-        res.push(l ^ r);
+fn test_vmxor_mm() {
+    fn expected_op(lhs: bool, rhs: bool, result: &mut bool) {
+        *result = lhs ^ rhs;
     }
-    result.copy_from_slice(res.as_slice());
-}
-
-fn test_vmxor_mm(sew: u64) {
-    fn op(lhs: &[u8], rhs: &[u8], result: &mut [u8], sew: u64, lmul: i64, avl: u64) {
-        vop_vv(lhs, rhs, result, sew, avl, lmul, || unsafe {
+    fn op(_: &[u8], _: &[u8], _: MaskType) {
+        unsafe {
             rvv_asm!("vmxor.mm v24, v8, v16");
-        });
+        }
     }
-    run_vmop_mm(
-        sew,
-        1,
-        256,
-        ExpectedOp::Normal(Box::new(expected_op_xor)),
-        op,
-        "vmxor.mm",
-    );
+    run_template_m_mm(expected_op, op, false, "vmxor.mm");
 }
 
-fn expected_op_xnor(lhs: &[u8], rhs: &[u8], result: &mut [u8]) {
-    assert!(lhs.len() == rhs.len() && rhs.len() == result.len());
-    let mut res = Vec::new();
-    for (l, r) in zip(lhs, rhs) {
-        res.push((l ^ r).not());
+fn test_vmxnor_mm() {
+    fn expected_op(lhs: bool, rhs: bool, result: &mut bool) {
+        *result = !(lhs ^ rhs);
     }
-    result.copy_from_slice(res.as_slice());
-}
-
-fn test_vmxnor_mm(sew: u64) {
-    fn op(lhs: &[u8], rhs: &[u8], result: &mut [u8], sew: u64, lmul: i64, avl: u64) {
-        vop_vv(lhs, rhs, result, sew, avl, lmul, || unsafe {
+    fn op(_: &[u8], _: &[u8], _: MaskType) {
+        unsafe {
             rvv_asm!("vmxnor.mm v24, v8, v16");
-        });
+        }
     }
-    run_vmop_mm(
-        sew,
-        1,
-        256,
-        ExpectedOp::Normal(Box::new(expected_op_xnor)),
-        op,
-        "vmxnor.mm",
-    );
+    run_template_m_mm(expected_op, op, false, "vmxnor.mm");
 }
 
 pub fn test_mask_register_logical() {
-    let sew = 8u64;
+    test_vmand_mm();
+    test_vmnand_mm();
+    test_vmandn_mm();
 
-    test_vmand_mm(sew);
-    test_vmnand_mm(sew);
-    test_vmandn_mm(sew);
+    test_vmor_mm();
+    test_vmnor_mm();
+    test_vmorn_mm();
 
-    test_vmor_mm(sew);
-    test_vmnor_mm(sew);
-    test_vmorn_mm(sew);
-
-    test_vmxor_mm(sew);
-    test_vmxnor_mm(sew);
+    test_vmxor_mm();
+    test_vmxnor_mm();
 }

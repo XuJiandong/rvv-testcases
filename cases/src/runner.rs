@@ -1,17 +1,19 @@
 use alloc::boxed::Box;
 use alloc::vec::Vec;
 use core::convert::TryInto;
+use core::fmt::{Display, Formatter, Result};
 use core::ops::Range;
 
 use ckb_std::syscalls::debug;
-use rand::{Rng, RngCore};
+use rand::Rng;
 
-use crate::intrinsic::{vl1r_v0, clean_cache_v8, clean_cache_v16, vle_v16, vle_v24, vle_v8, vse_v24, vsetvl};
+use crate::intrinsic::{
+    clean_cache_v16, clean_cache_v8, vl1r_v0, vle_v16, vle_v24, vle_v8, vse_v24, vsetvl,
+};
 use crate::misc::{avl_iterator, VLEN};
-use crate::rng::{new_random01_vec, new_random_vec};
 
 use super::log;
-use super::misc::{ceiling, get_bit_in_slice, is_verbose, set_bit_in_slice};
+use super::misc::{get_bit_in_slice, is_verbose, set_bit_in_slice};
 use super::rng::BestNumberRng;
 
 pub enum WideningCategory {
@@ -29,281 +31,6 @@ pub enum ExpectedOp {
     Reduction(Box<dyn FnMut(&[u8], &[u8], &mut [u8], usize)>),
     EnableMask(Box<dyn FnMut(&[u8], &[u8], &mut [u8], bool, usize)>),
     WithMask(Box<dyn FnMut(&[u8], &[u8], &mut [u8], u8)>),
-}
-
-pub fn run_vop_vv<T>(
-    sew: u64,
-    lmul: i64,
-    avl: u64,
-    mut expected_op: ExpectedOp,
-    mut v_op: T,
-    cat: WideningCategory,
-    desc: &str,
-) where
-    T: FnMut(&[u8], &[u8], &mut [u8], u64, i64, u64),
-{
-    if is_verbose() {
-        log!(
-            "run with sew = {}, lmul = {}, avl = {}, desc = {}",
-            sew,
-            lmul,
-            avl,
-            desc
-        );
-    }
-    let vl = vsetvl(avl as u64, sew, lmul);
-    if vl == 0 {
-        return;
-    }
-
-    let avl_bytes = (sew / 8 * avl) as usize;
-    let sew_bytes = (sew / 8) as usize;
-
-    let mut rhs = Vec::<u8>::new();
-    rhs.resize(avl_bytes, 0u8);
-
-    let mut lhs = Vec::<u8>::new();
-    // some destructive instructions, like vmacc.vv, require `expected` filled before executing.
-    // `expected_before` is the place to put random values.
-    let mut expected_before = Vec::<u8>::new();
-    let mut expected = Vec::<u8>::new();
-    let mut result = Vec::<u8>::new();
-
-    match cat {
-        WideningCategory::VdVs1 => {
-            expected.resize(avl_bytes * 2, 0);
-            result.resize(avl_bytes * 2, 0);
-            lhs.resize(avl_bytes, 0);
-            rhs.resize(avl_bytes * 2, 0u8);
-        }
-        WideningCategory::VdVs2 => {
-            expected.resize(avl_bytes * 2, 0);
-            result.resize(avl_bytes * 2, 0);
-            lhs.resize(avl_bytes * 2, 0);
-        }
-        WideningCategory::VdOnly => {
-            expected.resize(avl_bytes * 2, 0);
-            result.resize(avl_bytes * 2, 0);
-            lhs.resize(avl_bytes, 0);
-        }
-        WideningCategory::NarrowVs2(n) => {
-            expected.resize(avl_bytes, 0);
-            result.resize(avl_bytes, 0);
-            lhs.resize(avl_bytes / n, 0);
-        }
-        WideningCategory::Vs2Only => {
-            expected.resize(avl_bytes, 0);
-            result.resize(avl_bytes, 0);
-            lhs.resize(avl_bytes * 2, 0);
-        }
-        _ => {
-            expected.resize(avl_bytes, 0);
-            result.resize(avl_bytes, 0);
-            lhs.resize(avl_bytes, 0);
-        }
-    }
-    expected_before.resize(expected.len(), 0);
-
-    let mut rng = BestNumberRng::default();
-    for i in 0..avl as usize {
-        let range = i * sew_bytes..(i + 1) * sew_bytes;
-        let expected_range = match cat {
-            WideningCategory::VdVs2 => i * sew_bytes * 2..(i + 1) * sew_bytes * 2,
-            WideningCategory::VdOnly => i * sew_bytes * 2..(i + 1) * sew_bytes * 2,
-            _ => range.clone(),
-        };
-        let lhs_range = match cat {
-            WideningCategory::VdVs2 => i * sew_bytes * 2..(i + 1) * sew_bytes * 2,
-            WideningCategory::Vs2Only => i * sew_bytes * 2..(i + 1) * sew_bytes * 2,
-            WideningCategory::NarrowVs2(n) => i * sew_bytes / n..(i + 1) * sew_bytes / n,
-            _ => range.clone(),
-        };
-        let rhs_range = match cat {
-            WideningCategory::VdVs1 => i * sew_bytes * 2..(i + 1) * sew_bytes * 2,
-            _ => range.clone(),
-        };
-
-        rng.fill(&mut lhs[lhs_range.clone()]);
-        rng.fill(&mut rhs[rhs_range.clone()]);
-        rng.fill(&mut expected_before[expected_range.clone()]);
-        expected[expected_range.clone()].copy_from_slice(&expected_before[expected_range.clone()]);
-
-        if result.len() == expected_before.len() {
-            result[expected_range.clone()]
-                .copy_from_slice(&expected_before[expected_range.clone()]);
-        }
-
-        match expected_op {
-            ExpectedOp::Normal(ref mut op) => {
-                op(
-                    &lhs[lhs_range.clone()],
-                    &rhs[rhs_range.clone()],
-                    &mut expected[expected_range.clone()],
-                );
-            }
-            ExpectedOp::Reduction(ref mut op) => {
-                let expected_range = match cat {
-                    WideningCategory::VdVs1 => 0..sew_bytes * 2,
-                    WideningCategory::VdVs2 => 0..sew_bytes * 2,
-                    WideningCategory::VdOnly => 0..sew_bytes * 2,
-                    _ => 0..sew_bytes,
-                };
-                // vs2: lhs, vs1: rhs
-                //  # vd[0] =  sum(vs2[*], vs1[0])
-                let index = i % vl as usize;
-                if index == 0 {
-                    rhs[rhs_range.clone()].copy_from_slice(&expected[expected_range.clone()]);
-                }
-                op(
-                    &lhs[lhs_range.clone()],
-                    &rhs[rhs_range.clone()],
-                    &mut expected[expected_range.clone()],
-                    index,
-                );
-            }
-            _ => {
-                panic!("unexpected op")
-            }
-        }
-    }
-    v_op(
-        lhs.as_slice(),
-        rhs.as_slice(),
-        result.as_mut_slice(),
-        sew,
-        lmul,
-        avl,
-    );
-
-    for i in 0..avl as usize {
-        let range = i * sew_bytes..(i + 1) * sew_bytes;
-        let expected_range = match cat {
-            WideningCategory::VdVs2 | WideningCategory::VdOnly => {
-                i * sew_bytes * 2..(i + 1) * sew_bytes * 2
-            }
-            _ => range.clone(),
-        };
-        let lhs_range = match cat {
-            WideningCategory::VdVs2 => i * sew_bytes * 2..(i + 1) * sew_bytes * 2,
-            WideningCategory::Vs2Only => i * sew_bytes * 2..(i + 1) * sew_bytes * 2,
-            WideningCategory::NarrowVs2(n) => i * sew_bytes / n..(i + 1) * sew_bytes / n,
-            _ => range.clone(),
-        };
-        let rhs_range = match cat {
-            WideningCategory::VdVs1 => i * sew_bytes * 2..(i + 1) * sew_bytes * 2,
-            _ => range.clone(),
-        };
-
-        let left = &lhs[lhs_range.clone()];
-        let right = &rhs[rhs_range.clone()];
-
-        let res = &result[expected_range.clone()];
-        let exp = &expected[expected_range.clone()];
-        let exp_before = if result.len() == expected_before.len() {
-            &expected_before[expected_range.clone()]
-        } else {
-            &[]
-        };
-        if res != exp {
-            log!(
-                "[sew = {}, describe = {}] unexpected values found at index {}: {:0>2X?} (result) {:0>2X?} (expected)",
-                sew, desc, i, res, exp
-            );
-            log!(
-                "more information, lhs = {:0>2X?}, rhs = {:0>2X?}, expected_before = {:0>2X?}, lmul = {}, avl = {}",
-                left,
-                right,
-                exp_before,
-                lmul,
-                avl
-            );
-            panic!("Abort");
-        }
-        // for reduction operations, it only checks the first element
-        if let ExpectedOp::Reduction(_) = expected_op {
-            break;
-        }
-    }
-    if is_verbose() {
-        log!("finished");
-    }
-}
-
-pub fn run_vop_vvm<T>(
-    sew: u64,
-    lmul: i64,
-    avl: u64,
-    mut expected_op: ExpectedOp,
-    mut v_op: T,
-    desc: &str,
-) where
-    T: FnMut(&[u8], &[u8], &mut [u8], &[u8], u64, i64, u64),
-{
-    if is_verbose() {
-        log!(
-            "run with sew = {}, lmul = {}, avl = {}, desc = {}",
-            sew,
-            lmul,
-            avl,
-            desc
-        );
-    }
-
-    let avl_bytes = (sew / 8 * avl) as usize;
-    let sew_bytes = (sew / 8) as usize;
-
-    let lhs = new_random_vec(avl_bytes);
-    let rhs = new_random_vec(avl_bytes);
-    let mut expected = new_random_vec(avl_bytes);
-    let mut result = new_random_vec(avl_bytes);
-    let masks = new_random01_vec(avl as usize);
-
-    for i in 0..avl as usize {
-        let range = i * sew_bytes..(i + 1) * sew_bytes;
-        if let ExpectedOp::WithMask(ref mut op) = expected_op {
-            op(
-                &lhs[range.clone()],
-                &rhs[range.clone()],
-                &mut expected[range.clone()],
-                masks[i],
-            );
-        }
-    }
-    v_op(
-        lhs.as_slice(),
-        rhs.as_slice(),
-        result.as_mut_slice(),
-        masks.as_slice(),
-        sew,
-        lmul,
-        avl,
-    );
-
-    for i in 0..avl as usize {
-        let range = i * sew_bytes..(i + 1) * sew_bytes;
-        let left = &lhs[range.clone()];
-        let right = &rhs[range.clone()];
-
-        let res = &result[range.clone()];
-        let exp = &expected[range.clone()];
-        if res != exp {
-            log!(
-                "[sew = {}, describe = {}] unexpected values found at index {}: {:?} (result) {:?} (expected)",
-                sew, desc, i, res, exp
-            );
-            log!(
-                "more information, lhs = {:?}, rhs = {:?}, lmul = {}, avl = {}",
-                left,
-                right,
-                lmul,
-                avl
-            );
-            panic!("Abort");
-        }
-    }
-    if is_verbose() {
-        log!("finished");
-    }
 }
 
 pub fn run_vxop_m<T>(mut expected_op: ExpectedOp, mut v_op: T, enable_mask: bool, desc: &str)
@@ -354,561 +81,63 @@ where
     }
 }
 
-pub fn run_vmop_mm<T>(
-    sew: u64,
-    lmul: i64,
-    avl: u64,
-    mut expected_op: ExpectedOp,
-    mut v_op: T,
-    desc: &str,
-) where
-    T: FnMut(&[u8], &[u8], &mut [u8], u64, i64, u64),
-{
-    if is_verbose() {
-        log!(
-            "run with sew = {}, lmul = {}, avl = {}, desc = {}",
-            sew,
-            lmul,
-            avl,
-            desc
-        );
-    }
-    let avl_bytes = (avl / 8) as usize;
-    assert!(avl_bytes <= VLEN / 8);
-
-    let mut rhs = Vec::<u8>::new();
-    rhs.resize(avl_bytes, 0u8);
-
-    let mut lhs = Vec::<u8>::new();
-    let mut expected = Vec::<u8>::new();
-    let mut result = Vec::<u8>::new();
-
-    expected.resize(avl_bytes, 0);
-    result.resize(avl_bytes, 0);
-    lhs.resize(avl_bytes, 0);
-
-    let mut rng = BestNumberRng::default();
-    for i in 0..avl_bytes as usize {
-        rng.fill(&mut lhs[i..i + 1]);
-        rng.fill(&mut rhs[i..i + 1]);
-
-        if let ExpectedOp::Normal(ref mut op) = expected_op {
-            op(&lhs[i..i + 1], &rhs[i..i + 1], &mut expected[i..i + 1]);
-        } else {
-            panic!("Unexpected op")
-        }
-    }
-
-    // why?
-    let expected = expected.clone();
-
-    v_op(
-        lhs.as_slice(),
-        rhs.as_slice(),
-        result.as_mut_slice(),
-        sew,
-        lmul,
-        avl,
-    );
-
-    for i in 0..avl_bytes as usize {
-        let res = result[i];
-        let exp = expected[i];
-
-        if res != exp {
-            log!(
-                "[sew = {}, describe = {}] unexpected values found at index {}: {:0>2X?} (result) {:0>2X?} (expected)",
-                sew, desc, i, res, exp
-            );
-            panic!("Abort");
-        }
-    }
-    if is_verbose() {
-        log!("finished");
-    }
-}
-
-pub fn run_vmsop_vv<T1, T2>(
-    sew: u64,
-    lmul: i64,
-    avl: u64,
-    mut expected_op: T1,
-    mut v_op: T2,
-    _: WideningCategory,
-    desc: &str,
-) where
-    T1: FnMut(&[u8], &[u8], &mut [u8], usize),
-    T2: FnMut(&[u8], &[u8], &mut [u8], u64, i64, u64),
-{
-    if is_verbose() {
-        log!(
-            "run with sew = {}, lmul = {}, avl = {}, desc = {}",
-            sew,
-            lmul,
-            avl,
-            desc
-        );
-    }
-    let vl = vsetvl(avl as u64, sew, lmul);
-    if vl == 0 {
-        return;
-    }
-
-    let avl_bytes = (sew / 8 * avl) as usize;
-    let sew_bytes = (sew / 8) as usize;
-
-    let mut rhs = Vec::<u8>::new();
-    rhs.resize(avl_bytes, 0u8);
-    let mut lhs = Vec::<u8>::new();
-    lhs.resize(avl_bytes, 0);
-
-    let mut expected = Vec::<u8>::new();
-    let mut result = Vec::<u8>::new();
-
-    let result_avl_bytes = ceiling(avl as usize, 8);
-    result.resize(result_avl_bytes, 0);
-    expected.resize(result_avl_bytes, 0);
-
-    let mut rng = BestNumberRng::default();
-    for i in 0..avl as usize {
-        let range = i * sew_bytes..(i + 1) * sew_bytes;
-
-        rng.fill(&mut lhs[range.clone()]);
-        rng.fill(&mut rhs[range.clone()]);
-
-        expected_op(&lhs[range.clone()], &rhs[range.clone()], &mut expected, i);
-    }
-    v_op(
-        lhs.as_slice(),
-        rhs.as_slice(),
-        result.as_mut_slice(),
-        sew,
-        lmul,
-        avl,
-    );
-
-    for i in 0..avl as usize {
-        let range = i * sew_bytes..(i + 1) * sew_bytes;
-        let left = &lhs[range.clone()];
-        let right = &rhs[range.clone()];
-
-        let res = get_bit_in_slice(result.as_slice(), i);
-        let exp = get_bit_in_slice(expected.as_slice(), i);
-        if res != exp {
-            log!(
-                "[sew = {}, describe = {}] unexpected values found at index {} (nth-element): {:?} (result) {:?} (expected)",
-                sew, desc, i, res, exp
-            );
-            log!(
-                "more information, lhs = {:?}, rhs = {:?}, lmul = {}, avl = {}",
-                left,
-                right,
-                lmul,
-                avl
-            );
-            panic!("Abort");
-        }
-    }
-    if is_verbose() {
-        log!("finished");
-    }
-}
-
-pub fn run_vmsop_vx<T1, T2>(
-    sew: u64,
-    lmul: i64,
-    avl: u64,
-    mut expected_op: T1,
-    mut v_op: T2,
-    _: WideningCategory,
-    desc: &str,
-) where
-    T1: FnMut(&[u8], u64, &mut [u8], usize),
-    T2: FnMut(&[u8], u64, &mut [u8], u64, i64, u64),
-{
-    if is_verbose() {
-        log!(
-            "run with sew = {}, lmul = {}, avl = {}, desc = {}",
-            sew,
-            lmul,
-            avl,
-            desc
-        );
-    }
-    let vl = vsetvl(avl as u64, sew, lmul);
-    if vl == 0 {
-        return;
-    }
-
-    let avl_bytes = (sew / 8 * avl) as usize;
-    let sew_bytes = (sew / 8) as usize;
-
-    let mut lhs = Vec::<u8>::new();
-    lhs.resize(avl_bytes, 0);
-
-    let mut expected = Vec::<u8>::new();
-    let mut result = Vec::<u8>::new();
-
-    let result_avl_bytes = ceiling(avl as usize, 8);
-    result.resize(result_avl_bytes, 0);
-    expected.resize(result_avl_bytes, 0);
-
-    let mut rng = BestNumberRng::default();
-    let x = rng.next_u64();
-    for i in 0..avl as usize {
-        let range = i * sew_bytes..(i + 1) * sew_bytes;
-
-        rng.fill(&mut lhs[range.clone()]);
-
-        expected_op(&lhs[range.clone()], x, &mut expected, i);
-    }
-    v_op(lhs.as_slice(), x, result.as_mut_slice(), sew, lmul, avl);
-
-    for i in 0..avl as usize {
-        let range = i * sew_bytes..(i + 1) * sew_bytes;
-        let left = &lhs[range.clone()];
-        let right = x;
-
-        let res = get_bit_in_slice(result.as_slice(), i);
-        let exp = get_bit_in_slice(expected.as_slice(), i);
-        if res != exp {
-            log!(
-                "[sew = {}, describe = {}] unexpected values found at index {} (nth-element): {:?} (result) {:?} (expected)",
-                sew, desc, i, res, exp
-            );
-            log!(
-                "more information, lhs = {:0>2X?}, rhs = {:?}, lmul = {}, avl = {}",
-                left,
-                right,
-                lmul,
-                avl
-            );
-            panic!("Abort");
-        }
-    }
-    if is_verbose() {
-        log!("finished");
-    }
-}
-
-pub fn run_vmsop_vi<T1, T2>(
-    sew: u64,
-    lmul: i64,
-    avl: u64,
-    imm: i64,
-    mut expected_op: T1,
-    mut v_op: T2,
-    _: WideningCategory,
-    desc: &str,
-) where
-    T1: FnMut(&[u8], i64, &mut [u8], usize),
-    T2: FnMut(&[u8], i64, &mut [u8], u64, i64, u64),
-{
-    if is_verbose() {
-        log!(
-            "run with sew = {}, lmul = {}, avl = {}, desc = {}",
-            sew,
-            lmul,
-            avl,
-            desc
-        );
-    }
-    let vl = vsetvl(avl as u64, sew, lmul);
-    if vl == 0 {
-        return;
-    }
-
-    let avl_bytes = (sew / 8 * avl) as usize;
-    let sew_bytes = (sew / 8) as usize;
-
-    let mut lhs = Vec::<u8>::new();
-    lhs.resize(avl_bytes, 0);
-
-    let mut expected = Vec::<u8>::new();
-    let mut result = Vec::<u8>::new();
-
-    let result_avl_bytes = ceiling(avl as usize, 8);
-    result.resize(result_avl_bytes, 0);
-    expected.resize(result_avl_bytes, 0);
-
-    let mut rng = BestNumberRng::default();
-    for i in 0..avl as usize {
-        let range = i * sew_bytes..(i + 1) * sew_bytes;
-
-        rng.fill(&mut lhs[range.clone()]);
-
-        expected_op(&lhs[range.clone()], imm, &mut expected, i);
-    }
-    v_op(lhs.as_slice(), imm, result.as_mut_slice(), sew, lmul, avl);
-
-    for i in 0..avl as usize {
-        let range = i * sew_bytes..(i + 1) * sew_bytes;
-        let left = &lhs[range.clone()];
-
-        let res = get_bit_in_slice(result.as_slice(), i);
-        let exp = get_bit_in_slice(expected.as_slice(), i);
-        if res != exp {
-            log!(
-                "[sew = {}, describe = {}] unexpected values found at index {} (nth-element): {:?} (result) {:?} (expected)",
-                sew, desc, i, res, exp
-            );
-            log!(
-                "more information, lhs = {:0>2X?}, rhs = {:?}, lmul = {}, avl = {}",
-                left,
-                imm,
-                lmul,
-                avl
-            );
-            panic!("Abort");
-        }
-    }
-    if is_verbose() {
-        log!("finished");
-    }
-}
-
-pub fn run_vop_vx<T1, T2>(
-    sew: u64,
-    lmul: i64,
-    avl: u64,
-    mut expected_op: T1,
-    mut v_op: T2,
-    cat: WideningCategory,
-    desc: &str,
-) where
-    T1: FnMut(&[u8], u64, &mut [u8]),
-    T2: FnMut(&[u8], u64, &mut [u8], u64, i64, u64),
-{
-    if is_verbose() {
-        log!(
-            "run with sew = {}, lmul = {}, avl = {}, desc = {}",
-            sew,
-            lmul,
-            avl,
-            desc
-        );
-    }
-
-    let avl_bytes = (sew / 8 * avl) as usize;
-    let sew_bytes = (sew / 8) as usize;
-    let mut lhs = Vec::<u8>::new();
-    let mut expected = Vec::<u8>::new();
-    let mut result = Vec::<u8>::new();
-
-    match cat {
-        WideningCategory::VdVs2 => {
-            expected.resize(avl_bytes * 2, 0);
-            result.resize(avl_bytes * 2, 0);
-            lhs.resize(avl_bytes * 2, 0);
-        }
-        WideningCategory::VdOnly => {
-            expected.resize(avl_bytes * 2, 0);
-            result.resize(avl_bytes * 2, 0);
-            lhs.resize(avl_bytes, 0);
-        }
-        WideningCategory::Vs2Only => {
-            expected.resize(avl_bytes, 0);
-            result.resize(avl_bytes, 0);
-            lhs.resize(avl_bytes * 2, 0);
-        }
-        _ => {
-            expected.resize(avl_bytes, 0);
-            result.resize(avl_bytes, 0);
-            lhs.resize(avl_bytes, 0);
-        }
-    }
-
-    let mut rng = BestNumberRng::default();
-    let x = rng.next_u64();
-
-    for i in 0..avl as usize {
-        let range = i * sew_bytes..(i + 1) * sew_bytes;
-        let lhs_range = match cat {
-            WideningCategory::VdVs2 => i * sew_bytes * 2..(i + 1) * sew_bytes * 2,
-            WideningCategory::Vs2Only => i * sew_bytes * 2..(i + 1) * sew_bytes * 2,
-            _ => range.clone(),
-        };
-        let expected_range = match cat {
-            WideningCategory::VdVs2 | WideningCategory::VdOnly => {
-                i * sew_bytes * 2..(i + 1) * sew_bytes * 2
-            }
-            _ => range.clone(),
-        };
-        rng.fill(&mut lhs[lhs_range.clone()]);
-        expected_op(
-            &lhs[lhs_range.clone()],
-            x,
-            &mut expected[expected_range.clone()],
-        );
-    }
-
-    v_op(lhs.as_slice(), x, result.as_mut_slice(), sew, lmul, avl);
-
-    for i in 0..avl as usize {
-        let range = i * sew_bytes..(i + 1) * sew_bytes;
-
-        let expected_range = match cat {
-            WideningCategory::VdVs2 | WideningCategory::VdOnly => {
-                i * sew_bytes * 2..(i + 1) * sew_bytes * 2
-            }
-            _ => range.clone(),
-        };
-        let lhs_range = match cat {
-            WideningCategory::VdVs2 => i * sew_bytes * 2..(i + 1) * sew_bytes * 2,
-            WideningCategory::Vs2Only => i * sew_bytes * 2..(i + 1) * sew_bytes * 2,
-            _ => range.clone(),
-        };
-
-        let left = &lhs[lhs_range.clone()];
-        let right = x;
-
-        let res = &result[expected_range.clone()];
-        let exp = &expected[expected_range.clone()];
-        if res != exp {
-            log!(
-                "[sew = {}, describe = {}] unexpected values found at index {} (nth-element): {:0>2X?} (result) {:0>2X?} (expected)",
-                sew, desc, i, res, exp
-            );
-            log!(
-                "more information, lhs = {:0>2X?}, rhs = {:0>2X?}, lmul = {}, avl = {}",
-                left,
-                right,
-                lmul,
-                avl
-            );
-            panic!("Abort");
-        }
-    }
-    if is_verbose() {
-        log!("finished");
-    }
-}
-
-pub fn run_vop_vi<T1, T2>(
-    sew: u64,
-    lmul: i64,
-    avl: u64,
-    imm: i64,
-    mut expected_op: T1,
-    mut v_op: T2,
-    cat: WideningCategory,
-    desc: &str,
-) where
-    T1: FnMut(&[u8], i64, &mut [u8]),
-    T2: FnMut(&[u8], i64, &mut [u8], u64, i64, u64),
-{
-    if is_verbose() {
-        log!(
-            "run with sew = {}, lmul = {}, avl = {}, desc = {}",
-            sew,
-            lmul,
-            avl,
-            desc
-        );
-    }
-
-    let avl_bytes = (sew / 8 * avl) as usize;
-    let sew_bytes = (sew / 8) as usize;
-    let mut lhs = Vec::<u8>::new();
-    let mut expected = Vec::<u8>::new();
-    let mut result = Vec::<u8>::new();
-
-    match cat {
-        WideningCategory::VdVs2 => {
-            expected.resize(avl_bytes * 2, 0);
-            result.resize(avl_bytes * 2, 0);
-            lhs.resize(avl_bytes * 2, 0);
-        }
-        WideningCategory::VdOnly => {
-            expected.resize(avl_bytes * 2, 0);
-            result.resize(avl_bytes * 2, 0);
-            lhs.resize(avl_bytes, 0);
-        }
-        WideningCategory::Vs2Only => {
-            expected.resize(avl_bytes, 0);
-            result.resize(avl_bytes, 0);
-            lhs.resize(avl_bytes * 2, 0);
-        }
-        _ => {
-            expected.resize(avl_bytes, 0);
-            result.resize(avl_bytes, 0);
-            lhs.resize(avl_bytes, 0);
-        }
-    }
-
-    let mut rng = BestNumberRng::default();
-
-    for i in 0..avl as usize {
-        let range = i * sew_bytes..(i + 1) * sew_bytes;
-        let lhs_range = match cat {
-            WideningCategory::VdVs2 => i * sew_bytes * 2..(i + 1) * sew_bytes * 2,
-            WideningCategory::Vs2Only => i * sew_bytes * 2..(i + 1) * sew_bytes * 2,
-            _ => range.clone(),
-        };
-        let expected_range = match cat {
-            WideningCategory::VdVs2 | WideningCategory::VdOnly => {
-                i * sew_bytes * 2..(i + 1) * sew_bytes * 2
-            }
-            _ => range.clone(),
-        };
-        rng.fill(&mut lhs[lhs_range.clone()]);
-        expected_op(
-            &lhs[lhs_range.clone()],
-            imm,
-            &mut expected[expected_range.clone()],
-        );
-    }
-
-    v_op(lhs.as_slice(), imm, result.as_mut_slice(), sew, lmul, avl);
-
-    for i in 0..avl as usize {
-        let range = i * sew_bytes..(i + 1) * sew_bytes;
-
-        let expected_range = match cat {
-            WideningCategory::VdVs2 | WideningCategory::VdOnly => {
-                i * sew_bytes * 2..(i + 1) * sew_bytes * 2
-            }
-            _ => range.clone(),
-        };
-        let lhs_range = match cat {
-            WideningCategory::VdVs2 => i * sew_bytes * 2..(i + 1) * sew_bytes * 2,
-            WideningCategory::Vs2Only => i * sew_bytes * 2..(i + 1) * sew_bytes * 2,
-            _ => range.clone(),
-        };
-
-        let left = &lhs[lhs_range.clone()];
-
-        let res = &result[expected_range.clone()];
-        let exp = &expected[expected_range.clone()];
-        if res != exp {
-            log!(
-                "[sew = {}, describe = {}] unexpected values found at index {} (nth-element): {:0>2X?} (result) {:0>2X?} (expected)",
-                sew, desc, i, res, exp
-            );
-            log!(
-                "more information, lhs = {:0>2X?}, rhs = {:0>2X?}, lmul = {}, avl = {}",
-                left,
-                imm,
-                lmul,
-                avl
-            );
-            panic!("Abort");
-        }
-    }
-    if is_verbose() {
-        log!("finished");
-    }
-}
-
 #[derive(Clone, Copy, PartialEq)]
 pub enum InstructionArgsType {
     Vector,
     Vector2,
     VectorBit,
+    VectorAlway16,
+    VectorRed,
+    VectorRed2,
+    VectorNarrow2,
+    VectorNarrow4,
+    VectorNarrow8,
     Scalar,
     Immediate,
     UImmediate,
     None,
+}
+
+impl Display for InstructionArgsType {
+    fn fmt(&self, f: &mut Formatter) -> Result {
+        match self {
+            InstructionArgsType::Vector => write!(f, "vector"),
+            InstructionArgsType::Vector2 => write!(f, "vector2"),
+            InstructionArgsType::VectorBit => write!(f, "vector_bit"),
+            InstructionArgsType::VectorAlway16 => write!(f, "vector_alway16"),
+            InstructionArgsType::VectorRed => write!(f, "vector_red"),
+            InstructionArgsType::VectorRed2 => write!(f, "vector_red2"),
+            InstructionArgsType::VectorNarrow2 => write!(f, "vector_n2"),
+            InstructionArgsType::VectorNarrow4 => write!(f, "vector_n4"),
+            InstructionArgsType::VectorNarrow8 => write!(f, "vector_n8"),
+            InstructionArgsType::Scalar => write!(f, "scalar"),
+            InstructionArgsType::Immediate => write!(f, "immediate"),
+            InstructionArgsType::UImmediate => write!(f, "uimmediate"),
+            InstructionArgsType::None => write!(f, "none"),
+        }
+    }
+}
+
+impl InstructionArgsType {
+    fn is_imm(&self) -> bool {
+        *self == InstructionArgsType::Immediate || *self == InstructionArgsType::UImmediate
+    }
+
+    fn get_buf_len(&self, sew_byte: usize, vl: usize) -> usize {
+        match *self {
+            InstructionArgsType::None => 1 * sew_byte,
+            InstructionArgsType::Vector => vl * sew_byte,
+            InstructionArgsType::Vector2 => vl * 2 * sew_byte,
+            InstructionArgsType::VectorBit => vl * sew_byte,
+            InstructionArgsType::VectorAlway16 => vl * 2, // The minimum sew is 8, sew * 2 >= 16
+            InstructionArgsType::VectorRed => vl * sew_byte,
+            InstructionArgsType::VectorRed2 => vl * 2 * sew_byte,
+            InstructionArgsType::VectorNarrow2 => vl * sew_byte / 2,
+            InstructionArgsType::VectorNarrow4 => vl * sew_byte / 4,
+            InstructionArgsType::VectorNarrow8 => vl * sew_byte / 8,
+            _ => 8,
+        }
+    }
 }
 
 #[derive(Clone, Copy, PartialEq)]
@@ -918,7 +147,17 @@ pub enum MaskType {
     AsParam,
 }
 
-pub struct ExpectedParam {
+impl Display for MaskType {
+    fn fmt(&self, f: &mut Formatter) -> Result {
+        match self {
+            MaskType::Disable => write!(f, "disable"),
+            MaskType::Enable => write!(f, "enable"),
+            MaskType::AsParam => write!(f, "as_param"),
+        }
+    }
+}
+
+pub struct RVVTestData {
     pub lhs: Vec<u8>,
     pub lhs_type: InstructionArgsType,
     pub rhs: Vec<u8>,
@@ -926,7 +165,9 @@ pub struct ExpectedParam {
     pub mask: Vec<u8>,
     pub mask_type: MaskType,
 
-    pub res: Vec<u8>,
+    pub res_before: Vec<u8>,
+    pub res_rvv: Vec<u8>,
+    pub res_exp: Vec<u8>,
     pub res_type: InstructionArgsType,
 
     pub sew_bytes: usize,
@@ -942,132 +183,165 @@ pub struct ExpectedParam {
 
 #[derive(Clone, Copy)]
 enum VectorCallbackType {
-    None(fn(&mut ExpectedParam)),
-    VV(fn(&mut [u8], &[u8], &[u8])),
-    VX(fn(&mut [u8], &[u8], u64)),
-    VI(fn(&mut [u8], &[u8], i64)),
-    VVM(fn(&mut [u8], &[u8], &[u8], bool)),
-    VXM(fn(&mut [u8], &[u8], u64, bool)),
-    VIM(fn(&mut [u8], &[u8], i64, bool)),
-    MVVM(fn(&mut bool, &[u8], &[u8], bool)),
-    MVXM(fn(&mut bool, &[u8], u64, bool)),
-    MVIM(fn(&mut bool, &[u8], i64, bool)),
-    MVV(fn(&mut bool, &[u8], &[u8])),
-    MVX(fn(&mut bool, &[u8], u64)),
-    MVI(fn(&mut bool, &[u8], i64)),
+    None(fn(&mut RVVTestData)),
+    VV(fn(&[u8], &[u8], &mut [u8])),
+    VX(fn(&[u8], u64, &mut [u8])),
+    VI(fn(&[u8], i64, &mut [u8])),
+    VVM(fn(&[u8], &[u8], &mut [u8], bool)),
+    VXM(fn(&[u8], u64, &mut [u8], bool)),
+    VIM(fn(&[u8], i64, &mut [u8], bool)),
+    MVVM(fn(&[u8], &[u8], &mut bool, bool)),
+    MVXM(fn(&[u8], u64, &mut bool, bool)),
+    MVIM(fn(&[u8], i64, &mut bool, bool)),
+    MVV(fn(&[u8], &[u8], &mut bool)),
+    MVX(fn(&[u8], u64, &mut bool)),
+    MVI(fn(&[u8], i64, &mut bool)),
+    MMM(fn(bool, bool, &mut bool)),
+    VVR(fn(&[u8], &[u8], &mut [u8], usize)),
 }
 
-struct RunOpConfig {
-    pub sew: u64,
-    pub lmul: i64,
-    pub avl: u64,
-    pub mask_type: MaskType,
-    pub expected_op_ext: VectorCallbackType,
-    pub v_op: fn(&[u8], &[u8], MaskType),
-    pub vd_type: InstructionArgsType,
-    pub args1_type: InstructionArgsType,
-    pub args2_type: InstructionArgsType,
-    pub immediate_val: i64,
-}
-
-impl RunOpConfig {
-    fn get_args_len(t: InstructionArgsType, vl: usize) -> usize {
-        match t {
-            InstructionArgsType::None => 1,
-            InstructionArgsType::Vector => vl,
-            InstructionArgsType::Vector2 => vl * 2,
-            InstructionArgsType::VectorBit => vl,
-            _ => 8,
-        }
-    }
-
-    pub fn get_vd_len(&self, vl: usize) -> usize {
-        Self::get_args_len(self.vd_type, vl)
-    }
-
-    pub fn get_left_len(&self, vl: usize) -> usize {
-        Self::get_args_len(self.args1_type, vl)
-    }
-
-    pub fn get_right_len(&self, vl: usize) -> usize {
-        Self::get_args_len(self.args2_type, vl)
-    }
-}
-
-impl ExpectedParam {
-    fn new(config: &RunOpConfig, avl_bytes: usize) -> Self {
-        let mut d = ExpectedParam {
+impl RVVTestData {
+    fn new(
+        lhs_type: InstructionArgsType,
+        rhs_type: InstructionArgsType,
+        res_type: InstructionArgsType,
+        mask_type: MaskType,
+        sew: u64,
+        lmul: i64,
+        avl: u64,
+    ) -> Self {
+        let vl = vsetvl(avl, sew, lmul);
+        assert!(
+            vl != 0,
+            "vsetvl result {}, sew: {}, lmul {}, avl: {}",
+            vl,
+            sew,
+            lmul,
+            avl
+        );
+        RVVTestData {
             lhs: Vec::new(),
-            lhs_type: config.args1_type,
+            lhs_type,
             rhs: Vec::new(),
-            rhs_type: config.args2_type,
+            rhs_type,
             mask: Vec::new(),
-            mask_type: config.mask_type,
-            res: Vec::new(),
-            res_type: config.vd_type,
+            mask_type,
+            res_before: Vec::new(),
+            res_rvv: Vec::new(),
+            res_exp: Vec::new(),
+            res_type,
 
-            sew_bytes: config.sew as usize / 8,
+            sew_bytes: (sew / 8) as usize,
 
             index: 0,
 
-            sew: config.sew,
-            lmul: config.lmul,
-            avl: config.avl,
-            theoretically_vl: 0,
+            sew,
+            lmul,
+            avl,
+            theoretically_vl: vl as usize,
 
             count: 0,
-        };
-
-        let mut rng = BestNumberRng::default();
-        d.mask.resize(VLEN / 8, 0xFF);
-        rng.fill(d.mask.as_mut_slice());
-
-        d.lhs.resize(config.get_left_len(avl_bytes), 0);
-        if config.args1_type == InstructionArgsType::Immediate
-            || config.args1_type == InstructionArgsType::UImmediate
-        {
-            d.lhs.copy_from_slice(&config.immediate_val.to_le_bytes());
-        } else {
-            rng.fill(d.lhs.as_mut_slice());
         }
-
-        d.rhs.resize(config.get_right_len(avl_bytes), 0);
-        if config.args2_type == InstructionArgsType::Immediate
-            || config.args2_type == InstructionArgsType::UImmediate
-        {
-            d.rhs.copy_from_slice(&config.immediate_val.to_le_bytes());
-        } else {
-            rng.fill(d.rhs.as_mut_slice());
-        }
-
-        d.res.resize(config.get_vd_len(avl_bytes), 0);
-        rng.fill(d.res.as_mut_slice());
-
-        d
     }
 
-    pub fn get_data_by_sclice(
-        d: &[u8],
-        t: InstructionArgsType,
-        sew_bytes: usize,
-        index: usize,
-    ) -> Vec<u8> {
+    fn rng_fill(&mut self) {
+        let mut rng = BestNumberRng::default();
+
+        // mask
+        let mask_len = {
+            let len = (self.avl / 8 + 1) as usize;
+            if len < VLEN / 8 {
+                VLEN / 8
+            } else {
+                len
+            }
+        };
+        self.mask.resize(mask_len, 0xFF);
+        rng.fill(self.mask.as_mut_slice());
+
+        // lhs
+        let lhs_len = self.lhs_type.get_buf_len(self.sew_bytes, self.avl as usize);
+        self.lhs.resize(lhs_len, 0);
+        rng.fill(self.lhs.as_mut_slice());
+
+        // rhs
+        let rhs_len = self.rhs_type.get_buf_len(self.sew_bytes, self.avl as usize);
+        self.rhs.resize(rhs_len, 0);
+        rng.fill(self.rhs.as_mut_slice());
+
+        // res
+        let res_len = self.res_type.get_buf_len(self.sew_bytes, self.avl as usize);
+        self.res_before.resize(res_len, 0);
+        rng.fill(self.res_before.as_mut_slice());
+        self.res_rvv = self.res_before.clone();
+        self.res_exp = self.res_before.clone();
+    }
+
+    fn get_args_range(&self, t: InstructionArgsType, index: usize) -> Range<usize> {
+        match t {
+            InstructionArgsType::None => {
+                panic!("Can not get range for here")
+            }
+            InstructionArgsType::Vector => index * self.sew_bytes..(index + 1) * self.sew_bytes,
+            InstructionArgsType::Vector2 => {
+                index * self.sew_bytes * 2..(index + 1) * self.sew_bytes * 2
+            }
+            InstructionArgsType::VectorAlway16 => index * 2..(index + 1) * 2,
+            InstructionArgsType::VectorRed => {
+                let i = self.count * self.theoretically_vl;
+                i * self.sew_bytes..(i + 1) * self.sew_bytes
+            }
+            InstructionArgsType::VectorRed2 => {
+                let i = self.count * self.theoretically_vl;
+                i * self.sew_bytes * 2..(i + 1) * self.sew_bytes * 2
+            }
+            InstructionArgsType::VectorNarrow2 => {
+                ((index * self.sew_bytes) as f64 * 0.5) as usize
+                    ..(((index + 1) * self.sew_bytes) as f64 * 0.5) as usize
+            }
+            InstructionArgsType::VectorNarrow4 => {
+                ((index * self.sew_bytes) as f64 * 0.25) as usize
+                    ..(((index + 1) * self.sew_bytes) as f64 * 0.25) as usize
+            }
+            InstructionArgsType::VectorNarrow8 => {
+                ((index * self.sew_bytes) as f64 * 0.125) as usize
+                    ..(((index + 1) * self.sew_bytes) as f64 * 0.125) as usize
+            }
+            InstructionArgsType::VectorBit => {
+                panic!("VectorBit can not get range for here")
+            }
+            _ => 0..8,
+        }
+    }
+
+    fn get_data_by_slice(&self, d: &[u8], t: InstructionArgsType) -> Vec<u8> {
+        if t == InstructionArgsType::VectorBit {
+            let mut res = Vec::<u8>::new();
+            res.resize(1, 0);
+            res[0] = get_bit_in_slice(d, self.index);
+            res
+        } else {
+            d[self.get_args_range(t, self.index)].to_vec()
+        }
+    }
+
+    pub fn get_data(&self, d: &[u8], t: InstructionArgsType, index: usize) -> Vec<u8> {
         if t == InstructionArgsType::VectorBit {
             let mut res = Vec::<u8>::new();
             res.resize(1, 0);
             res[0] = get_bit_in_slice(d, index);
             res
         } else {
-            d[get_args_range(t, sew_bytes, index)].to_vec()
+            d[self.get_args_range(t, index)].to_vec()
         }
     }
 
     pub fn get_left(&self) -> Vec<u8> {
-        Self::get_data_by_sclice(&self.lhs, self.lhs_type, self.sew_bytes, self.index)
+        self.get_data_by_slice(&self.lhs, self.lhs_type)
     }
 
     pub fn get_right(&self) -> Vec<u8> {
-        Self::get_data_by_sclice(&self.rhs, self.rhs_type, self.sew_bytes, self.index)
+        self.get_data_by_slice(&self.rhs, self.rhs_type)
     }
 
     pub fn get_right_u64(&self) -> u64 {
@@ -1078,112 +352,165 @@ impl ExpectedParam {
         u64::from_le_bytes(self.get_right().try_into().unwrap())
     }
 
-    pub fn get_result(&self) -> Vec<u8> {
-        Self::get_data_by_sclice(&self.res, self.res_type, self.sew_bytes, self.index)
+    fn get_result_befor(&self) -> Vec<u8> {
+        self.get_data_by_slice(&self.res_before, self.res_type)
     }
 
-    pub fn set_result(&mut self, data: &[u8]) {
-        let r = get_args_range(self.res_type, self.sew_bytes, self.index);
+    fn get_result_rvv(&self) -> Vec<u8> {
+        self.get_data_by_slice(&self.res_rvv, self.res_type)
+    }
+
+    fn get_result_exp(&self) -> Vec<u8> {
+        self.get_data_by_slice(&self.res_exp, self.res_type)
+    }
+
+    pub fn set_result_exp(&mut self, data: &[u8]) {
+        let r = self.get_args_range(self.res_type, self.index);
         if data.len() != r.len() {
             panic!("set_result data len is ne: {}, {}", data.len(), r.len());
         }
-        self.res[r].copy_from_slice(data);
+        self.res_exp[r].copy_from_slice(data);
     }
 
-    pub fn get_mask(&self) -> bool {
+    fn get_mask(&self) -> bool {
         match self.mask_type {
-            MaskType::Enable => {
-                get_bit_in_slice(&self.mask, self.index % self.theoretically_vl) == 1
-            }
-            MaskType::AsParam => {
-                get_bit_in_slice(&self.mask, self.index % self.theoretically_vl) == 1
-            }
+            MaskType::Enable => get_bit_in_slice(&self.mask, self.index) == 1,
+            MaskType::AsParam => get_bit_in_slice(&self.mask, self.index) == 1,
             MaskType::Disable => true,
         }
     }
 
-    pub fn get_rvv_left(&self) -> &[u8] {
-        if self.lhs_type == InstructionArgsType::Immediate
-            || self.lhs_type == InstructionArgsType::UImmediate
-            || self.lhs_type == InstructionArgsType::Scalar
+    fn get_rvv_slice(&self, buf: &[u8], buf_type: InstructionArgsType) -> Vec<u8> {
+        if buf_type == InstructionArgsType::Immediate
+            || buf_type == InstructionArgsType::UImmediate
+            || buf_type == InstructionArgsType::Scalar
         {
-            self.lhs.as_slice()
-        } else {
-            let vl =
-                RunOpConfig::get_args_len(self.lhs_type, self.theoretically_vl) * self.sew_bytes;
+            buf.to_vec()
+        } else if buf_type == InstructionArgsType::VectorBit {
+            let vl = buf_type.get_buf_len(self.sew_bytes, self.theoretically_vl);
 
+            let begin = vl * self.count / self.sew_bytes;
+            let mut end = vl * (self.count + 1) / self.sew_bytes;
+
+            assert!(begin < end, "Abort begin: {} < end: {}", begin, end);
+
+            if end > buf.len() * 8 {
+                end = buf.len() * 8;
+            }
+            let buf_len = end - begin;
+            let buf_len = buf_len / 8 + if buf_len % 8 != 0 { 1 } else { 0 };
+            let mut ret_buf = Vec::<u8>::new();
+            ret_buf.resize(buf_len, 0);
+            for i in begin..end {
+                set_bit_in_slice(&mut ret_buf, i - begin, get_bit_in_slice(buf, i));
+            }
+
+            ret_buf
+        } else {
+            let vl = buf_type.get_buf_len(self.sew_bytes, self.theoretically_vl);
             let begin = vl * self.count;
             let mut end = vl * (self.count + 1);
-            if end > self.lhs.len() {
-                end = self.lhs.len();
+            assert!(begin < end, "Abort begin: {} < end: {}", begin, end);
+            if end > buf.len() {
+                end = buf.len();
             }
-            &self.lhs[begin..end]
+            buf[begin..end].to_vec()
         }
     }
 
-    pub fn get_rvv_right(&self) -> &[u8] {
-        if self.rhs_type == InstructionArgsType::Immediate
-            || self.rhs_type == InstructionArgsType::UImmediate
-            || self.rhs_type == InstructionArgsType::Scalar
-        {
-            self.rhs.as_slice()
-        } else {
-            let vl =
-                RunOpConfig::get_args_len(self.rhs_type, self.theoretically_vl) * self.sew_bytes;
-
-            let begin = vl * self.count;
-            let mut end = vl * (self.count + 1);
-            if end > self.rhs.len() {
-                end = self.rhs.len();
-            }
-
-            &self.rhs[begin..end]
-        }
+    fn get_rvv_left(&self) -> Vec<u8> {
+        self.get_rvv_slice(self.lhs.as_slice(), self.lhs_type)
     }
 
-    pub fn get_rvv_result_range(&self) -> Range<usize> {
+    fn get_rvv_right(&self) -> Vec<u8> {
+        self.get_rvv_slice(self.rhs.as_slice(), self.rhs_type)
+    }
+
+    fn get_rvv_result(&self, buf: &[u8]) -> Vec<u8> {
+        self.get_rvv_slice(buf, self.res_type)
+    }
+
+    fn set_rvv_result(&mut self, src: &[u8]) {
         if self.res_type == InstructionArgsType::Immediate
             || self.res_type == InstructionArgsType::UImmediate
             || self.res_type == InstructionArgsType::Scalar
         {
-            0..self.res.len()
+            self.res_rvv.copy_from_slice(src);
+        } else if self.res_type == InstructionArgsType::VectorBit {
+            let vl = self
+                .res_type
+                .get_buf_len(self.sew_bytes, self.theoretically_vl);
+
+            let begin = vl * self.count / self.sew_bytes;
+            let mut end = vl * (self.count + 1) / self.sew_bytes;
+            if end > self.res_rvv.len() / self.sew_bytes {
+                end = self.res_rvv.len() / self.sew_bytes;
+            }
+            assert!(begin < end);
+            for i in begin..end {
+                set_bit_in_slice(
+                    self.res_rvv.as_mut_slice(),
+                    i,
+                    get_bit_in_slice(src, i - begin),
+                );
+            }
         } else {
-            let vl =
-                RunOpConfig::get_args_len(self.res_type, self.theoretically_vl) * self.sew_bytes;
+            let vl = self
+                .res_type
+                .get_buf_len(self.sew_bytes, self.theoretically_vl);
 
             let begin = vl * self.count;
             let mut end = vl * (self.count + 1);
-            if end > self.res.len() {
-                end = self.res.len();
+            if end > self.res_rvv.len() {
+                end = self.res_rvv.len();
             }
-
-            begin..end
+            self.res_rvv[begin..end].copy_from_slice(src);
         }
+    }
+
+    fn get_rvv_mask(&self) -> Vec<u8> {
+        self.get_rvv_slice(&self.mask, InstructionArgsType::VectorBit)
     }
 
     fn get_sew(sew: u64, t: InstructionArgsType) -> u64 {
         match t {
             InstructionArgsType::Vector2 => sew * 2,
+            InstructionArgsType::VectorAlway16 => 16,
+            InstructionArgsType::VectorRed2 => sew * 2,
+            InstructionArgsType::VectorNarrow2 => (sew as f64 * 0.5) as u64,
+            InstructionArgsType::VectorNarrow4 => (sew as f64 * 0.25) as u64,
+            InstructionArgsType::VectorNarrow8 => (sew as f64 * 0.125) as u64,
             _ => sew,
         }
     }
 
     fn get_left_sew(&self, sew: u64) -> u64 {
-        ExpectedParam::get_sew(sew, self.lhs_type)
+        RVVTestData::get_sew(sew, self.lhs_type)
     }
 
     fn get_right_sew(&self, sew: u64) -> u64 {
-        ExpectedParam::get_sew(sew, self.rhs_type)
+        RVVTestData::get_sew(sew, self.rhs_type)
     }
 
     fn get_result_sew(&self, sew: u64) -> u64 {
-        ExpectedParam::get_sew(sew, self.res_type)
+        RVVTestData::get_sew(sew, self.res_type)
     }
 
     pub fn get_vl(&self) -> usize {
         let total_vl = match self.res_type {
-            InstructionArgsType::Vector => self.res.len() / self.sew_bytes,
-            InstructionArgsType::Vector2 => self.res.len() / self.sew_bytes / 2,
+            InstructionArgsType::Vector => self.res_before.len() / self.sew_bytes,
+            InstructionArgsType::Vector2 => self.res_before.len() / self.sew_bytes / 2,
+            InstructionArgsType::VectorRed => self.res_before.len() / self.sew_bytes,
+            InstructionArgsType::VectorRed2 => self.res_before.len() / self.sew_bytes / 2,
+            InstructionArgsType::VectorNarrow2 => {
+                ((self.res_before.len() / self.sew_bytes) as f64 / 0.5) as usize
+            }
+            InstructionArgsType::VectorNarrow4 => {
+                ((self.res_before.len() / self.sew_bytes) as f64 / 0.25) as usize
+            }
+            InstructionArgsType::VectorNarrow8 => {
+                ((self.res_before.len() / self.sew_bytes) as f64 / 0.125) as usize
+            }
             _ => panic!("Abort"),
         };
 
@@ -1201,284 +528,301 @@ impl ExpectedParam {
             rem
         }
     }
-}
 
-fn get_args_range(t: InstructionArgsType, sew_bytes: usize, index: usize) -> Range<usize> {
-    match t {
-        InstructionArgsType::None => {
-            panic!("Can not get range for here")
+    fn get_lmul(lmul: i64) -> f64 {
+        match lmul {
+            -8 => 0.125,
+            -4 => 0.25,
+            -2 => 0.5,
+            1 => 1.0,
+            2 => 2.0,
+            4 => 4.0,
+            8 => 8.0,
+            _ => panic!("Abort"),
         }
-        InstructionArgsType::Vector => index * sew_bytes..(index + 1) * sew_bytes,
-        InstructionArgsType::Vector2 => index * sew_bytes * 2..(index + 1) * sew_bytes * 2,
-        InstructionArgsType::VectorBit => {
-            panic!("VectorBit can not get range for here")
-        }
-        _ => 0..8,
+    }
+
+    fn get_rvv_index(&self) -> usize {
+        self.index % self.theoretically_vl
     }
 }
 
-fn clean_v() {
-    
-}
-
-fn run_rvv_op(exp_param: &mut ExpectedParam, res: &mut [u8], op: fn(&[u8], &[u8], MaskType)) {
+fn run_rvv_op(rvv_data: &mut RVVTestData, op: fn(&[u8], &[u8], MaskType)) {
     let empty_buf = [0u8; 1];
 
-    let mut avl = exp_param.avl as i64;
-    let sew = exp_param.sew;
-    let mask_type = exp_param.mask_type;
+    let mut avl = rvv_data.avl as i64;
+    let sew = rvv_data.sew;
+    let mask_type = rvv_data.mask_type;
 
-    exp_param.count = 0;
+    rvv_data.count = 0;
     while avl > 0 {
-        let vl = vsetvl(avl as u64, exp_param.sew, exp_param.lmul) as usize;
+        let vl = vsetvl(avl as u64, rvv_data.sew, rvv_data.lmul) as usize;
         if vl == 0 {
             panic!("Abort")
         }
         avl -= vl as i64;
 
-        clean_v();
-
-        let l = if exp_param.lhs_type == InstructionArgsType::Immediate
-            || exp_param.lhs_type == InstructionArgsType::UImmediate
-            || exp_param.lhs_type == InstructionArgsType::Scalar
+        let l = if rvv_data.lhs_type == InstructionArgsType::Immediate
+            || rvv_data.lhs_type == InstructionArgsType::UImmediate
+            || rvv_data.lhs_type == InstructionArgsType::Scalar
         {
-            exp_param.lhs.as_slice()
+            rvv_data.lhs.as_slice()
         } else {
             clean_cache_v8();
-            vle_v8(exp_param.get_left_sew(sew), &exp_param.get_rvv_left());
+            vle_v8(rvv_data.get_left_sew(sew), &rvv_data.get_rvv_left());
             &empty_buf
         };
 
-        let r = if exp_param.rhs_type == InstructionArgsType::Immediate
-            || exp_param.rhs_type == InstructionArgsType::UImmediate
-            || exp_param.rhs_type == InstructionArgsType::Scalar
+        let r = if rvv_data.rhs_type == InstructionArgsType::Immediate
+            || rvv_data.rhs_type == InstructionArgsType::UImmediate
+            || rvv_data.rhs_type == InstructionArgsType::Scalar
         {
-            exp_param.rhs.as_slice()
+            rvv_data.rhs.as_slice()
         } else {
             clean_cache_v16();
-            vle_v16(exp_param.get_right_sew(sew), exp_param.get_rvv_right());
+            vle_v16(rvv_data.get_right_sew(sew), &rvv_data.get_rvv_right());
             &empty_buf
         };
 
         if mask_type == MaskType::Enable || mask_type == MaskType::AsParam {
-            vl1r_v0(&exp_param.mask);
+            let mut buf = Vec::<u8>::new();
+            buf.resize(VLEN / 8, 0);
+            let mask = rvv_data.get_rvv_mask();
+            buf[..mask.len()].copy_from_slice(&mask);
+
+            vl1r_v0(&buf);
         }
 
-        let res_range = exp_param.get_rvv_result_range();
-        vle_v24(exp_param.get_result_sew(sew), &res[res_range.clone()]);
-        op.clone()(l, r, mask_type);
-        vse_v24(exp_param.get_result_sew(sew), &mut res[res_range.clone()]);
+        let (mut result, result_len) = {
+            let d = rvv_data.get_rvv_result(&rvv_data.res_rvv);
+            if rvv_data.res_type == InstructionArgsType::VectorBit {
+                let mut buf = Vec::<u8>::new();
+                buf.resize(rvv_data.theoretically_vl * rvv_data.sew_bytes, 0);
 
-        exp_param.count += 1;
+                buf[..d.len()].copy_from_slice(&d);
+
+                (buf, d.len())
+            } else {
+                let dlen = d.len();
+                (d, dlen)
+            }
+        };
+        vle_v24(rvv_data.get_result_sew(sew), &result);
+        op.clone()(l, r, mask_type);
+        vse_v24(rvv_data.get_result_sew(sew), &mut result);
+        rvv_data.set_rvv_result(&result[..result_len]);
+        rvv_data.count += 1;
     }
 }
 
-fn run_op(config: &RunOpConfig, desc: &str) {
+fn run_op(
+    rvv_data: &mut RVVTestData,
+    rvv_op: fn(&[u8], &[u8], MaskType),
+    exp_op: VectorCallbackType,
+    masked_op: fn(&mut RVVTestData),
+    desc: &str,
+) {
     if is_verbose() {
         log!(
             "run with sew = {}, lmul = {}, avl = {}, desc = {}",
-            config.sew,
-            config.lmul,
-            config.avl,
+            rvv_data.sew,
+            rvv_data.lmul,
+            rvv_data.avl,
             desc
         );
     }
-    let vl = vsetvl(config.avl as u64, config.sew, config.lmul);
-    if vl == 0 {
-        return;
-    }
 
-    let avl_bytes = (config.sew / 8 * config.avl) as usize;
-    let sew_bytes = (config.sew / 8) as usize;
-
-    let mut exp_param = ExpectedParam::new(config, avl_bytes);
-
-    exp_param.theoretically_vl = vl as usize;
-    let expected_before = exp_param.res.clone();
-    let mut result = exp_param.res.clone();
-    for i in 0..config.avl as usize {
-        exp_param.index = i;
-        exp_param.count = i / vl as usize;
-        if config.mask_type == MaskType::Enable && !exp_param.get_mask() {
+    for i in 0..rvv_data.avl as usize {
+        rvv_data.index = i;
+        rvv_data.count = i / rvv_data.theoretically_vl as usize;
+        if rvv_data.mask_type == MaskType::Enable && !rvv_data.get_mask() {
+            masked_op.clone()(rvv_data);
             continue;
         }
-        match config.expected_op_ext {
+        match exp_op {
             VectorCallbackType::None(op) => {
-                op(&mut exp_param);
+                op(rvv_data);
             }
             VectorCallbackType::VV(op) => {
-                let mut res = exp_param.get_result();
+                let mut res = rvv_data.get_result_befor();
                 op(
+                    rvv_data.get_left().as_slice(),
+                    rvv_data.get_right().as_slice(),
                     res.as_mut_slice(),
-                    exp_param.get_left().as_slice(),
-                    exp_param.get_right().as_slice(),
                 );
-                exp_param.set_result(&res);
+                rvv_data.set_result_exp(&res);
             }
             VectorCallbackType::VX(op) => {
-                let mut res = exp_param.get_result();
+                let mut res = rvv_data.get_result_befor();
                 op(
+                    rvv_data.get_left().as_slice(),
+                    rvv_data.get_right_u64(),
                     res.as_mut_slice(),
-                    exp_param.get_left().as_slice(),
-                    exp_param.get_right_u64(),
                 );
-                exp_param.set_result(&res);
+                rvv_data.set_result_exp(&res);
             }
             VectorCallbackType::VI(op) => {
-                let mut res = exp_param.get_result();
+                let mut res = rvv_data.get_result_befor();
                 op(
+                    rvv_data.get_left().as_slice(),
+                    rvv_data.get_right_u64() as i64,
                     res.as_mut_slice(),
-                    exp_param.get_left().as_slice(),
-                    exp_param.get_right_u64() as i64,
                 );
-                exp_param.set_result(&res);
+                rvv_data.set_result_exp(&res);
             }
             VectorCallbackType::VVM(op) => {
-                let mut res = exp_param.get_result();
+                let mut res = rvv_data.get_result_befor();
                 op(
+                    rvv_data.get_left().as_slice(),
+                    rvv_data.get_right().as_slice(),
                     res.as_mut_slice(),
-                    exp_param.get_left().as_slice(),
-                    exp_param.get_right().as_slice(),
-                    exp_param.get_mask(),
+                    rvv_data.get_mask(),
                 );
-                exp_param.set_result(&res);
+                rvv_data.set_result_exp(&res);
             }
             VectorCallbackType::VXM(op) => {
-                let mut res = exp_param.get_result();
+                let mut res = rvv_data.get_result_befor();
                 op(
+                    rvv_data.get_left().as_slice(),
+                    rvv_data.get_right_u64(),
                     res.as_mut_slice(),
-                    exp_param.get_left().as_slice(),
-                    exp_param.get_right_u64(),
-                    exp_param.get_mask(),
+                    rvv_data.get_mask(),
                 );
-                exp_param.set_result(&res);
+                rvv_data.set_result_exp(&res);
             }
             VectorCallbackType::VIM(op) => {
-                let mut res = exp_param.get_result();
+                let mut res = rvv_data.get_result_befor();
                 op(
+                    rvv_data.get_left().as_slice(),
+                    rvv_data.get_right_u64() as i64,
                     res.as_mut_slice(),
-                    exp_param.get_left().as_slice(),
-                    exp_param.get_right_u64() as i64,
-                    exp_param.get_mask(),
+                    rvv_data.get_mask(),
                 );
-                exp_param.set_result(&res);
+                rvv_data.set_result_exp(&res);
             }
             VectorCallbackType::MVVM(op) => {
-                let index = exp_param.index as u64;
-                let pos = (config.sew * vl * (index / vl) + index % vl) as usize;
-
-                let mut res = get_bit_in_slice(&exp_param.res, pos) == 1;
+                let mut res = get_bit_in_slice(&rvv_data.res_before, i) == 1;
                 op(
+                    rvv_data.get_left().as_slice(),
+                    rvv_data.get_right().as_slice(),
                     &mut res,
-                    exp_param.get_left().as_slice(),
-                    exp_param.get_right().as_slice(),
-                    exp_param.get_mask(),
+                    rvv_data.get_mask(),
                 );
-                set_bit_in_slice(&mut exp_param.res, pos, res as u8);
+                set_bit_in_slice(&mut rvv_data.res_exp, i, res as u8);
             }
             VectorCallbackType::MVXM(op) => {
-                let index = exp_param.index as u64;
-                let pos = (config.sew * vl * (index / vl) + index % vl) as usize;
-
-                let mut res = get_bit_in_slice(&exp_param.res, pos) == 1;
+                let mut res = get_bit_in_slice(&rvv_data.res_before, i) == 1;
                 op(
+                    rvv_data.get_left().as_slice(),
+                    rvv_data.get_right_u64(),
                     &mut res,
-                    exp_param.get_left().as_slice(),
-                    exp_param.get_right_u64(),
-                    exp_param.get_mask(),
+                    rvv_data.get_mask(),
                 );
-                set_bit_in_slice(&mut exp_param.res, pos, res as u8);
+                set_bit_in_slice(&mut rvv_data.res_exp, i, res as u8);
             }
             VectorCallbackType::MVIM(op) => {
-                let index = exp_param.index as u64;
-                let pos = (config.sew * vl * (index / vl) + index % vl) as usize;
-
-                let mut res = get_bit_in_slice(&exp_param.res, pos) == 1;
+                let mut res = get_bit_in_slice(&rvv_data.res_before, i) == 1;
                 op(
+                    rvv_data.get_left().as_slice(),
+                    rvv_data.get_right_u64() as i64,
                     &mut res,
-                    exp_param.get_left().as_slice(),
-                    exp_param.get_right_u64() as i64,
-                    exp_param.get_mask(),
+                    rvv_data.get_mask(),
                 );
-                set_bit_in_slice(&mut exp_param.res, pos, res as u8);
+                set_bit_in_slice(&mut rvv_data.res_exp, i, res as u8);
             }
             VectorCallbackType::MVV(op) => {
-                let index = exp_param.index as u64;
-                let pos = (config.sew * vl * (index / vl) + index % vl) as usize;
-
-                let mut res = get_bit_in_slice(&exp_param.res, pos) == 1;
+                let mut res = get_bit_in_slice(&rvv_data.res_before, i) == 1;
                 op(
+                    rvv_data.get_left().as_slice(),
+                    rvv_data.get_right().as_slice(),
                     &mut res,
-                    exp_param.get_left().as_slice(),
-                    exp_param.get_right().as_slice(),
                 );
-                set_bit_in_slice(&mut exp_param.res, pos, res as u8);
+                set_bit_in_slice(&mut rvv_data.res_exp, i, res as u8);
             }
             VectorCallbackType::MVX(op) => {
-                let index = exp_param.index as u64;
-                let pos = (config.sew * vl * (index / vl) + index % vl) as usize;
-
-                let mut res = get_bit_in_slice(&exp_param.res, pos) == 1;
+                let mut res = get_bit_in_slice(&rvv_data.res_before, i) == 1;
                 op(
+                    rvv_data.get_left().as_slice(),
+                    rvv_data.get_right_u64(),
                     &mut res,
-                    exp_param.get_left().as_slice(),
-                    exp_param.get_right_u64(),
                 );
-                set_bit_in_slice(&mut exp_param.res, pos, res as u8);
+                set_bit_in_slice(&mut rvv_data.res_exp, i, res as u8);
             }
             VectorCallbackType::MVI(op) => {
-                let index = exp_param.index as u64;
-                let pos = (config.sew * vl * (index / vl) + index % vl) as usize;
-
-                let mut res = get_bit_in_slice(&exp_param.res, pos) == 1;
+                let mut res = get_bit_in_slice(&rvv_data.res_before, i) == 1;
                 op(
+                    rvv_data.get_left().as_slice(),
+                    rvv_data.get_right_u64() as i64,
                     &mut res,
-                    exp_param.get_left().as_slice(),
-                    exp_param.get_right_u64() as i64,
                 );
-                set_bit_in_slice(&mut exp_param.res, pos, res as u8);
+                set_bit_in_slice(&mut rvv_data.res_exp, i, res as u8);
+            }
+            VectorCallbackType::MMM(op) => {
+                let mut res = get_bit_in_slice(&rvv_data.res_before, i) == 1;
+                let lhs = get_bit_in_slice(&rvv_data.lhs, rvv_data.index) == 1;
+                let rhs = get_bit_in_slice(&rvv_data.rhs, rvv_data.index) == 1;
+
+                op(lhs, rhs, &mut res);
+                set_bit_in_slice(&mut rvv_data.res_exp, i, res as u8);
+            }
+            VectorCallbackType::VVR(op) => {
+                let mut res = rvv_data.get_result_exp();
+                let index = rvv_data.get_rvv_index();
+                op(
+                    rvv_data.get_left().as_slice(),
+                    rvv_data.get_right().as_slice(),
+                    res.as_mut_slice(),
+                    index,
+                );
+                rvv_data.set_result_exp(&res);
             }
         }
     }
 
-    run_rvv_op(&mut exp_param, result.as_mut_slice(), config.v_op);
+    run_rvv_op(rvv_data, rvv_op);
 
-    for i in 0..config.avl as usize {
-        exp_param.index = i;
-        let exp = exp_param.get_result();
-        let res = ExpectedParam::get_data_by_sclice(&result, config.vd_type, sew_bytes, i);
-        let exp_befor =
-            ExpectedParam::get_data_by_sclice(&expected_before, config.vd_type, sew_bytes, i);
+    if rvv_data.res_exp != rvv_data.res_rvv {
+        for i in 0..rvv_data.avl as usize {
+            rvv_data.index = i;
+            rvv_data.count = i / rvv_data.theoretically_vl as usize;
+            let exp = rvv_data.get_result_exp();
+            let res = rvv_data.get_result_rvv();
+            let exp_befor = rvv_data.get_result_befor();
 
-        if exp != res {
-            log!(
+            if exp != res {
+                log!(
                 "[sew = {}, describe = {}] unexpected values found at index {} \nresult = {:0>2X?} \nexpected = {:0>2X?}",
-                config.sew, desc, i, res, exp
+                rvv_data.sew, desc, i, res, exp
             );
-            log!(
-                "more information, \nlhs = {:0>2X?} \nrhs = {:0>2X?} \nexpected_before = {:0>2X?}, \nlmul = {}, avl = {}",
-                exp_param.get_left(),
-                exp_param.get_right(),
-                exp_befor,
-                config.lmul,
-                config.avl
+                log!(
+                "more information, \nlhs = {:0>2X?} \nrhs = {:0>2X?} \nexpected_before = {:0>2X?}",
+                rvv_data.get_left(),
+                rvv_data.get_right(),
+                exp_befor
             );
-            //log!("more infomation, expected: {:0>2X?} \nresult: {:0>2X?} \nmask: {:0>2X?}", exp_param.res, result, exp_param.mask);
-            panic!("Abort");
+
+                log!(
+                    "-lmul = {}, avl = {}, vl = {}, mask = {}",
+                    rvv_data.lmul,
+                    rvv_data.avl,
+                    rvv_data.theoretically_vl,
+                    rvv_data.mask_type
+                );
+
+                log!("-expected: {:0>2X?}", rvv_data.res_exp);
+                log!("-result: {:0>2X?}", rvv_data.res_rvv);
+                log!("-res_before: {:0>2X?}", rvv_data.res_before);
+                if rvv_data.mask_type != MaskType::Disable {
+                    log!("-mask = {:0>2X?}", &rvv_data.mask);
+                }
+                log!("-lhs: {:0>2X?}", rvv_data.lhs);
+                log!("-rhs: {:0>2X?}", rvv_data.rhs);
+                panic!("Abort");
+            }
         }
     }
     if is_verbose() {
         log!("finished");
-    }
-}
-
-fn get_imm_begin(l: InstructionArgsType, r: InstructionArgsType) -> i64 {
-    if l == InstructionArgsType::Immediate || r == InstructionArgsType::Immediate {
-        -16
-    } else if l == InstructionArgsType::UImmediate || r == InstructionArgsType::UImmediate {
-        0
-    } else {
-        0
     }
 }
 
@@ -1488,45 +832,70 @@ fn run_template_ext(
     right_type: InstructionArgsType,
     mask_type: MaskType,
     rvv_op: fn(&[u8], &[u8], MaskType),
-    callback: VectorCallbackType,
-    sews: &[u64],
-    lmuls: &[i64],
+    exp_op: VectorCallbackType,
+    before_op: fn(f64, f64, u64) -> bool,
+    masked_op: fn(&mut RVVTestData),
     desc: &str,
 ) {
+    fn get_imm_begin(l: InstructionArgsType, r: InstructionArgsType) -> i64 {
+        if l == InstructionArgsType::Immediate || r == InstructionArgsType::Immediate {
+            -16
+        } else if l == InstructionArgsType::UImmediate || r == InstructionArgsType::UImmediate {
+            0
+        } else {
+            0
+        }
+    }
+
     let mut enable_mask = true;
     let imm_begin = get_imm_begin(left_type, right_type);
     let mut imm = imm_begin;
+
+    let sews = &[64, 256];
+    let lmuls = &[-8, -4, -2, 1, 2, 4, 8];
+
     for sew in sews {
         for lmul in lmuls {
-            for avl in avl_iterator(sew.clone(), 2) {
-                let mut config = RunOpConfig {
-                    sew: sew.clone(),
-                    lmul: lmul.clone(),
-                    avl,
-                    mask_type,
-                    expected_op_ext: callback,
-                    v_op: rvv_op,
-                    vd_type: vd_type,
-                    args1_type: left_type,
-                    args2_type: right_type,
-                    immediate_val: imm,
-                };
+            for avl in avl_iterator(sew.clone(), *lmul, 2) {
+                if vsetvl(avl, *sew, *lmul) == 0 {
+                    continue;
+                }
 
-                if mask_type == MaskType::Enable {
-                    config.mask_type = if enable_mask {
+                if !before_op.clone()(*sew as f64, RVVTestData::get_lmul(*lmul), avl) {
+                    continue;
+                }
+
+                let e_mask_type = if mask_type == MaskType::Enable {
+                    enable_mask = !enable_mask;
+                    if !enable_mask {
                         MaskType::Enable
                     } else {
                         MaskType::Disable
-                    };
-                    enable_mask = !enable_mask;
-                }
-                run_op(&config, desc);
+                    }
+                } else {
+                    mask_type
+                };
 
-                if left_type == InstructionArgsType::Immediate
-                    || right_type == InstructionArgsType::Immediate
-                    || left_type == InstructionArgsType::UImmediate
-                    || right_type == InstructionArgsType::UImmediate
-                {
+                let mut rvv_data = RVVTestData::new(
+                    left_type,
+                    right_type,
+                    vd_type,
+                    e_mask_type,
+                    sew.clone(),
+                    lmul.clone(),
+                    avl,
+                );
+                rvv_data.rng_fill();
+                if left_type.is_imm() {
+                    rvv_data.lhs.copy_from_slice(&imm.to_le_bytes());
+                }
+                if right_type.is_imm() {
+                    rvv_data.rhs.copy_from_slice(&imm.to_le_bytes());
+                }
+
+                run_op(&mut rvv_data, rvv_op, exp_op, masked_op, desc);
+
+                if left_type.is_imm() || right_type.is_imm() {
                     imm += 1;
                     if imm == imm_begin + 32 {
                         imm = imm_begin
@@ -1535,6 +904,33 @@ fn run_template_ext(
             }
         }
     }
+    //log!("{}", desc);
+}
+
+fn befor_op_default(_: f64, _: f64, _: u64) -> bool {
+    true
+}
+
+fn befor_op_wide(sew: f64, lmul: f64, _: u64) -> bool {
+    if sew * 2.0 > 1024.0 {
+        return false;
+    }
+    let emul = lmul * 2.0;
+    if emul >= 0.125 && emul <= 8.0 {
+        true
+    } else {
+        false
+    }
+}
+
+fn masked_op_default(_: &mut RVVTestData) {}
+
+fn masked_op_red(rvv_data: &mut RVVTestData) {
+    let index = rvv_data.get_rvv_index();
+    if index == 0 {
+        let rhs = rvv_data.get_right();
+        rvv_data.set_result_exp(&rhs);
+    }
 }
 
 pub fn run_template(
@@ -1542,10 +938,9 @@ pub fn run_template(
     left_type: InstructionArgsType,
     right_type: InstructionArgsType,
     mask_type: MaskType,
-    expected_op: fn(&mut ExpectedParam),
+    expected_op: fn(&mut RVVTestData),
     rvv_op: fn(&[u8], &[u8], MaskType),
-    sews: &[u64],
-    lmuls: &[i64],
+    before_op: fn(f64, f64, u64) -> bool,
     desc: &str,
 ) {
     run_template_ext(
@@ -1555,17 +950,15 @@ pub fn run_template(
         mask_type,
         rvv_op,
         VectorCallbackType::None(expected_op),
-        sews,
-        lmuls,
+        before_op,
+        masked_op_default,
         desc,
     );
 }
 
-pub fn run_template_vvm(
-    expected_op: fn(&mut [u8], &[u8], &[u8], bool),
+pub fn run_template_v_vvm(
+    expected_op: fn(&[u8], &[u8], &mut [u8], bool),
     rvv_op: fn(&[u8], &[u8], MaskType),
-    sews: &[u64],
-    lmuls: &[i64],
     desc: &str,
 ) {
     run_template_ext(
@@ -1575,17 +968,15 @@ pub fn run_template_vvm(
         MaskType::AsParam,
         rvv_op,
         VectorCallbackType::VVM(expected_op),
-        sews,
-        lmuls,
+        befor_op_default,
+        masked_op_default,
         desc,
     );
 }
 
-pub fn run_template_vxm(
-    expected_op: fn(&mut [u8], &[u8], u64, bool),
+pub fn run_template_v_vxm(
+    expected_op: fn(&[u8], u64, &mut [u8], bool),
     rvv_op: fn(&[u8], &[u8], MaskType),
-    sews: &[u64],
-    lmuls: &[i64],
     desc: &str,
 ) {
     run_template_ext(
@@ -1595,17 +986,15 @@ pub fn run_template_vxm(
         MaskType::AsParam,
         rvv_op,
         VectorCallbackType::VXM(expected_op),
-        sews,
-        lmuls,
+        befor_op_default,
+        masked_op_default,
         desc,
     );
 }
 
-pub fn run_template_vim(
-    expected_op: fn(&mut [u8], &[u8], i64, bool),
+pub fn run_template_v_vim(
+    expected_op: fn(&[u8], i64, &mut [u8], bool),
     rvv_op: fn(&[u8], &[u8], MaskType),
-    sews: &[u64],
-    lmuls: &[i64],
     desc: &str,
 ) {
     run_template_ext(
@@ -1615,17 +1004,15 @@ pub fn run_template_vim(
         MaskType::AsParam,
         rvv_op,
         VectorCallbackType::VIM(expected_op),
-        sews,
-        lmuls,
+        befor_op_default,
+        masked_op_default,
         desc,
     );
 }
 
-pub fn run_template_mvvm(
-    expected_op: fn(&mut bool, &[u8], &[u8], bool),
+pub fn run_template_m_vvm(
+    expected_op: fn(&[u8], &[u8], &mut bool, bool),
     rvv_op: fn(&[u8], &[u8], MaskType),
-    sews: &[u64],
-    lmuls: &[i64],
     desc: &str,
 ) {
     run_template_ext(
@@ -1635,17 +1022,15 @@ pub fn run_template_mvvm(
         MaskType::AsParam,
         rvv_op,
         VectorCallbackType::MVVM(expected_op),
-        sews,
-        lmuls,
+        befor_op_default,
+        masked_op_default,
         desc,
     );
 }
 
-pub fn run_template_mvxm(
-    expected_op: fn(&mut bool, &[u8], u64, bool),
+pub fn run_template_m_vxm(
+    expected_op: fn(&[u8], u64, &mut bool, bool),
     rvv_op: fn(&[u8], &[u8], MaskType),
-    sews: &[u64],
-    lmuls: &[i64],
     desc: &str,
 ) {
     run_template_ext(
@@ -1655,17 +1040,15 @@ pub fn run_template_mvxm(
         MaskType::AsParam,
         rvv_op,
         VectorCallbackType::MVXM(expected_op),
-        sews,
-        lmuls,
+        befor_op_default,
+        masked_op_default,
         desc,
     );
 }
 
-pub fn run_template_mvim(
-    expected_op: fn(&mut bool, &[u8], i64, bool),
+pub fn run_template_m_vim(
+    expected_op: fn(&[u8], i64, &mut bool, bool),
     rvv_op: fn(&[u8], &[u8], MaskType),
-    sews: &[u64],
-    lmuls: &[i64],
     desc: &str,
 ) {
     run_template_ext(
@@ -1675,77 +1058,153 @@ pub fn run_template_mvim(
         MaskType::AsParam,
         rvv_op,
         VectorCallbackType::MVIM(expected_op),
-        sews,
-        lmuls,
+        befor_op_default,
+        masked_op_default,
         desc,
     );
 }
 
-pub fn run_template_mvv(
-    expected_op: fn(&mut bool, &[u8], &[u8]),
+pub fn run_template_m_vv(
+    expected_op: fn(&[u8], &[u8], &mut bool),
     rvv_op: fn(&[u8], &[u8], MaskType),
-    sews: &[u64],
-    lmuls: &[i64],
+    enable_mask: bool,
     desc: &str,
 ) {
     run_template_ext(
         InstructionArgsType::VectorBit,
         InstructionArgsType::Vector,
         InstructionArgsType::Vector,
-        MaskType::Disable,
+        if enable_mask {
+            MaskType::Enable
+        } else {
+            MaskType::Disable
+        },
         rvv_op,
         VectorCallbackType::MVV(expected_op),
-        sews,
-        lmuls,
+        befor_op_default,
+        masked_op_default,
         desc,
     );
 }
 
-pub fn run_template_mvx(
-    expected_op: fn(&mut bool, &[u8], u64),
+pub fn run_template_m_vx(
+    expected_op: fn(&[u8], u64, &mut bool),
     rvv_op: fn(&[u8], &[u8], MaskType),
-    sews: &[u64],
-    lmuls: &[i64],
+    enable_mask: bool,
     desc: &str,
 ) {
     run_template_ext(
         InstructionArgsType::VectorBit,
         InstructionArgsType::Vector,
         InstructionArgsType::Scalar,
-        MaskType::Disable,
+        if enable_mask {
+            MaskType::Enable
+        } else {
+            MaskType::Disable
+        },
         rvv_op,
         VectorCallbackType::MVX(expected_op),
-        sews,
-        lmuls,
+        befor_op_default,
+        masked_op_default,
         desc,
     );
 }
 
-pub fn run_template_mvi(
-    expected_op: fn(&mut bool, &[u8], i64),
+pub fn run_template_m_vi(
+    expected_op: fn(&[u8], i64, &mut bool),
     rvv_op: fn(&[u8], &[u8], MaskType),
-    sews: &[u64],
-    lmuls: &[i64],
+    enable_mask: bool,
     desc: &str,
 ) {
     run_template_ext(
         InstructionArgsType::VectorBit,
         InstructionArgsType::Vector,
         InstructionArgsType::Immediate,
-        MaskType::Disable,
+        if enable_mask {
+            MaskType::Enable
+        } else {
+            MaskType::Disable
+        },
         rvv_op,
         VectorCallbackType::MVI(expected_op),
-        sews,
-        lmuls,
+        befor_op_default,
+        masked_op_default,
         desc,
     );
 }
 
-pub fn run_template_wv(
-    expected_op: fn(&mut [u8], &[u8], &[u8]),
+pub fn run_template_m_mm(
+    expected_op: fn(bool, bool, &mut bool),
     rvv_op: fn(&[u8], &[u8], MaskType),
-    sews: &[u64],
-    lmuls: &[i64],
+    enable_mask: bool,
+    desc: &str,
+) {
+    run_template_ext(
+        InstructionArgsType::VectorBit,
+        InstructionArgsType::VectorBit,
+        InstructionArgsType::VectorBit,
+        if enable_mask {
+            MaskType::Enable
+        } else {
+            MaskType::Disable
+        },
+        rvv_op,
+        VectorCallbackType::MMM(expected_op),
+        befor_op_default,
+        masked_op_default,
+        desc,
+    );
+}
+
+pub fn run_template_w_vv(
+    expected_op: fn(&[u8], &[u8], &mut [u8]),
+    rvv_op: fn(&[u8], &[u8], MaskType),
+    enable_mask: bool,
+    desc: &str,
+) {
+    run_template_ext(
+        InstructionArgsType::Vector2,
+        InstructionArgsType::Vector,
+        InstructionArgsType::Vector,
+        if enable_mask {
+            MaskType::Enable
+        } else {
+            MaskType::Disable
+        },
+        rvv_op,
+        VectorCallbackType::VV(expected_op),
+        befor_op_wide,
+        masked_op_default,
+        desc,
+    );
+}
+
+pub fn run_template_w_vx(
+    expected_op: fn(&[u8], u64, &mut [u8]),
+    rvv_op: fn(&[u8], &[u8], MaskType),
+    enable_mask: bool,
+    desc: &str,
+) {
+    run_template_ext(
+        InstructionArgsType::Vector2,
+        InstructionArgsType::Vector,
+        InstructionArgsType::Scalar,
+        if enable_mask {
+            MaskType::Enable
+        } else {
+            MaskType::Disable
+        },
+        rvv_op,
+        VectorCallbackType::VX(expected_op),
+        befor_op_wide,
+        masked_op_default,
+        desc,
+    );
+}
+
+pub fn run_template_v_wv(
+    expected_op: fn(&[u8], &[u8], &mut [u8]),
+    rvv_op: fn(&[u8], &[u8], MaskType),
     enable_mask: bool,
     desc: &str,
 ) {
@@ -1760,17 +1219,15 @@ pub fn run_template_wv(
         },
         rvv_op,
         VectorCallbackType::VV(expected_op),
-        sews,
-        lmuls,
+        befor_op_wide,
+        masked_op_default,
         desc,
     );
 }
 
-pub fn run_template_wx(
-    expected_op: fn(&mut [u8], &[u8], u64),
+pub fn run_template_v_wx(
+    expected_op: fn(&[u8], u64, &mut [u8]),
     rvv_op: fn(&[u8], &[u8], MaskType),
-    sews: &[u64],
-    lmuls: &[i64],
     enable_mask: bool,
     desc: &str,
 ) {
@@ -1785,37 +1242,33 @@ pub fn run_template_wx(
         },
         rvv_op,
         VectorCallbackType::VX(expected_op),
-        sews,
-        lmuls,
+        befor_op_wide,
+        masked_op_default,
         desc,
     );
 }
 
-pub fn run_template_wi(
-    expected_op: fn(&mut [u8], &[u8], i64),
+pub fn run_template_v_wi(
+    expected_op: fn(&[u8], i64, &mut [u8]),
     rvv_op: fn(&[u8], &[u8], MaskType),
-    sews: &[u64],
-    lmuls: &[i64],
     desc: &str,
 ) {
     run_template_ext(
         InstructionArgsType::Vector,
         InstructionArgsType::Vector2,
         InstructionArgsType::UImmediate,
-        MaskType::Disable,
+        MaskType::Enable,
         rvv_op,
         VectorCallbackType::VI(expected_op),
-        sews,
-        lmuls,
+        befor_op_wide,
+        masked_op_default,
         desc,
     );
 }
 
-pub fn run_template_vv(
-    expected_op: fn(&mut [u8], &[u8], &[u8]),
+pub fn run_template_v_vv(
+    expected_op: fn(&[u8], &[u8], &mut [u8]),
     rvv_op: fn(&[u8], &[u8], MaskType),
-    sews: &[u64],
-    lmuls: &[i64],
     enable_mask: bool,
     desc: &str,
 ) {
@@ -1830,17 +1283,15 @@ pub fn run_template_vv(
         },
         rvv_op,
         VectorCallbackType::VV(expected_op),
-        sews,
-        lmuls,
+        befor_op_default,
+        masked_op_default,
         desc,
     );
 }
 
-pub fn run_template_vx(
-    expected_op: fn(&mut [u8], &[u8], u64),
+pub fn run_template_v_vx(
+    expected_op: fn(&[u8], u64, &mut [u8]),
     rvv_op: fn(&[u8], &[u8], MaskType),
-    sews: &[u64],
-    lmuls: &[i64],
     enable_mask: bool,
     desc: &str,
 ) {
@@ -1855,17 +1306,16 @@ pub fn run_template_vx(
         },
         rvv_op,
         VectorCallbackType::VX(expected_op),
-        sews,
-        lmuls,
+        befor_op_default,
+        masked_op_default,
         desc,
     );
 }
 
-pub fn run_template_vi(
-    expected_op: fn(&mut [u8], &[u8], i64),
+pub fn run_template_v_vi(
+    expected_op: fn(&[u8], i64, &mut [u8]),
     rvv_op: fn(&[u8], &[u8], MaskType),
-    sews: &[u64],
-    lmuls: &[i64],
+    enable_mask: bool,
     single: bool,
     desc: &str,
 ) {
@@ -1877,11 +1327,191 @@ pub fn run_template_vi(
         } else {
             InstructionArgsType::UImmediate
         },
-        MaskType::Disable,
+        if enable_mask {
+            MaskType::Enable
+        } else {
+            MaskType::Disable
+        },
         rvv_op,
         VectorCallbackType::VI(expected_op),
-        sews,
-        lmuls,
+        befor_op_default,
+        masked_op_default,
         desc,
     );
+}
+
+pub fn run_template_w_wv(
+    expected_op: fn(&[u8], &[u8], &mut [u8]),
+    rvv_op: fn(&[u8], &[u8], MaskType),
+    enable_mask: bool,
+    desc: &str,
+) {
+    run_template_ext(
+        InstructionArgsType::Vector2,
+        InstructionArgsType::Vector2,
+        InstructionArgsType::Vector,
+        if enable_mask {
+            MaskType::Enable
+        } else {
+            MaskType::Disable
+        },
+        rvv_op,
+        VectorCallbackType::VV(expected_op),
+        befor_op_wide,
+        masked_op_default,
+        desc,
+    );
+}
+
+pub fn run_template_w_wx(
+    expected_op: fn(&[u8], u64, &mut [u8]),
+    rvv_op: fn(&[u8], &[u8], MaskType),
+    enable_mask: bool,
+    desc: &str,
+) {
+    run_template_ext(
+        InstructionArgsType::Vector2,
+        InstructionArgsType::Vector2,
+        InstructionArgsType::Scalar,
+        if enable_mask {
+            MaskType::Enable
+        } else {
+            MaskType::Disable
+        },
+        rvv_op,
+        VectorCallbackType::VX(expected_op),
+        befor_op_wide,
+        masked_op_default,
+        desc,
+    );
+}
+
+pub fn run_template_r_vv(
+    expected_op: fn(&[u8], &[u8], &mut [u8], usize),
+    rvv_op: fn(&[u8], &[u8], MaskType),
+    enable_mask: bool,
+    desc: &str,
+) {
+    run_template_ext(
+        InstructionArgsType::VectorRed,
+        InstructionArgsType::Vector,
+        InstructionArgsType::Vector,
+        if enable_mask {
+            MaskType::Enable
+        } else {
+            MaskType::Disable
+        },
+        rvv_op,
+        VectorCallbackType::VVR(expected_op),
+        befor_op_default,
+        masked_op_red,
+        desc,
+    );
+}
+
+pub fn run_template_wr_vw(
+    expected_op: fn(&[u8], &[u8], &mut [u8], usize),
+    rvv_op: fn(&[u8], &[u8], MaskType),
+    enable_mask: bool,
+    desc: &str,
+) {
+    run_template_ext(
+        InstructionArgsType::VectorRed2,
+        InstructionArgsType::Vector,
+        InstructionArgsType::Vector2,
+        if enable_mask {
+            MaskType::Enable
+        } else {
+            MaskType::Disable
+        },
+        rvv_op,
+        VectorCallbackType::VVR(expected_op),
+        befor_op_wide,
+        masked_op_red,
+        desc,
+    );
+}
+
+pub fn run_template_v_n(
+    expected_op: fn(&[u8], &[u8], &mut [u8]),
+    rvv_op: fn(&[u8], &[u8], MaskType),
+    narrow: u64,
+    enable_mask: bool,
+    desc: &str,
+) {
+    fn before_op_2(_: f64, lmul: f64, _: u64) -> bool {
+        let v = 0.5;
+        let emul = lmul * v;
+        if emul >= 0.125 && emul <= 8.0 {
+            true
+        } else {
+            false
+        }
+    }
+    fn before_op_4(_: f64, lmul: f64, _: u64) -> bool {
+        let v = 0.25;
+        let emul = lmul * v;
+        if emul >= 0.125 && emul <= 8.0 {
+            true
+        } else {
+            false
+        }
+    }
+    fn before_op_8(_: f64, lmul: f64, _: u64) -> bool {
+        let v = 0.125;
+        let emul = lmul * v;
+        if emul >= 0.125 && emul <= 8.0 {
+            true
+        } else {
+            false
+        }
+    }
+    match narrow {
+        2 => run_template_ext(
+            InstructionArgsType::Vector,
+            InstructionArgsType::VectorNarrow2,
+            InstructionArgsType::Vector,
+            if enable_mask {
+                MaskType::Enable
+            } else {
+                MaskType::Disable
+            },
+            rvv_op,
+            VectorCallbackType::VV(expected_op),
+            before_op_2,
+            masked_op_default,
+            desc,
+        ),
+        4 => run_template_ext(
+            InstructionArgsType::Vector,
+            InstructionArgsType::VectorNarrow4,
+            InstructionArgsType::Vector,
+            if enable_mask {
+                MaskType::Enable
+            } else {
+                MaskType::Disable
+            },
+            rvv_op,
+            VectorCallbackType::VV(expected_op),
+            before_op_4,
+            masked_op_default,
+            desc,
+        ),
+        8 => run_template_ext(
+            InstructionArgsType::Vector,
+            InstructionArgsType::VectorNarrow8,
+            InstructionArgsType::Vector,
+            if enable_mask {
+                MaskType::Enable
+            } else {
+                MaskType::Disable
+            },
+            rvv_op,
+            VectorCallbackType::VV(expected_op),
+            before_op_8,
+            masked_op_default,
+            desc,
+        ),
+        _ => panic!("Abort"),
+    };
 }

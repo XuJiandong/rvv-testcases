@@ -2,17 +2,15 @@ use core::{arch::asm, convert::TryInto};
 use eint::{Eint, E256};
 use rvv_asm::rvv_asm;
 use rvv_testcases::runner::{
-    run_template_mvi, run_template_mvim, run_template_mvv, run_template_mvvm, run_template_mvx,
-    run_template_mvxm, run_template_vim, run_template_vvm, run_template_vxm, MaskType,
+    run_template_m_vi, run_template_m_vim, run_template_m_vv, run_template_m_vvm,
+    run_template_m_vx, run_template_m_vxm, run_template_v_vim, run_template_v_vvm,
+    run_template_v_vxm, MaskType,
 };
 
 // use ckb_std::syscalls::debug;
 // use rvv_testcases::log;
 
-const SEW_LIST: [u64; 2] = [64, 256];
-const LMUL_LIST: [i64; 5] = [-4, -2, 1, 4, 8];
-
-fn expected_op_adc_vvm(result: &mut [u8], lhs: &[u8], rhs: &[u8], mask: bool) {
+fn expected_op_adc_vvm(lhs: &[u8], rhs: &[u8], result: &mut [u8], mask: bool) {
     assert_eq!(lhs.len(), rhs.len());
     assert_eq!(rhs.len(), result.len());
     match lhs.len() {
@@ -45,16 +43,10 @@ fn test_vadc_vvm() {
         }
     }
 
-    run_template_vvm(
-        expected_op_adc_vvm,
-        rvv_op,
-        &SEW_LIST,
-        &LMUL_LIST,
-        "vadc.vvm",
-    )
+    run_template_v_vvm(expected_op_adc_vvm, rvv_op, "vadc.vvm")
 }
 
-fn expected_op_adc_vxm(result: &mut [u8], lhs: &[u8], x: u64, mask: bool) {
+fn expected_op_adc_vxm(lhs: &[u8], x: u64, result: &mut [u8], mask: bool) {
     match lhs.len() {
         8 => {
             let l = i64::from_le_bytes(lhs.try_into().unwrap());
@@ -84,17 +76,11 @@ fn test_vadc_vxm() {
             rvv_asm!("mv t0, {}", "vadc.vxm v24, v8, t0, v0", in (reg) x);
         }
     }
-    run_template_vxm(
-        expected_op_adc_vxm,
-        rvv_op,
-        &SEW_LIST,
-        &LMUL_LIST,
-        "vadc.vxm",
-    );
+    run_template_v_vxm(expected_op_adc_vxm, rvv_op, "vadc.vxm");
 }
 
-fn expected_op_adc_vim(result: &mut [u8], lhs: &[u8], x: i64, mask: bool) {
-    expected_op_adc_vxm(result, lhs, x as u64, mask);
+fn expected_op_adc_vim(lhs: &[u8], x: i64, result: &mut [u8], mask: bool) {
+    expected_op_adc_vxm(lhs, x as u64, result, mask);
 }
 fn test_vadc_vim() {
     fn rvv_op(_: &[u8], rhs: &[u8], _: MaskType) {
@@ -203,16 +189,10 @@ fn test_vadc_vim() {
             }
         }
     }
-    run_template_vim(
-        expected_op_adc_vim,
-        rvv_op,
-        &SEW_LIST,
-        &LMUL_LIST,
-        "vadc.vim",
-    );
+    run_template_v_vim(expected_op_adc_vim, rvv_op, "vadc.vim");
 }
 
-fn expected_op_madc_vvm(result: &mut bool, lhs: &[u8], rhs: &[u8], mask: bool) {
+fn expected_op_madc_vvm(lhs: &[u8], rhs: &[u8], result: &mut bool, mask: bool) {
     match lhs.len() {
         8 => {
             let l = u64::from_le_bytes(lhs.try_into().unwrap());
@@ -244,16 +224,10 @@ fn test_vmadc_vvm() {
         }
     }
 
-    run_template_mvvm(
-        expected_op_madc_vvm,
-        rvv_op,
-        &SEW_LIST,
-        &LMUL_LIST,
-        "vmadc.vvm",
-    )
+    run_template_m_vvm(expected_op_madc_vvm, rvv_op, "vmadc.vvm")
 }
 
-fn expected_op_madc_vxm(result: &mut bool, lhs: &[u8], x: u64, mask: bool) {
+fn expected_op_madc_vxm(lhs: &[u8], x: u64, result: &mut bool, mask: bool) {
     match lhs.len() {
         8 => {
             let l = u64::from_le_bytes(lhs.try_into().unwrap());
@@ -285,17 +259,11 @@ fn test_vmadc_vxm() {
         }
     }
 
-    run_template_mvxm(
-        expected_op_madc_vxm,
-        rvv_op,
-        &SEW_LIST,
-        &LMUL_LIST,
-        "vmadc.vxm",
-    )
+    run_template_m_vxm(expected_op_madc_vxm, rvv_op, "vmadc.vxm")
 }
 
-fn expected_op_madc_vim(result: &mut bool, lhs: &[u8], x: i64, mask: bool) {
-    expected_op_madc_vxm(result, lhs, x as u64, mask);
+fn expected_op_madc_vim(lhs: &[u8], x: i64, result: &mut bool, mask: bool) {
+    expected_op_madc_vxm(lhs, x as u64, result, mask);
 }
 fn test_vmadc_vim() {
     fn rvv_op(_: &[u8], rhs: &[u8], _: MaskType) {
@@ -404,18 +372,12 @@ fn test_vmadc_vim() {
             }
         }
     }
-    run_template_mvim(
-        expected_op_madc_vim,
-        rvv_op,
-        &SEW_LIST,
-        &LMUL_LIST,
-        "vadc.vim",
-    );
+    run_template_m_vim(expected_op_madc_vim, rvv_op, "vmadc.vim");
 }
 
 fn test_vmadc_vv() {
-    fn exp_op(result: &mut bool, lhs: &[u8], rhs: &[u8]) {
-        expected_op_madc_vvm(result, lhs, rhs, false);
+    fn exp_op(lhs: &[u8], rhs: &[u8], result: &mut bool) {
+        expected_op_madc_vvm(lhs, rhs, result, false);
     }
     fn rvv_op(_: &[u8], _: &[u8], _: MaskType) {
         unsafe {
@@ -423,12 +385,12 @@ fn test_vmadc_vv() {
         }
     }
 
-    run_template_mvv(exp_op, rvv_op, &SEW_LIST, &LMUL_LIST, "vmadc.vv")
+    run_template_m_vv(exp_op, rvv_op, false, "vmadc.vv")
 }
 
 fn test_vmadc_vx() {
-    fn exp_op(result: &mut bool, lhs: &[u8], rhs: u64) {
-        expected_op_madc_vxm(result, lhs, rhs, false);
+    fn exp_op(lhs: &[u8], rhs: u64, result: &mut bool) {
+        expected_op_madc_vxm(lhs, rhs, result, false);
     }
     fn rvv_op(_: &[u8], rhs: &[u8], _: MaskType) {
         let x = u64::from_le_bytes(rhs.try_into().unwrap());
@@ -437,12 +399,12 @@ fn test_vmadc_vx() {
         }
     }
 
-    run_template_mvx(exp_op, rvv_op, &SEW_LIST, &LMUL_LIST, "vmadc.vx")
+    run_template_m_vx(exp_op, rvv_op, false, "vmadc.vx")
 }
 
 fn test_vmadc_vi() {
-    fn exp_op(result: &mut bool, lhs: &[u8], rhs: i64) {
-        expected_op_madc_vxm(result, lhs, rhs as u64, false);
+    fn exp_op(lhs: &[u8], rhs: i64, result: &mut bool) {
+        expected_op_madc_vxm(lhs, rhs as u64, result, false);
     }
     fn rvv_op(_: &[u8], rhs: &[u8], _: MaskType) {
         let imm = i64::from_le_bytes(rhs.try_into().unwrap());
@@ -551,10 +513,10 @@ fn test_vmadc_vi() {
         }
     }
 
-    run_template_mvi(exp_op, rvv_op, &SEW_LIST, &LMUL_LIST, "vmadc.vi")
+    run_template_m_vi(exp_op, rvv_op, false, "vmadc.vi")
 }
 
-fn expected_op_sbc_vvm(result: &mut [u8], lhs: &[u8], rhs: &[u8], mask: bool) {
+fn expected_op_sbc_vvm(lhs: &[u8], rhs: &[u8], result: &mut [u8], mask: bool) {
     assert_eq!(lhs.len(), rhs.len());
     assert_eq!(rhs.len(), result.len());
     match lhs.len() {
@@ -587,16 +549,10 @@ fn test_vsbc_vvm() {
         }
     }
 
-    run_template_vvm(
-        expected_op_sbc_vvm,
-        rvv_op,
-        &SEW_LIST,
-        &LMUL_LIST,
-        "vsbc.vvm",
-    )
+    run_template_v_vvm(expected_op_sbc_vvm, rvv_op, "vsbc.vvm")
 }
 
-fn expected_op_sbc_vxm(result: &mut [u8], lhs: &[u8], x: u64, mask: bool) {
+fn expected_op_sbc_vxm(lhs: &[u8], x: u64, result: &mut [u8], mask: bool) {
     match lhs.len() {
         8 => {
             let l = i64::from_le_bytes(lhs.try_into().unwrap());
@@ -626,16 +582,10 @@ fn test_vsbc_vxm() {
             rvv_asm!("mv t0, {}", "vsbc.vxm v24, v8, t0, v0", in (reg) x);
         }
     }
-    run_template_vxm(
-        expected_op_sbc_vxm,
-        rvv_op,
-        &SEW_LIST,
-        &LMUL_LIST,
-        "vsbc.vxm",
-    );
+    run_template_v_vxm(expected_op_sbc_vxm, rvv_op, "vsbc.vxm");
 }
 
-fn expected_op_msbc_vvm(result: &mut bool, lhs: &[u8], rhs: &[u8], mask: bool) {
+fn expected_op_msbc_vvm(lhs: &[u8], rhs: &[u8], result: &mut bool, mask: bool) {
     match lhs.len() {
         8 => {
             let l = u64::from_le_bytes(lhs.try_into().unwrap());
@@ -667,16 +617,10 @@ fn test_vmsbc_vvm() {
         }
     }
 
-    run_template_mvvm(
-        expected_op_msbc_vvm,
-        rvv_op,
-        &SEW_LIST,
-        &LMUL_LIST,
-        "vmsbc.vvm",
-    )
+    run_template_m_vvm(expected_op_msbc_vvm, rvv_op, "vmsbc.vvm")
 }
 
-fn expected_op_msbc_vxm(result: &mut bool, lhs: &[u8], x: u64, mask: bool) {
+fn expected_op_msbc_vxm(lhs: &[u8], x: u64, result: &mut bool, mask: bool) {
     match lhs.len() {
         8 => {
             let l = u64::from_le_bytes(lhs.try_into().unwrap());
@@ -708,18 +652,12 @@ fn test_vmsbc_vxm() {
         }
     }
 
-    run_template_mvxm(
-        expected_op_msbc_vxm,
-        rvv_op,
-        &SEW_LIST,
-        &LMUL_LIST,
-        "vmsbc.vxm",
-    )
+    run_template_m_vxm(expected_op_msbc_vxm, rvv_op, "vmsbc.vxm")
 }
 
 fn test_vmsbc_vv() {
-    fn exp_op(result: &mut bool, lhs: &[u8], rhs: &[u8]) {
-        expected_op_msbc_vvm(result, lhs, rhs, false);
+    fn exp_op(lhs: &[u8], rhs: &[u8], result: &mut bool) {
+        expected_op_msbc_vvm(lhs, rhs, result, false);
     }
     fn rvv_op(_: &[u8], _: &[u8], _: MaskType) {
         unsafe {
@@ -727,12 +665,12 @@ fn test_vmsbc_vv() {
         }
     }
 
-    run_template_mvv(exp_op, rvv_op, &SEW_LIST, &LMUL_LIST, "vmsbc.vv")
+    run_template_m_vv(exp_op, rvv_op, false, "vmsbc.vv")
 }
 
 fn test_vmsbc_vx() {
-    fn exp_op(result: &mut bool, lhs: &[u8], rhs: u64) {
-        expected_op_msbc_vxm(result, lhs, rhs, false);
+    fn exp_op(lhs: &[u8], rhs: u64, result: &mut bool) {
+        expected_op_msbc_vxm(lhs, rhs, result, false);
     }
     fn rvv_op(_: &[u8], rhs: &[u8], _: MaskType) {
         let x = u64::from_le_bytes(rhs.try_into().unwrap());
@@ -741,7 +679,7 @@ fn test_vmsbc_vx() {
         }
     }
 
-    run_template_mvx(exp_op, rvv_op, &SEW_LIST, &LMUL_LIST, "vmsbc.vx")
+    run_template_m_vx(exp_op, rvv_op, false, "vmsbc.vx")
 }
 
 pub fn test_adc_sbc() {
