@@ -13,7 +13,7 @@ use crate::intrinsic::{
 use crate::misc::{avl_iterator, VLEN};
 
 use super::log;
-use super::misc::{get_bit_in_slice, is_verbose, set_bit_in_slice};
+use super::misc::{get_bit_in_slice, is_simple, is_verbose, set_bit_in_slice};
 use super::rng::BestNumberRng;
 
 pub enum WideningCategory {
@@ -851,18 +851,25 @@ fn run_template_ext(
     let imm_begin = get_imm_begin(left_type, right_type);
     let mut imm = imm_begin;
 
-    //let sews = &[64, 256];
-    let sews = &[8, 16, 32, 64, 128, 256, 512, 1024];
-    let lmuls = &[-8, -4, -2, 1, 2, 4, 8];
+    let sews = if is_simple() {
+        [64, 256].to_vec()
+    } else {
+        [8, 16, 32, 64, 128, 256, 512, 1024].to_vec()
+    };
+    let lmuls = if is_simple() {
+        [-8, 1, 8].to_vec()
+    } else {
+        [-8, -4, -2, 1, 2, 4, 8].to_vec()
+    };
 
     for sew in sews {
-        for lmul in lmuls {
-            for avl in avl_iterator(sew.clone(), *lmul, 2) {
-                if vsetvl(avl, *sew, *lmul) == 0 {
+        for lmul in lmuls.clone() {
+            for avl in avl_iterator(sew.clone(), lmul, 2) {
+                if vsetvl(avl, sew, lmul) == 0 {
                     continue;
                 }
 
-                if !before_op.clone()(*sew as f64, RVVTestData::get_lmul(*lmul), avl) {
+                if !before_op.clone()(sew as f64, RVVTestData::get_lmul(lmul), avl) {
                     continue;
                 }
 
