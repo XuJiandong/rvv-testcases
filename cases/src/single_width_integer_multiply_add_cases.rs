@@ -1404,7 +1404,7 @@ fn expected_op_wmaccus_vx(lhs: &[u8], rhs: u64, result: &mut [u8]) {
             let l = i8::from_le_bytes(lhs.try_into().unwrap()) as i16;
             let r = rhs as u8 as i16;
             let extra = i16::from_le_bytes(result.try_into().unwrap());
-            
+
             let res1 = l.wrapping_mul(r);
             let res2 = res1.wrapping_add(extra);
             result.copy_from_slice(&res2.to_le_bytes());

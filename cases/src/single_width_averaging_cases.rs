@@ -531,52 +531,52 @@ fn test_vasub_vx() {
         assert!(lhs.len() == result.len());
         let sew = lhs.len() * 8;
         match sew {
-            
             8 => {
                 let (r, _) = (to_i8(lhs) as i16).overflowing_sub((x as i8) as i16);
                 let r2 = (r >> 1) as i8;
                 result.copy_from_slice(&r2.to_le_bytes());
             }
-            
+
             16 => {
                 let (r, _) = (to_i16(lhs) as i32).overflowing_sub((x as i16) as i32);
                 let r2 = (r >> 1) as i16;
                 result.copy_from_slice(&r2.to_le_bytes());
             }
-            
+
             32 => {
                 let (r, _) = (to_i32(lhs) as i64).overflowing_sub((x as i32) as i64);
                 let r2 = (r >> 1) as i32;
                 result.copy_from_slice(&r2.to_le_bytes());
             }
-            
+
             64 => {
                 let (r, _) = (to_i64(lhs) as i128).overflowing_sub((x as i64) as i128);
                 let r2 = (r >> 1) as i64;
                 result.copy_from_slice(&r2.to_le_bytes());
             }
-            
-            
+
             128 => {
                 let (r, _) = conver_to_i256(E128::get(lhs)).overflowing_sub_s(E256::from(x as i64));
                 r.wrapping_shr(1).0.put(result);
             }
-            
+
             256 => {
                 let (r, _) = conver_to_i512(E256::get(lhs)).overflowing_sub_s(E512::from(x as i64));
                 r.wrapping_shr(1).0.put(result);
             }
-            
+
             512 => {
-                let (r, _) = conver_to_i1024(E512::get(lhs)).overflowing_sub_s(E1024::from(x as i64));
+                let (r, _) =
+                    conver_to_i1024(E512::get(lhs)).overflowing_sub_s(E1024::from(x as i64));
                 r.wrapping_shr(1).0.put(result);
             }
-            
+
             1024 => {
-                let (r, _) = conver_to_i2048(E1024::get(lhs)).overflowing_sub_s(E2048::from(x as i64));
+                let (r, _) =
+                    conver_to_i2048(E1024::get(lhs)).overflowing_sub_s(E2048::from(x as i64));
                 r.wrapping_shr(1).0.put(result);
             }
-            
+
             _ => {
                 panic!("expected_op_aadd");
             }

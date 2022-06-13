@@ -389,7 +389,6 @@ fn test_vmadc_vvm() {
 fn expected_op_madc_vxm(lhs: &[u8], x: u64, result: &mut bool, mask: bool) {
     let sew = lhs.len() * 8;
     match sew {
-        
         8 => {
             let l = u8::from_le_bytes(lhs.try_into().unwrap());
 
@@ -422,7 +421,7 @@ fn expected_op_madc_vxm(lhs: &[u8], x: u64, result: &mut bool, mask: bool) {
 
             *result = carry1 | carry2;
         }
-        
+
         128 => {
             let l = E128::get(lhs);
             let r = E128::from(x as i64);
@@ -734,7 +733,6 @@ fn expected_op_sbc_vvm(lhs: &[u8], rhs: &[u8], result: &mut [u8], mask: bool) {
     assert_eq!(rhs.len(), result.len());
     let sew = lhs.len() * 8;
     match sew {
-        
         8 => {
             let l = i8::from_le_bytes(lhs.try_into().unwrap());
             let r = i8::from_le_bytes(rhs.try_into().unwrap());
@@ -771,7 +769,7 @@ fn expected_op_sbc_vvm(lhs: &[u8], rhs: &[u8], result: &mut [u8], mask: bool) {
 
             result.copy_from_slice(&res.to_le_bytes());
         }
-        
+
         128 => {
             let l = E128::get(lhs);
             let r = E128::get(rhs);
@@ -822,7 +820,6 @@ fn test_vsbc_vvm() {
 fn expected_op_sbc_vxm(lhs: &[u8], x: u64, result: &mut [u8], mask: bool) {
     let sew = lhs.len() * 8;
     match sew {
-        
         8 => {
             let l = i8::from_le_bytes(lhs.try_into().unwrap());
 
@@ -855,7 +852,7 @@ fn expected_op_sbc_vxm(lhs: &[u8], x: u64, result: &mut [u8], mask: bool) {
 
             result.copy_from_slice(&res.to_le_bytes());
         }
-        
+
         128 => {
             let l = E128::get(lhs);
             let r = E128::from(x as i64);
@@ -906,7 +903,6 @@ fn test_vsbc_vxm() {
 fn expected_op_msbc_vvm(lhs: &[u8], rhs: &[u8], result: &mut bool, mask: bool) {
     let sew = lhs.len() * 8;
     match sew {
-        
         8 => {
             let l = u8::from_le_bytes(lhs.try_into().unwrap());
             let r = u8::from_le_bytes(rhs.try_into().unwrap());
@@ -943,7 +939,7 @@ fn expected_op_msbc_vvm(lhs: &[u8], rhs: &[u8], result: &mut bool, mask: bool) {
 
             *result = carry1 | carry2;
         }
-        
+
         128 => {
             let l = E128::get(lhs);
             let r = E128::get(rhs);
@@ -998,7 +994,6 @@ fn test_vmsbc_vvm() {
 fn expected_op_msbc_vxm(lhs: &[u8], x: u64, result: &mut bool, mask: bool) {
     let sew = lhs.len() * 8;
     match sew {
-        
         8 => {
             let l = u8::from_le_bytes(lhs.try_into().unwrap());
 
@@ -1031,7 +1026,7 @@ fn expected_op_msbc_vxm(lhs: &[u8], x: u64, result: &mut bool, mask: bool) {
 
             *result = carry1 | carry2;
         }
-        
+
         128 => {
             let l = E128::get(lhs);
             let r = E128::from(x as i64);

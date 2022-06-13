@@ -342,7 +342,6 @@ fn expected_le(lhs: &[u8], rhs: &[u8], result: &mut bool) {
     assert_eq!(lhs.len(), rhs.len());
     let sew = lhs.len() * 8;
     match sew {
-        
         8 => {
             let l = i8::from_le_bytes(lhs.try_into().unwrap());
             let r = i8::from_le_bytes(rhs.try_into().unwrap());
@@ -363,7 +362,7 @@ fn expected_le(lhs: &[u8], rhs: &[u8], result: &mut bool) {
             let r = i64::from_le_bytes(rhs.try_into().unwrap());
             *result = l <= r;
         }
-        
+
         128 => {
             let l = E128::get(lhs);
             let r = E128::get(rhs);

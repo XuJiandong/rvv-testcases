@@ -17,7 +17,7 @@ fn expected_op_sub(lhs: &[u8], rhs: &[u8], result: &mut [u8]) {
         }
         4 => {
             let r = u32::from_le_bytes(lhs.try_into().unwrap())
-            .wrapping_sub(u32::from_le_bytes(rhs.try_into().unwrap()));
+                .wrapping_sub(u32::from_le_bytes(rhs.try_into().unwrap()));
             result.copy_from_slice(&r.to_le_bytes());
         }
         8 => {
