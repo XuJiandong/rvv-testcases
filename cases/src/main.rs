@@ -76,6 +76,7 @@ fn program_entry(argc: u64, argv: *const *const u8) -> i8 {
             set_verbose(true)
         }
     }
+    if argc > 2 {}
     test_case!(vsetvl_cases::test_vsetvl, test_pattern);
 
     test_case!(misc_cases::test_add, test_pattern);

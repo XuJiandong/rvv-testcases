@@ -1,5 +1,5 @@
 use core::{arch::asm, convert::TryInto};
-use eint::{Eint, E256};
+use eint::{Eint, E1024, E128, E256, E512};
 use rvv_asm::rvv_asm;
 use rvv_testcases::runner::{run_template_v_vim, run_template_v_vvm, run_template_v_vxm, MaskType};
 
@@ -24,8 +24,14 @@ fn test_vmerge_vxm() {
     fn exp_op(lhs: &[u8], x: u64, result: &mut [u8], mask: bool) {
         if mask {
             match result.len() {
-                8 => result.copy_from_slice(&x.to_le_bytes()),
+                1 => result.copy_from_slice(&(x as u8).to_le_bytes()),
+                2 => result.copy_from_slice(&(x as u16).to_le_bytes()),
+                4 => result.copy_from_slice(&(x as u32).to_le_bytes()),
+                8 => result.copy_from_slice(&(x as u64).to_le_bytes()),
+                16 => E128::from(x as i64).put(result),
                 32 => E256::from(x as i64).put(result),
+                64 => E512::from(x as i64).put(result),
+                128 => E1024::from(x as i64).put(result),
                 _ => panic!("Abort"),
             }
         } else {
@@ -46,8 +52,14 @@ fn test_vmerge_vim() {
     fn exp_op(lhs: &[u8], x: i64, result: &mut [u8], mask: bool) {
         if mask {
             match result.len() {
-                8 => result.copy_from_slice(&x.to_le_bytes()),
+                1 => result.copy_from_slice(&(x as u8).to_le_bytes()),
+                2 => result.copy_from_slice(&(x as u16).to_le_bytes()),
+                4 => result.copy_from_slice(&(x as u32).to_le_bytes()),
+                8 => result.copy_from_slice(&(x as u64).to_le_bytes()),
+                16 => E128::from(x).put(result),
                 32 => E256::from(x).put(result),
+                64 => E512::from(x).put(result),
+                128 => E1024::from(x).put(result),
                 _ => panic!("Abort"),
             }
         } else {

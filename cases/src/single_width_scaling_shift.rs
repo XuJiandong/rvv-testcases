@@ -1,33 +1,44 @@
 use core::{arch::asm, convert::TryInto};
-use eint::{Eint, E256};
+use eint::{Eint, E1024, E128, E256, E512};
 use rvv_asm::rvv_asm;
 use rvv_testcases::runner::{run_template_v_vi, run_template_v_vv, run_template_v_vx, MaskType};
 
 fn expected_op_vssrl_vx(lhs: &[u8], x: u64, result: &mut [u8]) {
     assert_eq!(lhs.len(), result.len());
-    match lhs.len() {
-        1 => {
+    match lhs.len() * 8 {
+        8 => {
             let res = lhs[0].wrapping_shr(x as u32);
             result.copy_from_slice(&res.to_le_bytes());
         }
-        2 => {
+        16 => {
             let res = u16::from_le_bytes(lhs.try_into().unwrap()).wrapping_shr(x as u32);
             result.copy_from_slice(&res.to_le_bytes());
         }
-        4 => {
+        32 => {
             let res = u32::from_le_bytes(lhs.try_into().unwrap()).wrapping_shr(x as u32);
             result.copy_from_slice(&res.to_le_bytes());
         }
-        8 => {
+        64 => {
             let res = u64::from_le_bytes(lhs.try_into().unwrap()).wrapping_shr(x as u32);
             result.copy_from_slice(&res.to_le_bytes());
         }
-        16 => {
-            let res = u128::from_le_bytes(lhs.try_into().unwrap()).wrapping_shr(x as u32);
-            result.copy_from_slice(&res.to_le_bytes());
+        128 => {
+            let l = E128::get(lhs);
+            let r = l.wrapping_shr(x as u32);
+            r.put(result);
         }
-        32 => {
+        256 => {
             let l = E256::get(lhs);
+            let r = l.wrapping_shr(x as u32);
+            r.put(result);
+        }
+        512 => {
+            let l = E512::get(lhs);
+            let r = l.wrapping_shr(x as u32);
+            r.put(result);
+        }
+        1024 => {
+            let l = E1024::get(lhs);
             let r = l.wrapping_shr(x as u32);
             r.put(result);
         }
@@ -56,34 +67,47 @@ fn test_vssrl_vx() {
 
 fn expected_op_ssrl_vv(lhs: &[u8], rhs: &[u8], result: &mut [u8]) {
     assert!(lhs.len() == rhs.len() && rhs.len() == result.len());
-    match lhs.len() {
-        1 => {
+    match lhs.len() * 8 {
+        8 => {
             let res = lhs[0].wrapping_shr(rhs[0] as u32);
             result.copy_from_slice(&res.to_le_bytes());
         }
-        2 => {
+        16 => {
             let x = u16::from_le_bytes(rhs.try_into().unwrap()) as u32;
             let res = u16::from_le_bytes(lhs.try_into().unwrap()).wrapping_shr(x);
             result.copy_from_slice(&res.to_le_bytes());
         }
-        4 => {
+        32 => {
             let x = u32::from_le_bytes(rhs.try_into().unwrap()) as u32;
             let res = u32::from_le_bytes(lhs.try_into().unwrap()).wrapping_shr(x);
             result.copy_from_slice(&res.to_le_bytes());
         }
-        8 => {
+        64 => {
             let x = u64::from_le_bytes(rhs.try_into().unwrap()) as u32;
             let res = u64::from_le_bytes(lhs.try_into().unwrap()).wrapping_shr(x);
             result.copy_from_slice(&res.to_le_bytes());
         }
-        16 => {
-            let x = u128::from_le_bytes(rhs.try_into().unwrap()) as u32;
-            let res = u128::from_le_bytes(lhs.try_into().unwrap()).wrapping_shr(x);
-            result.copy_from_slice(&res.to_le_bytes());
+        128 => {
+            let x = E128::get(rhs).u32();
+            let l = E128::get(lhs);
+            let r = l.wrapping_shr(x);
+            r.put(result);
         }
-        32 => {
+        256 => {
             let x = E256::get(rhs).u32();
             let l = E256::get(lhs);
+            let r = l.wrapping_shr(x);
+            r.put(result);
+        }
+        512 => {
+            let x = E512::get(rhs).u32();
+            let l = E512::get(lhs);
+            let r = l.wrapping_shr(x);
+            r.put(result);
+        }
+        1024 => {
+            let x = E1024::get(rhs).u32();
+            let l = E1024::get(lhs);
             let r = l.wrapping_shr(x);
             r.put(result);
         }
@@ -417,29 +441,40 @@ fn test_vssrl_vi() {
 
 fn expected_op_vssra_vx(lhs: &[u8], x: u64, result: &mut [u8]) {
     assert_eq!(lhs.len(), result.len());
-    match lhs.len() {
-        1 => {
+    match lhs.len() * 8 {
+        8 => {
             let res = (lhs[0] as i8).wrapping_shr(x as u32);
             result.copy_from_slice(&res.to_le_bytes());
         }
-        2 => {
+        16 => {
             let res = i16::from_le_bytes(lhs.try_into().unwrap()).wrapping_shr(x as u32);
             result.copy_from_slice(&res.to_le_bytes());
         }
-        4 => {
+        32 => {
             let res = i32::from_le_bytes(lhs.try_into().unwrap()).wrapping_shr(x as u32);
             result.copy_from_slice(&res.to_le_bytes());
         }
-        8 => {
+        64 => {
             let res = i64::from_le_bytes(lhs.try_into().unwrap()).wrapping_shr(x as u32);
             result.copy_from_slice(&res.to_le_bytes());
         }
-        16 => {
-            let res = i128::from_le_bytes(lhs.try_into().unwrap()).wrapping_shr(x as u32);
-            result.copy_from_slice(&res.to_le_bytes());
+        128 => {
+            let l = E128::get(lhs);
+            let r = l.wrapping_sra(x as u32);
+            r.put(result);
         }
-        32 => {
+        256 => {
             let l = E256::get(lhs);
+            let r = l.wrapping_sra(x as u32);
+            r.put(result);
+        }
+        512 => {
+            let l = E512::get(lhs);
+            let r = l.wrapping_sra(x as u32);
+            r.put(result);
+        }
+        1024 => {
+            let l = E1024::get(lhs);
             let r = l.wrapping_sra(x as u32);
             r.put(result);
         }
@@ -468,34 +503,47 @@ fn test_vssra_vx() {
 
 fn expected_op_ssra_vv(lhs: &[u8], rhs: &[u8], result: &mut [u8]) {
     assert!(lhs.len() == rhs.len() && rhs.len() == result.len());
-    match lhs.len() {
-        1 => {
+    match lhs.len() * 8 {
+        8 => {
             let res = (lhs[0] as i8).wrapping_shr(rhs[0] as u32);
             result.copy_from_slice(&res.to_le_bytes());
         }
-        2 => {
+        16 => {
             let x = u16::from_le_bytes(rhs.try_into().unwrap()) as u32;
             let res = i16::from_le_bytes(lhs.try_into().unwrap()).wrapping_shr(x);
             result.copy_from_slice(&res.to_le_bytes());
         }
-        4 => {
+        32 => {
             let x = u32::from_le_bytes(rhs.try_into().unwrap()) as u32;
             let res = i32::from_le_bytes(lhs.try_into().unwrap()).wrapping_shr(x);
             result.copy_from_slice(&res.to_le_bytes());
         }
-        8 => {
+        64 => {
             let x = u64::from_le_bytes(rhs.try_into().unwrap()) as u32;
             let res = i64::from_le_bytes(lhs.try_into().unwrap()).wrapping_shr(x);
             result.copy_from_slice(&res.to_le_bytes());
         }
-        16 => {
-            let x = u128::from_le_bytes(rhs.try_into().unwrap()) as u32;
-            let res = i128::from_le_bytes(lhs.try_into().unwrap()).wrapping_shr(x);
-            result.copy_from_slice(&res.to_le_bytes());
+        128 => {
+            let x = E128::get(rhs).u32();
+            let l = E128::get(lhs);
+            let r = l.wrapping_sra(x);
+            r.put(result);
         }
-        32 => {
+        256 => {
             let x = E256::get(rhs).u32();
             let l = E256::get(lhs);
+            let r = l.wrapping_sra(x);
+            r.put(result);
+        }
+        512 => {
+            let x = E512::get(rhs).u32();
+            let l = E512::get(lhs);
+            let r = l.wrapping_sra(x);
+            r.put(result);
+        }
+        1024 => {
+            let x = E1024::get(rhs).u32();
+            let l = E1024::get(lhs);
             let r = l.wrapping_sra(x);
             r.put(result);
         }

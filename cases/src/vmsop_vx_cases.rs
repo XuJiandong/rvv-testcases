@@ -1,17 +1,46 @@
 use core::{arch::asm, convert::TryInto};
-use eint::{Eint, E256};
+use eint::{Eint, E1024, E128, E256, E512};
 use rvv_asm::rvv_asm;
 use rvv_testcases::runner::{run_template_m_vx, MaskType};
 
 fn expected_op_eq(lhs: &[u8], x: u64, result: &mut bool) {
-    match lhs.len() {
+    let sew = lhs.len() * 8;
+    match sew {
         8 => {
+            let l = i8::from_le_bytes(lhs.try_into().unwrap());
+            *result = l == x as i8;
+        }
+        16 => {
+            let l = i16::from_le_bytes(lhs.try_into().unwrap());
+            *result = l == x as i16;
+        }
+        32 => {
+            let l = i32::from_le_bytes(lhs.try_into().unwrap());
+            *result = l == x as i32;
+        }
+        64 => {
             let l = i64::from_le_bytes(lhs.try_into().unwrap());
             *result = l == x as i64;
         }
-        32 => {
+
+        128 => {
+            let l = E128::get(lhs);
+            let r = E128::from(x as i64);
+            *result = l.cmp_s(&r).is_eq();
+        }
+        256 => {
             let l = E256::get(lhs);
             let r = E256::from(x as i64);
+            *result = l.cmp_s(&r).is_eq();
+        }
+        512 => {
+            let l = E512::get(lhs);
+            let r = E512::from(x as i64);
+            *result = l.cmp_s(&r).is_eq();
+        }
+        1024 => {
+            let l = E1024::get(lhs);
+            let r = E1024::from(x as i64);
             *result = l.cmp_s(&r).is_eq();
         }
         _ => {
@@ -38,14 +67,43 @@ fn test_vmseq() {
 }
 
 fn expected_op_ne(lhs: &[u8], x: u64, result: &mut bool) {
-    match lhs.len() {
+    let sew = lhs.len() * 8;
+    match sew {
         8 => {
+            let l = i8::from_le_bytes(lhs.try_into().unwrap());
+            *result = l != x as i8;
+        }
+        16 => {
+            let l = i16::from_le_bytes(lhs.try_into().unwrap());
+            *result = l != x as i16;
+        }
+        32 => {
+            let l = i32::from_le_bytes(lhs.try_into().unwrap());
+            *result = l != x as i32;
+        }
+        64 => {
             let l = i64::from_le_bytes(lhs.try_into().unwrap());
             *result = l != x as i64;
         }
-        32 => {
+
+        128 => {
+            let l = E128::get(lhs);
+            let r = E128::from(x as i64);
+            *result = l.cmp_s(&r).is_ne();
+        }
+        256 => {
             let l = E256::get(lhs);
             let r = E256::from(x as i64);
+            *result = l.cmp_s(&r).is_ne();
+        }
+        512 => {
+            let l = E512::get(lhs);
+            let r = E512::from(x as i64);
+            *result = l.cmp_s(&r).is_ne();
+        }
+        1024 => {
+            let l = E1024::get(lhs);
+            let r = E1024::from(x as i64);
             *result = l.cmp_s(&r).is_ne();
         }
         _ => {
@@ -72,14 +130,43 @@ fn test_vmsne() {
 }
 
 fn expected_op_ltu(lhs: &[u8], x: u64, result: &mut bool) {
-    match lhs.len() {
+    let sew = lhs.len() * 8;
+    match sew {
         8 => {
-            let l = u64::from_le_bytes(lhs.try_into().unwrap());
-            *result = l < x;
+            let l = u8::from_le_bytes(lhs.try_into().unwrap());
+            *result = l < (x as u8);
+        }
+        16 => {
+            let l = u16::from_le_bytes(lhs.try_into().unwrap());
+            *result = l < (x as u16);
         }
         32 => {
+            let l = u32::from_le_bytes(lhs.try_into().unwrap());
+            *result = l < (x as u32);
+        }
+        64 => {
+            let l = u64::from_le_bytes(lhs.try_into().unwrap());
+            *result = l < (x as u64);
+        }
+
+        128 => {
+            let l = E128::get(lhs);
+            let r = E128::from(x as i64);
+            *result = l.cmp_u(&r).is_lt();
+        }
+        256 => {
             let l = E256::get(lhs);
             let r = E256::from(x as i64);
+            *result = l.cmp_u(&r).is_lt();
+        }
+        512 => {
+            let l = E512::get(lhs);
+            let r = E512::from(x as i64);
+            *result = l.cmp_u(&r).is_lt();
+        }
+        1024 => {
+            let l = E1024::get(lhs);
+            let r = E1024::from(x as i64);
             *result = l.cmp_u(&r).is_lt();
         }
         _ => {
@@ -106,15 +193,47 @@ fn test_vmsltu() {
 }
 
 fn expected_op_lt(lhs: &[u8], x: u64, result: &mut bool) {
-    match lhs.len() {
+    let sew = lhs.len() * 8;
+    match sew {
         8 => {
+            let l = i8::from_le_bytes(lhs.try_into().unwrap());
+            let r = x as i8;
+            *result = l < r;
+        }
+        16 => {
+            let l = i16::from_le_bytes(lhs.try_into().unwrap());
+            let r = x as i16;
+            *result = l < r;
+        }
+        32 => {
+            let l = i32::from_le_bytes(lhs.try_into().unwrap());
+            let r = x as i32;
+            *result = l < r;
+        }
+        64 => {
             let l = i64::from_le_bytes(lhs.try_into().unwrap());
             let r = x as i64;
             *result = l < r;
         }
-        32 => {
+
+        128 => {
+            let l = E128::get(lhs);
+            let r = E128::from(x as i64);
+            *result = l.cmp_s(&r).is_lt();
+        }
+        256 => {
             let l = E256::get(lhs);
             let r = E256::from(x as i64);
+            *result = l.cmp_s(&r).is_lt();
+        }
+        512 => {
+            let l = E512::get(lhs);
+            let r = E512::from(x as i64);
+            *result = l.cmp_s(&r).is_lt();
+        }
+        1024 => {
+            let l = E1024::get(lhs);
+            let r = E1024::from(x as i64);
             *result = l.cmp_s(&r).is_lt();
         }
         _ => {
@@ -141,14 +260,43 @@ fn test_vmslt() {
 }
 
 fn expected_op_leu(lhs: &[u8], x: u64, result: &mut bool) {
-    match lhs.len() {
+    let sew = lhs.len() * 8;
+    match sew {
         8 => {
-            let l = u64::from_le_bytes(lhs.try_into().unwrap());
-            *result = l <= x;
+            let l = u8::from_le_bytes(lhs.try_into().unwrap());
+            *result = l <= (x as u8);
+        }
+        16 => {
+            let l = u16::from_le_bytes(lhs.try_into().unwrap());
+            *result = l <= (x as u16);
         }
         32 => {
+            let l = u32::from_le_bytes(lhs.try_into().unwrap());
+            *result = l <= (x as u32);
+        }
+        64 => {
+            let l = u64::from_le_bytes(lhs.try_into().unwrap());
+            *result = l <= (x as u64);
+        }
+
+        128 => {
+            let l = E128::get(lhs);
+            let r = E128::from(x as i64);
+            *result = l.cmp_u(&r).is_le();
+        }
+        256 => {
             let l = E256::get(lhs);
             let r = E256::from(x as i64);
+            *result = l.cmp_u(&r).is_le();
+        }
+        512 => {
+            let l = E512::get(lhs);
+            let r = E512::from(x as i64);
+            *result = l.cmp_u(&r).is_le();
+        }
+        1024 => {
+            let l = E1024::get(lhs);
+            let r = E1024::from(x as i64);
             *result = l.cmp_u(&r).is_le();
         }
         _ => {
@@ -175,14 +323,43 @@ fn test_vmsleu() {
 }
 
 fn expected_op_le(lhs: &[u8], x: u64, result: &mut bool) {
-    match lhs.len() {
+    let sew = lhs.len() * 8;
+    match sew {
         8 => {
-            let l = i64::from_le_bytes(lhs.try_into().unwrap());
-            *result = l <= x as i64;
+            let l = i8::from_le_bytes(lhs.try_into().unwrap());
+            *result = l <= (x as i8);
+        }
+        16 => {
+            let l = i16::from_le_bytes(lhs.try_into().unwrap());
+            *result = l <= (x as i16);
         }
         32 => {
+            let l = i32::from_le_bytes(lhs.try_into().unwrap());
+            *result = l <= (x as i32);
+        }
+        64 => {
+            let l = i64::from_le_bytes(lhs.try_into().unwrap());
+            *result = l <= (x as i64);
+        }
+
+        128 => {
+            let l = E128::get(lhs);
+            let r = E128::from(x as i64);
+            *result = l.cmp_s(&r).is_le();
+        }
+        256 => {
             let l = E256::get(lhs);
             let r = E256::from(x as i64);
+            *result = l.cmp_s(&r).is_le();
+        }
+        512 => {
+            let l = E512::get(lhs);
+            let r = E512::from(x as i64);
+            *result = l.cmp_s(&r).is_le();
+        }
+        1024 => {
+            let l = E1024::get(lhs);
+            let r = E1024::from(x as i64);
             *result = l.cmp_s(&r).is_le();
         }
         _ => {
@@ -209,14 +386,43 @@ fn test_vmsle() {
 }
 
 fn expected_op_gtu(lhs: &[u8], x: u64, result: &mut bool) {
-    match lhs.len() {
+    let sew = lhs.len() * 8;
+    match sew {
         8 => {
-            let l = u64::from_le_bytes(lhs.try_into().unwrap());
-            *result = l > x;
+            let l = u8::from_le_bytes(lhs.try_into().unwrap());
+            *result = l > (x as u8);
+        }
+        16 => {
+            let l = u16::from_le_bytes(lhs.try_into().unwrap());
+            *result = l > (x as u16);
         }
         32 => {
+            let l = u32::from_le_bytes(lhs.try_into().unwrap());
+            *result = l > (x as u32);
+        }
+        64 => {
+            let l = u64::from_le_bytes(lhs.try_into().unwrap());
+            *result = l > (x as u64);
+        }
+
+        128 => {
+            let l = E128::get(lhs);
+            let r = E128::from(x as i64);
+            *result = l.cmp_u(&r).is_gt();
+        }
+        256 => {
             let l = E256::get(lhs);
             let r = E256::from(x as i64);
+            *result = l.cmp_u(&r).is_gt();
+        }
+        512 => {
+            let l = E512::get(lhs);
+            let r = E512::from(x as i64);
+            *result = l.cmp_u(&r).is_gt();
+        }
+        1024 => {
+            let l = E1024::get(lhs);
+            let r = E1024::from(x as i64);
             *result = l.cmp_u(&r).is_gt();
         }
         _ => {
@@ -243,14 +449,43 @@ fn test_vmsgtu() {
 }
 
 fn expected_op_gt(lhs: &[u8], x: u64, result: &mut bool) {
-    match lhs.len() {
+    let sew = lhs.len() * 8;
+    match sew {
         8 => {
+            let l = i8::from_le_bytes(lhs.try_into().unwrap());
+            *result = l > x as i8;
+        }
+        16 => {
+            let l = i16::from_le_bytes(lhs.try_into().unwrap());
+            *result = l > x as i16;
+        }
+        32 => {
+            let l = i32::from_le_bytes(lhs.try_into().unwrap());
+            *result = l > x as i32;
+        }
+        64 => {
             let l = i64::from_le_bytes(lhs.try_into().unwrap());
             *result = l > x as i64;
         }
-        32 => {
+
+        128 => {
+            let l = E128::get(lhs);
+            let r = E128::from(x as i64);
+            *result = l.cmp_s(&r).is_gt();
+        }
+        256 => {
             let l = E256::get(lhs);
             let r = E256::from(x as i64);
+            *result = l.cmp_s(&r).is_gt();
+        }
+        512 => {
+            let l = E512::get(lhs);
+            let r = E512::from(x as i64);
+            *result = l.cmp_s(&r).is_gt();
+        }
+        1024 => {
+            let l = E1024::get(lhs);
+            let r = E1024::from(x as i64);
             *result = l.cmp_s(&r).is_gt();
         }
         _ => {

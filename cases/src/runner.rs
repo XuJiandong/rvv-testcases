@@ -851,7 +851,8 @@ fn run_template_ext(
     let imm_begin = get_imm_begin(left_type, right_type);
     let mut imm = imm_begin;
 
-    let sews = &[64, 256];
+    //let sews = &[64, 256];
+    let sews = &[8, 16, 32, 64, 128, 256, 512, 1024];
     let lmuls = &[-8, -4, -2, 1, 2, 4, 8];
 
     for sew in sews {
@@ -1439,7 +1440,10 @@ pub fn run_template_v_n(
     enable_mask: bool,
     desc: &str,
 ) {
-    fn before_op_2(_: f64, lmul: f64, _: u64) -> bool {
+    fn before_op_2(sew: f64, lmul: f64, _: u64) -> bool {
+        if sew <= 8.0 {
+            return false;
+        }
         let v = 0.5;
         let emul = lmul * v;
         if emul >= 0.125 && emul <= 8.0 {
@@ -1448,7 +1452,10 @@ pub fn run_template_v_n(
             false
         }
     }
-    fn before_op_4(_: f64, lmul: f64, _: u64) -> bool {
+    fn before_op_4(sew: f64, lmul: f64, _: u64) -> bool {
+        if sew <= 16.0 {
+            return false;
+        }
         let v = 0.25;
         let emul = lmul * v;
         if emul >= 0.125 && emul <= 8.0 {
@@ -1457,7 +1464,10 @@ pub fn run_template_v_n(
             false
         }
     }
-    fn before_op_8(_: f64, lmul: f64, _: u64) -> bool {
+    fn before_op_8(sew: f64, lmul: f64, _: u64) -> bool {
+        if sew <= 32.0 {
+            return false;
+        }
         let v = 0.125;
         let emul = lmul * v;
         if emul >= 0.125 && emul <= 8.0 {

@@ -1,6 +1,6 @@
 use alloc::vec::Vec;
 use core::{arch::asm, convert::TryInto};
-use eint::{Eint, E256};
+use eint::{Eint, E1024, E128, E256, E512};
 use rand::Rng;
 use rvv_asm::rvv_asm;
 use rvv_testcases::{
@@ -28,13 +28,40 @@ fn test_vmv_v_v() {
 
 fn test_vmv_v_x() {
     fn expected_op(_: &[u8], x: u64, result: &mut [u8]) {
-        match result.len() {
+        let sew = result.len() * 8;
+        match sew {
             8 => {
-                result.copy_from_slice(&x.to_le_bytes());
+                result.copy_from_slice(&(x as i8).to_le_bytes());
             }
+
+            16 => {
+                result.copy_from_slice(&(x as i16).to_le_bytes());
+            }
+
             32 => {
+                result.copy_from_slice(&(x as i32).to_le_bytes());
+            }
+
+            64 => {
+                result.copy_from_slice(&(x as i64).to_le_bytes());
+            }
+
+            128 => {
+                E128::from(x as i64).put(result);
+            }
+
+            256 => {
                 E256::from(x as i64).put(result);
             }
+
+            512 => {
+                E512::from(x as i64).put(result);
+            }
+
+            1024 => {
+                E1024::from(x as i64).put(result);
+            }
+
             _ => {
                 panic!("Abort");
             }
@@ -52,13 +79,40 @@ fn test_vmv_v_x() {
 
 fn test_vmv_v_i() {
     fn expected_op(_: &[u8], x: i64, result: &mut [u8]) {
-        match result.len() {
+        let sew = result.len() * 8;
+        match sew {
             8 => {
-                result.copy_from_slice(&x.to_le_bytes());
+                result.copy_from_slice(&(x as i8).to_le_bytes());
             }
+
+            16 => {
+                result.copy_from_slice(&(x as i16).to_le_bytes());
+            }
+
             32 => {
+                result.copy_from_slice(&(x as i32).to_le_bytes());
+            }
+
+            64 => {
+                result.copy_from_slice(&(x as i64).to_le_bytes());
+            }
+
+            128 => {
+                E128::from(x as i64).put(result);
+            }
+
+            256 => {
                 E256::from(x as i64).put(result);
             }
+
+            512 => {
+                E512::from(x as i64).put(result);
+            }
+
+            1024 => {
+                E1024::from(x as i64).put(result);
+            }
+
             _ => {
                 panic!("Abort");
             }
