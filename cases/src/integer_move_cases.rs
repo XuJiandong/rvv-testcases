@@ -1,11 +1,10 @@
 use alloc::vec::Vec;
 use core::{arch::asm, convert::TryInto};
 use eint::{Eint, E1024, E128, E256, E512};
-use rand::Rng;
 use rvv_asm::rvv_asm;
 use rvv_testcases::{
     misc::VLEN,
-    rng::BestNumberRng,
+    rng::fill_rand_bytes,
     runner::{run_template_v_vi, run_template_v_vv, run_template_v_vx, MaskType},
 };
 
@@ -229,15 +228,13 @@ fn test_vmv_v_i() {
 }
 
 fn test_vmv1r_v_v() {
-    let mut rng = BestNumberRng::default();
-
     let mut buffer = Vec::<u8>::new();
     buffer.resize(VLEN, 0);
-    rng.fill(buffer.as_mut_slice());
+    fill_rand_bytes(buffer.as_mut_slice());
 
     let mut result = Vec::<u8>::new();
     result.resize(VLEN, 0);
-    rng.fill(result.as_mut_slice());
+    fill_rand_bytes(result.as_mut_slice());
 
     let result2 = result.clone();
 
@@ -271,15 +268,13 @@ fn test_vmv1r_v_v() {
 }
 
 fn test_vmv2r_v_v() {
-    let mut rng = BestNumberRng::default();
-
     let mut buffer = Vec::<u8>::new();
     buffer.resize(VLEN, 0);
-    rng.fill(buffer.as_mut_slice());
+    fill_rand_bytes(buffer.as_mut_slice());
 
     let mut result = Vec::<u8>::new();
     result.resize(VLEN, 0);
-    rng.fill(result.as_mut_slice());
+    fill_rand_bytes(result.as_mut_slice());
 
     let result2 = result.clone();
 
@@ -318,15 +313,13 @@ fn test_vmv2r_v_v() {
 }
 
 fn test_vmv4r_v_v() {
-    let mut rng = BestNumberRng::default();
-
     let mut buffer = Vec::<u8>::new();
     buffer.resize(VLEN, 0);
-    rng.fill(buffer.as_mut_slice());
+    fill_rand_bytes(buffer.as_mut_slice());
 
     let mut result = Vec::<u8>::new();
     result.resize(VLEN, 0);
-    rng.fill(result.as_mut_slice());
+    fill_rand_bytes(result.as_mut_slice());
 
     let result2 = result.clone();
 
@@ -375,15 +368,13 @@ fn test_vmv4r_v_v() {
 }
 
 fn test_vmv8r_v_v() {
-    let mut rng = BestNumberRng::default();
-
     let mut buffer = Vec::<u8>::new();
     buffer.resize(VLEN, 0);
-    rng.fill(buffer.as_mut_slice());
+    fill_rand_bytes(buffer.as_mut_slice());
 
     let mut result = Vec::<u8>::new();
     result.resize(VLEN, 0);
-    rng.fill(result.as_mut_slice());
+    fill_rand_bytes(result.as_mut_slice());
 
     let result2 = result.clone();
 

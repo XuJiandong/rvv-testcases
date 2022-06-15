@@ -5,7 +5,6 @@ use core::fmt::{Display, Formatter, Result};
 use core::ops::Range;
 
 use ckb_std::syscalls::debug;
-use rand::Rng;
 
 use crate::intrinsic::{
     clean_cache_v16, clean_cache_v8, vl1r_v0, vle_v16, vle_v24, vle_v8, vse_v24, vsetvl,
@@ -14,7 +13,7 @@ use crate::misc::{avl_iterator, VLEN};
 
 use super::log;
 use super::misc::{get_bit_in_slice, is_simple, is_verbose, set_bit_in_slice};
-use super::rng::BestNumberRng;
+use super::rng::fill_rand_bytes;
 
 pub enum WideningCategory {
     None,
@@ -43,9 +42,8 @@ where
     let mut mask_v0 = [0u8; VLEN / 8];
     let mut vs2 = [0u8; VLEN / 8];
 
-    let mut rng = BestNumberRng::default();
-    rng.fill(&mut mask_v0[..]);
-    rng.fill(&mut vs2[..]);
+    fill_rand_bytes(&mut mask_v0[..]);
+    fill_rand_bytes(&mut vs2[..]);
 
     let vl = vsetvl(8, 256, 1) as usize;
     assert_eq!(vl, 8);
@@ -245,8 +243,6 @@ impl RVVTestData {
     }
 
     fn rng_fill(&mut self) {
-        let mut rng = BestNumberRng::default();
-
         // mask
         let mask_len = {
             let len = (self.avl / 8 + 1) as usize;
@@ -257,22 +253,22 @@ impl RVVTestData {
             }
         };
         self.mask.resize(mask_len, 0xFF);
-        rng.fill(self.mask.as_mut_slice());
+        fill_rand_bytes(self.mask.as_mut_slice());
 
         // lhs
         let lhs_len = self.lhs_type.get_buf_len(self.sew_bytes, self.avl as usize);
         self.lhs.resize(lhs_len, 0);
-        rng.fill(self.lhs.as_mut_slice());
+        fill_rand_bytes(self.lhs.as_mut_slice());
 
         // rhs
         let rhs_len = self.rhs_type.get_buf_len(self.sew_bytes, self.avl as usize);
         self.rhs.resize(rhs_len, 0);
-        rng.fill(self.rhs.as_mut_slice());
+        fill_rand_bytes(self.rhs.as_mut_slice());
 
         // res
         let res_len = self.res_type.get_buf_len(self.sew_bytes, self.avl as usize);
         self.res_before.resize(res_len, 0);
-        rng.fill(self.res_before.as_mut_slice());
+        fill_rand_bytes(self.res_before.as_mut_slice());
         self.res_rvv = self.res_before.clone();
         self.res_exp = self.res_before.clone();
     }

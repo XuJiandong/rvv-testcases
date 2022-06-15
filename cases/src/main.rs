@@ -55,6 +55,7 @@ use core::arch::asm;
 use core::slice::from_raw_parts;
 use core::stringify;
 use rvv_testcases::misc::{is_simple, is_verbose, set_simple, set_verbose};
+use rvv_testcases::rng::{get_seed, set_seed};
 use rvv_testcases::{log, test_case};
 
 ckb_std::entry!(program_entry);
@@ -73,14 +74,19 @@ fn program_entry(argc: u64, argv: *const *const u8) -> i8 {
             set_verbose(true);
         } else if data.find("--simple").is_some() {
             set_simple(true);
+        } else if data.find("--seed=").is_some() {
+            let pos = data.find("--seed=").unwrap() + 7;
+            let seed = data[pos..data.len()].parse::<usize>().unwrap();
+            set_seed(seed);
         }
     }
 
     log!(
-        "--StartTesting, case: {:?}, verbose: {}, simple: {}",
+        "--StartTesting, case: {:?}, verbose: {}, simple: {}, seed: {}",
         test_pattern,
         is_verbose(),
-        is_simple()
+        is_simple(),
+        get_seed()
     );
 
     test_case!(vsetvl_cases::test_vsetvl, test_pattern);

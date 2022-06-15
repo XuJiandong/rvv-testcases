@@ -7,3 +7,4 @@ pub mod intrinsic_setvl;
 pub mod misc;
 pub mod rng;
 pub mod runner;
+mod rng_data;

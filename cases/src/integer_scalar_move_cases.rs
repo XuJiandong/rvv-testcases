@@ -1,21 +1,19 @@
 use core::arch::asm;
-use rand::Rng;
 use rvv_asm::rvv_asm;
 
 use ckb_std::syscalls::debug;
 use rvv_testcases::intrinsic::{vl1r_v8, vs1r_v8, vsetvl};
 use rvv_testcases::log;
 use rvv_testcases::misc::{is_verbose, VLEN};
-use rvv_testcases::rng::BestNumberRng;
+use rvv_testcases::rng::fill_rand_bytes;
 
 fn vmv_x_s() {
     if is_verbose() {
         log!("test vmv.x.s");
     }
     let mut vs2 = [1u8; VLEN / 8];
-    let mut rng = BestNumberRng::default();
-    rng.fill(&mut vs2[..]);
-    rng.fill(&mut vs2[..]);
+    fill_rand_bytes(&mut vs2[..]);
+    fill_rand_bytes(&mut vs2[..]);
 
     let vl = vsetvl(32, 64, 1) as usize;
     assert_eq!(vl, 32);
@@ -62,9 +60,8 @@ fn vmv_s_x() {
     }
 
     let mut data = [1u8; VLEN / 8];
-    let mut rng = BestNumberRng::default();
-    rng.fill(&mut data[..]);
-    rng.fill(&mut data[..]);
+    fill_rand_bytes(&mut data[..]);
+    fill_rand_bytes(&mut data[..]);
 
     let vl = vsetvl(32, 64, 1) as usize;
     assert_eq!(vl, 32);

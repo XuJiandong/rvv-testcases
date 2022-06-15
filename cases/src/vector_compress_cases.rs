@@ -1,12 +1,11 @@
 use core::arch::asm;
-use rand::Rng;
 use rvv_asm::rvv_asm;
 
 use ckb_std::syscalls::debug;
 use rvv_testcases::intrinsic::{vl1r_v0, vl1r_v24, vl1r_v8, vs1r_v24, vsetvl};
 use rvv_testcases::log;
 use rvv_testcases::misc::{get_bit_in_slice, is_verbose, VLEN};
-use rvv_testcases::rng::BestNumberRng;
+use rvv_testcases::rng::fill_rand_bytes;
 
 pub fn test_vector_compress() {
     if is_verbose() {
@@ -18,11 +17,9 @@ pub fn test_vector_compress() {
     let mut vs2 = [0u8; VLEN / 8];
     let mut result = [0u8; VLEN / 8];
 
-    let mut rng = BestNumberRng::default();
-
-    rng.fill(&mut mask[..]);
-    rng.fill(&mut vs2[..]);
-    rng.fill(&mut expected_before[..]);
+    fill_rand_bytes(&mut mask[..]);
+    fill_rand_bytes(&mut vs2[..]);
+    fill_rand_bytes(&mut expected_before[..]);
     expected.copy_from_slice(&expected_before[..]);
 
     let mut pos: usize = 0;
