@@ -2,6 +2,7 @@ use alloc::vec::Vec;
 use ckb_std::syscalls::debug;
 use core::arch::asm;
 use eint::{Eint, E16, E32, E64, E8};
+use rand::Rng;
 use rvv_asm::rvv_asm;
 use rvv_testcases::intrinsic::{
     vle_v16, vle_v24, vle_v8, vloxei_v8, vlse_v8, vluxei_v8, vs1r_v8, vs2r_v8, vs4r_v8, vs8r_v8,
@@ -9,7 +10,7 @@ use rvv_testcases::intrinsic::{
 };
 use rvv_testcases::log;
 use rvv_testcases::misc::MutSliceUtils;
-use rvv_testcases::{intrinsic::vsetvl, misc::VLEN, rng::fill_rand_bytes};
+use rvv_testcases::{intrinsic::vsetvl, misc::VLEN, rng::BestNumberRng};
 
 fn fill_all_regisert() {
     let vl = vsetvl(2048, 8, 8);
@@ -63,8 +64,9 @@ fn test_unit_stride(sew: usize, lmul: i64, offset: i64, register: usize) {
     let mut mem2: Vec<u8> = Vec::new();
     mem2.resize(res_vl as usize * sew / 8, 0);
 
-    fill_rand_bytes(&mut mem[..]);
-    fill_rand_bytes(&mut mem2[..]);
+    let mut rng = BestNumberRng::default();
+    rng.fill(&mut mem[..]);
+    rng.fill(&mut mem2[..]);
 
     match register {
         8 => {
@@ -121,8 +123,9 @@ fn test_stride(sew: usize, lmul: i64, stride: usize) {
     mem.resize(total_size, 0);
     mem2.resize(total_size, 0);
 
-    fill_rand_bytes(mem.as_mut_slice());
-    fill_rand_bytes(mem2.as_mut_slice());
+    let mut rng = BestNumberRng::default();
+    rng.fill(mem.as_mut_slice());
+    rng.fill(mem2.as_mut_slice());
 
     vlse_v8(sew as u64, &mem[..], stride as u64);
     vsse_v8(sew as u64, &mut mem2[..], stride as u64);
@@ -196,10 +199,11 @@ fn test_indexed_unordered(sew: usize, offset_sew: usize, lmul: i64, test_ordered
     let vl = vl as usize;
     let sew_byte = sew / 8;
 
+    let mut rng = BestNumberRng::default();
     let mem: Vec<u8> = {
         let mut buf: Vec<u8> = Vec::new();
         buf.resize(vl * sew_byte, 0);
-        fill_rand_bytes(&mut buf[..]);
+        rng.fill(&mut buf[..]);
         buf
     };
 
@@ -208,7 +212,7 @@ fn test_indexed_unordered(sew: usize, offset_sew: usize, lmul: i64, test_ordered
 
         let mut buf: Vec<u8> = Vec::new();
         buf.resize(vl * (offset_sew / 8), 0);
-        fill_rand_bytes(&mut buf[..]);
+        rng.fill(&mut buf[..]);
 
         let mut index: usize = 0;
         for i in 0..vl {
@@ -450,10 +454,11 @@ fn test_vlm_v(mem: &Vec<u8>, sew: usize, lmul: i64) {
 }
 
 pub fn test_vector_unit_stride() {
+    let mut rng = BestNumberRng::default();
     let mem: Vec<u8> = {
         let mut buf: Vec<u8> = Vec::new();
         buf.resize(VLEN, 0x77);
-        fill_rand_bytes(&mut buf[..]);
+        rng.fill(&mut buf[..]);
         buf
     };
 
@@ -617,8 +622,9 @@ fn check_whole(
 
 fn whole_load_store(sew: usize, lmul: i64) {
     let mem = {
+        let mut rng = BestNumberRng::default();
         let mut buf = [1u8; 2048];
-        fill_rand_bytes(&mut buf[..]);
+        rng.fill(&mut buf[..]);
         buf
     };
 

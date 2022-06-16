@@ -1,5 +1,6 @@
 use alloc::vec::Vec;
 use core::arch::asm;
+use rand::Rng;
 use rvv_asm::rvv_asm;
 
 use ckb_std::syscalls::debug;
@@ -7,7 +8,7 @@ use rvv_testcases::{
     intrinsic::{vl1r_v0, vl1r_v24, vl1r_v8, vs1r_v24, vsetvl},
     log,
     misc::{get_bit_in_slice, is_verbose, VLEN},
-    rng::fill_rand_bytes,
+    rng::BestNumberRng,
 };
 
 fn sideup(
@@ -59,9 +60,11 @@ fn test_vslideup(wide: usize) {
     let mut result = [0u8; VLEN / 8];
     let mut result2 = [0u8; VLEN / 8];
 
-    fill_rand_bytes(&mut mask[..]);
-    fill_rand_bytes(&mut vs2[..]);
-    fill_rand_bytes(&mut expected_before[..]);
+    let mut rng = BestNumberRng::default();
+
+    rng.fill(&mut mask[..]);
+    rng.fill(&mut vs2[..]);
+    rng.fill(&mut expected_before[..]);
 
     let ref_offset = sideup(&vs2, 3, VLEN / wide, wide, &expected_before, &mask);
 
@@ -122,9 +125,11 @@ fn test_vslide1up(wide: usize) {
     let mut vs2 = [0u8; VLEN / 8];
     let mut result = [0u8; VLEN / 8];
 
-    fill_rand_bytes(&mut mask[..]);
-    fill_rand_bytes(&mut vs2[..]);
-    fill_rand_bytes(&mut expected_before[..]);
+    let mut rng = BestNumberRng::default();
+
+    rng.fill(&mut mask[..]);
+    rng.fill(&mut vs2[..]);
+    rng.fill(&mut expected_before[..]);
 
     let mut expected = sideup(&vs2, 1, VLEN / wide, wide, &expected_before, &mask);
 
@@ -233,9 +238,11 @@ fn test_vslidedown(wide: usize) {
     let mut result = [0u8; VLEN / 8];
     let mut result2 = [0u8; VLEN / 8];
 
-    fill_rand_bytes(&mut mask[..]);
-    fill_rand_bytes(&mut vs2[..]);
-    fill_rand_bytes(&mut expected_before[..]);
+    let mut rng = BestNumberRng::default();
+
+    rng.fill(&mut mask[..]);
+    rng.fill(&mut vs2[..]);
+    rng.fill(&mut expected_before[..]);
 
     let expected = sidedown(&vs2, 3, VLEN / wide, wide, &expected_before, &mask);
 
@@ -294,9 +301,11 @@ fn test_vslide1down(wide: usize) {
     let mut vs2 = [0u8; VLEN / 8];
     let mut result = [0u8; VLEN / 8];
 
-    fill_rand_bytes(&mut mask[..]);
-    fill_rand_bytes(&mut vs2[..]);
-    fill_rand_bytes(&mut expected_before[..]);
+    let mut rng = BestNumberRng::default();
+
+    rng.fill(&mut mask[..]);
+    rng.fill(&mut vs2[..]);
+    rng.fill(&mut expected_before[..]);
 
     let mut expected = sidedown(&vs2, 1, VLEN / wide, wide, &expected_before, &mask);
 

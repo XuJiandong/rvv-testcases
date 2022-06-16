@@ -232,22 +232,22 @@ fn expected_lt(lhs: &[u8], rhs: &[u8], result: &mut bool) {
         128 => {
             let l = E128::get(lhs);
             let r = E128::get(rhs);
-            *result = l.cmp_s(&r).is_lt();
+            *result = l.cmp_s(&r).is_le();
         }
         256 => {
             let l = E256::get(lhs);
             let r = E256::get(rhs);
-            *result = l.cmp_s(&r).is_lt();
+            *result = l.cmp_s(&r).is_le();
         }
         512 => {
             let l = E512::get(lhs);
             let r = E512::get(rhs);
-            *result = l.cmp_s(&r).is_lt();
+            *result = l.cmp_s(&r).is_le();
         }
         1024 => {
             let l = E1024::get(lhs);
             let r = E1024::get(rhs);
-            *result = l.cmp_s(&r).is_lt();
+            *result = l.cmp_s(&r).is_le();
         }
         _ => {
             panic!("Invalid sew");
