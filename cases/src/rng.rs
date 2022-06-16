@@ -1,8 +1,27 @@
+use super::{misc::set_bit_in_slice, rng_data::G_DATA};
 use alloc::vec;
-use alloc::vec::Vec;
 use rand::prelude::*;
 
+// use super::log;
+// use ckb_std::syscalls::debug;
+
 static mut SEED: usize = 0;
+static mut CUSTOMIZE_SEED: bool = false;
+
+pub fn customize_seed(seed: usize) {
+    unsafe {
+        CUSTOMIZE_SEED = true;
+        SEED = seed;
+    }
+}
+
+pub fn is_customize_seed() -> bool {
+    unsafe { CUSTOMIZE_SEED }
+}
+
+pub fn get_seed() -> usize {
+    unsafe { SEED }
+}
 
 pub struct BestNumberRng {
     data: [u64; 128],
@@ -178,24 +197,94 @@ impl RngCore for BestNumberRng {
             dest[i * 8..(i + 1) * 8].copy_from_slice(&next.to_le_bytes());
         }
     }
+
     fn try_fill_bytes(&mut self, dest: &mut [u8]) -> Result<(), rand::Error> {
         Ok(self.fill_bytes(dest))
     }
 }
 
-pub fn new_random_vec(size: usize) -> Vec<u8> {
-    let mut vec = vec![0u8; size];
-    let mut rng = BestNumberRng::default();
-    rng.fill(&mut vec[..]);
-    vec
+pub fn fill_rand_bytes(dest: &mut [u8]) {
+    let mut begin_pos = 0;
+    let mut seed = get_seed();
+    while begin_pos < dest.len() {
+        let mut end_pos = dest.len();
+        if seed + (end_pos - begin_pos) > G_DATA.len() {
+            end_pos = G_DATA.len() - seed + begin_pos;
+            dest[begin_pos..end_pos].copy_from_slice(&G_DATA[seed..]);
+            seed = 0;
+        } else {
+            dest[begin_pos..end_pos].copy_from_slice(&G_DATA[seed..seed + end_pos - begin_pos]);
+            seed += end_pos - begin_pos;
+        }
+        begin_pos = end_pos;
+    }
+
+    unsafe {
+        SEED = seed % G_DATA.len();
+    }
 }
 
-pub fn new_random01_vec(size: usize) -> Vec<u8> {
-    let mut res = vec![];
-    let mut rng = BestNumberRng::default();
-    for _ in 0..size {
-        let r: u8 = rng.gen_range(0..2);
-        res.push(r);
+fn gen_rand_u8() -> u8 {
+    let seed = get_seed();
+    let ret = G_DATA[seed];
+    unsafe {
+        SEED = (seed + 1) % G_DATA.len();
     }
-    res
+    ret
+}
+
+pub fn fill_rand_mask(dest: &mut [u8]) {
+    let mut count = 0;
+    let mut val = 0;
+    for i in 0..dest.len() * 8 {
+        if count == 0 {
+            count = gen_rand_u8() % 32 + 1;
+            val = if val == 1 { 0 } else { 1 }
+        }
+        set_bit_in_slice(dest, i, val);
+        count -= 1
+    }
+}
+
+pub fn fill_rand_sew(dest: &mut [u8], sew: u64) {
+    let sew = sew as usize;
+    let sew_byte = sew / 8;
+    let mut zero_data = vec::Vec::<u8>::new();
+    zero_data.resize(sew_byte, 0);
+
+    let mut true_data = vec::Vec::<u8>::new();
+    true_data.resize(sew_byte, 0xFF);
+
+    for i in 0..dest.len() / sew_byte {
+        let v = gen_rand_u8();
+        let t = v % 10;
+        if t == 0 {
+            // zero
+            dest[i * sew_byte..(i + 1) * sew_byte].copy_from_slice(&zero_data);
+        } else if t == 1 {
+            // fill 0xFF
+            dest[i * sew_byte..(i + 1) * sew_byte].copy_from_slice(&true_data);
+        } else {
+            let mut data = vec::Vec::<u8>::new();
+            data.resize(sew_byte, 0);
+            fill_rand_bytes(&mut data);
+            if t == 4 {
+                let z = (v as usize >> 2) % (sew / 2) + 1;
+                for i in 0..z {
+                    set_bit_in_slice(&mut data, i, 0);
+                }
+            } else if t == 5 {
+                let z = (v as usize >> 2) % (sew / 2) + 1;
+                for i in z..(data.len() * 8) {
+                    set_bit_in_slice(&mut data, i, 0);
+                }
+            } else if t == 6 {
+                let z = (v as usize >> 2) % (sew / 2) + 1;
+                for i in z..(data.len() * 8) {
+                    set_bit_in_slice(&mut data, i, 1);
+                }
+            }
+            dest[i * sew_byte..(i + 1) * sew_byte].copy_from_slice(&data);
+        }
+    }
 }

@@ -13,3 +13,5 @@ jobs:
       run: cd cases && make all-via-docker
     - name: Run cases
       run: cd cases && make asm64-run
+    - name: Run rand with seed case
+      run: cd cases && shell run_with_seed.sh
