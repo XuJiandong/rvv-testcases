@@ -139,11 +139,11 @@ pub fn set_verbose(b: bool) {
     }
 }
 
-pub fn is_fill() -> bool {
+pub fn is_full() -> bool {
     unsafe { RUN_FILL_CASE }
 }
 
-pub fn set_fill(b: bool) {
+pub fn set_full(b: bool) {
     unsafe {
         RUN_FILL_CASE = b;
     }

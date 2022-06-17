@@ -232,7 +232,7 @@ fn expected_lt(lhs: &[u8], rhs: &[u8], result: &mut bool) {
         128 => {
             let l = E128::get(lhs);
             let r = E128::get(rhs);
-            *result = l.cmp_s(&r).is_le();
+            *result = l.cmp_s(&r).is_lt();
         }
         256 => {
             let l = E256::get(lhs);

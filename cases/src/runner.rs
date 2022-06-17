@@ -13,7 +13,7 @@ use crate::intrinsic::{
 use crate::misc::{avl_iterator, VLEN};
 
 use super::log;
-use super::misc::{get_bit_in_slice, is_fill, is_verbose, set_bit_in_slice};
+use super::misc::{get_bit_in_slice, is_full, is_verbose, set_bit_in_slice};
 use super::rng::BestNumberRng;
 
 pub enum WideningCategory {
@@ -859,12 +859,12 @@ fn run_template_ext(
     let imm_begin = get_imm_begin(left_type, right_type);
     let mut imm = imm_begin;
 
-    let sews = if is_fill() {
+    let sews = if is_full() {
         [8, 16, 32, 64, 128, 256, 512, 1024].to_vec()
     } else {
         [64, 256].to_vec()
     };
-    let lmuls = if is_fill() {
+    let lmuls = if is_full() {
         [-8, -4, -2, 1, 2, 4, 8].to_vec()
     } else {
         [-8, 1, 8].to_vec()
