@@ -76,7 +76,7 @@ fn program_entry(argc: u64, argv: *const *const u8) -> i8 {
             set_simple(true);
         } else if data.find("--seed=").is_some() {
             let pos = data.find("--seed=").unwrap() + 7;
-            customize_seed(data[pos..data.len()].parse::<usize>().unwrap())
+            customize_seed(data[pos..data.len()].parse::<u64>().unwrap())
         }
     }
 

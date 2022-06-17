@@ -14,9 +14,7 @@ use crate::misc::{avl_iterator, VLEN};
 
 use super::log;
 use super::misc::{get_bit_in_slice, is_simple, is_verbose, set_bit_in_slice};
-use super::rng::{
-    fill_rand_bytes, fill_rand_mask, fill_rand_sew, is_customize_seed, BestNumberRng,
-};
+use super::rng::BestNumberRng;
 
 pub enum WideningCategory {
     None,
@@ -45,14 +43,9 @@ where
     let mut mask_v0 = [0u8; VLEN / 8];
     let mut vs2 = [0u8; VLEN / 8];
 
-    if is_customize_seed() {
-        fill_rand_mask(&mut mask_v0[..]);
-        fill_rand_bytes(&mut vs2[..]);
-    } else {
-        let mut rng = BestNumberRng::default();
-        rng.fill(&mut mask_v0[..]);
-        rng.fill(&mut vs2[..]);
-    }
+    let mut rng = BestNumberRng::default();
+    rng.fill_mask(&mut mask_v0[..]);
+    rng.fill(&mut vs2[..]);
 
     let vl = vsetvl(8, 256, 1) as usize;
     assert_eq!(vl, 8);
@@ -272,28 +265,22 @@ impl RVVTestData {
         let res_len = self.res_type.get_buf_len(self.sew_bytes, self.avl as usize);
         self.res_before.resize(res_len, 0);
 
-        if is_customize_seed() {
-            fill_rand_mask(self.mask.as_mut_slice());
-            fill_rand_sew(
-                self.lhs.as_mut_slice(),
-                Self::get_sew(self.sew, self.lhs_type),
-            );
-            fill_rand_sew(
-                self.rhs.as_mut_slice(),
-                Self::get_sew(self.sew, self.rhs_type),
-            );
-            fill_rand_sew(
-                self.res_before.as_mut_slice(),
-                Self::get_sew(self.sew, self.res_type),
-            );
-        } else {
-            let mut rng = BestNumberRng::default();
+        let mut rng = BestNumberRng::default();
 
-            rng.fill(self.mask.as_mut_slice());
-            rng.fill(self.lhs.as_mut_slice());
-            rng.fill(self.rhs.as_mut_slice());
-            rng.fill(self.res_before.as_mut_slice());
-        }
+        rng.fill_mask(self.mask.as_mut_slice());
+        rng.fill_bytes_with_sew(
+            self.lhs.as_mut_slice(),
+            Self::get_sew(self.sew, self.lhs_type),
+        );
+        rng.fill_bytes_with_sew(
+            self.rhs.as_mut_slice(),
+            Self::get_sew(self.sew, self.rhs_type),
+        );
+        rng.fill_bytes_with_sew(
+            self.res_before.as_mut_slice(),
+            Self::get_sew(self.sew, self.res_type),
+        );
+
         self.res_rvv = self.res_before.clone();
         self.res_exp = self.res_before.clone();
     }
@@ -933,7 +920,6 @@ fn run_template_ext(
             }
         }
     }
-    //log!("{}", desc);
 }
 
 fn befor_op_default(_: f64, _: f64, _: u64) -> bool {
