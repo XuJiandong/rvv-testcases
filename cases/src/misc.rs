@@ -5,7 +5,7 @@ use alloc::vec::Vec;
 use eint::{Eint, E1024, E128, E16, E2048, E256, E32, E512, E64, E8};
 
 static mut VERBOSE: bool = false;
-static mut SIMPLE: bool = false;
+static mut RUN_FILL_CASE: bool = false;
 
 pub fn create_vtype(sew: u64, lmul: i64) -> u64 {
     let lmul_bits = match lmul {
@@ -139,13 +139,13 @@ pub fn set_verbose(b: bool) {
     }
 }
 
-pub fn is_simple() -> bool {
-    unsafe { SIMPLE }
+pub fn is_fill() -> bool {
+    unsafe { RUN_FILL_CASE }
 }
 
-pub fn set_simple(b: bool) {
+pub fn set_fill(b: bool) {
     unsafe {
-        SIMPLE = b;
+        RUN_FILL_CASE = b;
     }
 }
 

@@ -54,7 +54,7 @@ use ckb_std::syscalls::debug;
 use core::arch::asm;
 use core::slice::from_raw_parts;
 use core::stringify;
-use rvv_testcases::misc::{is_simple, is_verbose, set_simple, set_verbose};
+use rvv_testcases::misc::{is_fill, is_verbose, set_fill, set_verbose};
 use rvv_testcases::rng::{customize_seed, get_seed};
 use rvv_testcases::{log, test_case};
 
@@ -72,8 +72,8 @@ fn program_entry(argc: u64, argv: *const *const u8) -> i8 {
             test_pattern = Some(&data[pos..data.len()]);
         } else if data.find("--verbose").is_some() {
             set_verbose(true);
-        } else if data.find("--simple").is_some() {
-            set_simple(true);
+        } else if data.find("--fill").is_some() {
+            set_fill(true);
         } else if data.find("--seed=").is_some() {
             let pos = data.find("--seed=").unwrap() + 7;
             customize_seed(data[pos..data.len()].parse::<u64>().unwrap())
@@ -81,10 +81,10 @@ fn program_entry(argc: u64, argv: *const *const u8) -> i8 {
     }
 
     log!(
-        "--StartTesting, case: {:?}, verbose: {}, simple: {}, seed: {}",
+        "--StartTesting, case: {:?}, verbose: {}, fill: {}, seed: {}",
         test_pattern,
         is_verbose(),
-        is_simple(),
+        is_fill(),
         get_seed()
     );
 

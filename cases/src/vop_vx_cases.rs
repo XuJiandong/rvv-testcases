@@ -1193,7 +1193,7 @@ fn expected_op_maxu(lhs: &[u8], x: u64, result: &mut [u8]) {
     assert_eq!(lhs.len(), result.len());
     let sew = lhs.len() * 8;
     let mut zero_buf = Vec::<u8>::new();
-    zero_buf.resize(64, 0);
+    zero_buf.resize(128, 0);
 
     match sew {
         8 => {
