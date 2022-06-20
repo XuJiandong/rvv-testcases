@@ -12,6 +12,6 @@ jobs:
     - name: Build cases
       run: cd cases && make all-via-docker
     - name: Run cases
-      run: cd cases && make asm64-run
+      run: cd cases && make asm64-run args=--full
     - name: Run rand with seed case
-      run: cd cases && make asm64-run args=--seed=$RANDOM$RANDOM$RANDOM$RANDOM
+      run: cd cases && make asm64-run args="--seed=$RANDOM$RANDOM$RANDOM$RANDOM --full"
