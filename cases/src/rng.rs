@@ -48,7 +48,7 @@ pub struct BestNumberRng {
 
 impl SeedableRng for BestNumberRng {
     type Seed = BestNumberRngSeed;
-    
+
     fn from_seed(seed: BestNumberRngSeed) -> BestNumberRng {
         let data = unsafe { mem::transmute::<[u8; 1024], [u64; 128]>(seed.0) };
         BestNumberRng { index: 0, data }
