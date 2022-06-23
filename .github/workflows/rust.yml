@@ -7,7 +7,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v1
-    -name: Check code fmt
+    - name: Check code fmt
       run: cd cases && cargo fmt --all -- --check
     - name: Install asm64
       run: cd cases && make install-tool2
