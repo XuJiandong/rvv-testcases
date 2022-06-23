@@ -3,7 +3,7 @@ use rand::Rng;
 use rvv_asm::rvv_asm;
 
 use ckb_std::syscalls::debug;
-use rvv_testcases::intrinsic::{vl1r_v0, vl1r_v8, vl1r_v24, vs1r_v24, vsetvl};
+use rvv_testcases::intrinsic::{vl1r_v0, vl1r_v24, vl1r_v8, vs1r_v24, vsetvl};
 use rvv_testcases::log;
 use rvv_testcases::misc::{get_bit_in_slice, is_verbose, VLEN};
 use rvv_testcases::rng::BestNumberRng;

@@ -1,19 +1,54 @@
 #![allow(dead_code)]
 
 use core::{arch::asm, convert::TryInto};
+use eint::{Eint, E1024, E128, E256, E512};
 use rvv_asm::rvv_asm;
-use rvv_testcases::{
-    misc::{greater_i256, less_i256, U256},
-    runner::{run_template_r_vv, MaskType},
-};
+use rvv_testcases::runner::{run_template_r_vv, MaskType};
 
 // use ckb_std::syscalls::debug;
 // use rvv_testcases::log;
 
 fn expected_op_sum(lhs: &[u8], rhs: &[u8], result: &mut [u8], index: usize) {
     assert!(lhs.len() == rhs.len() && rhs.len() == result.len());
-    match lhs.len() {
+    let sew = lhs.len() * 8;
+    match sew {
         8 => {
+            let l = u8::from_le_bytes(lhs.try_into().unwrap());
+            let r = u8::from_le_bytes(rhs.try_into().unwrap());
+            let res = u8::from_le_bytes(result.try_into().unwrap());
+
+            let res2 = if index == 0 {
+                l.wrapping_add(r)
+            } else {
+                l.wrapping_add(res)
+            };
+            result.copy_from_slice(res2.to_le_bytes().as_slice());
+        }
+        16 => {
+            let l = u16::from_le_bytes(lhs.try_into().unwrap());
+            let r = u16::from_le_bytes(rhs.try_into().unwrap());
+            let res = u16::from_le_bytes(result.try_into().unwrap());
+
+            let res2 = if index == 0 {
+                l.wrapping_add(r)
+            } else {
+                l.wrapping_add(res)
+            };
+            result.copy_from_slice(res2.to_le_bytes().as_slice());
+        }
+        32 => {
+            let l = u32::from_le_bytes(lhs.try_into().unwrap());
+            let r = u32::from_le_bytes(rhs.try_into().unwrap());
+            let res = u32::from_le_bytes(result.try_into().unwrap());
+
+            let res2 = if index == 0 {
+                l.wrapping_add(r)
+            } else {
+                l.wrapping_add(res)
+            };
+            result.copy_from_slice(res2.to_le_bytes().as_slice());
+        }
+        64 => {
             let l = u64::from_le_bytes(lhs.try_into().unwrap());
             let r = u64::from_le_bytes(rhs.try_into().unwrap());
             let res = u64::from_le_bytes(result.try_into().unwrap());
@@ -24,20 +59,59 @@ fn expected_op_sum(lhs: &[u8], rhs: &[u8], result: &mut [u8], index: usize) {
                 l.wrapping_add(res)
             };
             result.copy_from_slice(res2.to_le_bytes().as_slice());
-            //log!("--index: {}, l: {:0>16x?}, r: {:0>16x?}, res: {:0>16x?}, res2: {:0>16x?}", index, l, r, res, res2);
         }
-        32 => {
-            let l = U256::from_little_endian(lhs);
-            let r = U256::from_little_endian(rhs);
-            let res = U256::from_little_endian(result);
+
+        128 => {
+            let l = E128::get(lhs);
+            let r = E128::get(rhs);
+            let res = E128::get(result);
             let res2 = if index == 0 {
-                let (res, _) = l.overflowing_add(r);
+                let (res, _) = l.overflowing_add_u(r);
                 res
             } else {
-                let (res, _) = l.overflowing_add(res);
+                let (res, _) = l.overflowing_add_u(res);
                 res
             };
-            res2.to_little_endian(result);
+            res2.put(result);
+        }
+        256 => {
+            let l = E256::get(lhs);
+            let r = E256::get(rhs);
+            let res = E256::get(result);
+            let res2 = if index == 0 {
+                let (res, _) = l.overflowing_add_u(r);
+                res
+            } else {
+                let (res, _) = l.overflowing_add_u(res);
+                res
+            };
+            res2.put(result);
+        }
+        512 => {
+            let l = E512::get(lhs);
+            let r = E512::get(rhs);
+            let res = E512::get(result);
+            let res2 = if index == 0 {
+                let (res, _) = l.overflowing_add_u(r);
+                res
+            } else {
+                let (res, _) = l.overflowing_add_u(res);
+                res
+            };
+            res2.put(result);
+        }
+        1024 => {
+            let l = E1024::get(lhs);
+            let r = E1024::get(rhs);
+            let res = E1024::get(result);
+            let res2 = if index == 0 {
+                let (res, _) = l.overflowing_add_u(r);
+                res
+            } else {
+                let (res, _) = l.overflowing_add_u(res);
+                res
+            };
+            res2.put(result);
         }
         _ => {
             panic!("Invalid sew");
@@ -63,20 +137,64 @@ fn test_vredop_vv() {
 
 fn expected_op_and(lhs: &[u8], rhs: &[u8], result: &mut [u8], index: usize) {
     assert!(lhs.len() == rhs.len() && rhs.len() == result.len());
-    match lhs.len() {
+    let sew = lhs.len() * 8;
+    match sew {
         8 => {
+            let l = u8::from_le_bytes(lhs.try_into().unwrap());
+            let r = u8::from_le_bytes(rhs.try_into().unwrap());
+            let res = u8::from_le_bytes(result.try_into().unwrap());
+            let res2 = if index == 0 { l & r } else { l & res };
+            result.copy_from_slice(res2.to_le_bytes().as_slice());
+        }
+        16 => {
+            let l = u16::from_le_bytes(lhs.try_into().unwrap());
+            let r = u16::from_le_bytes(rhs.try_into().unwrap());
+            let res = u16::from_le_bytes(result.try_into().unwrap());
+            let res2 = if index == 0 { l & r } else { l & res };
+            result.copy_from_slice(res2.to_le_bytes().as_slice());
+        }
+        32 => {
+            let l = u32::from_le_bytes(lhs.try_into().unwrap());
+            let r = u32::from_le_bytes(rhs.try_into().unwrap());
+            let res = u32::from_le_bytes(result.try_into().unwrap());
+            let res2 = if index == 0 { l & r } else { l & res };
+            result.copy_from_slice(res2.to_le_bytes().as_slice());
+        }
+        64 => {
             let l = u64::from_le_bytes(lhs.try_into().unwrap());
             let r = u64::from_le_bytes(rhs.try_into().unwrap());
             let res = u64::from_le_bytes(result.try_into().unwrap());
             let res2 = if index == 0 { l & r } else { l & res };
             result.copy_from_slice(res2.to_le_bytes().as_slice());
         }
-        32 => {
-            let l = U256::from_little_endian(lhs);
-            let r = U256::from_little_endian(rhs);
-            let res = U256::from_little_endian(result);
+
+        128 => {
+            let l = E128::get(lhs);
+            let r = E128::get(rhs);
+            let res = E128::get(result);
             let res2 = if index == 0 { l & r } else { l & res };
-            res2.to_little_endian(result);
+            res2.put(result);
+        }
+        256 => {
+            let l = E256::get(lhs);
+            let r = E256::get(rhs);
+            let res = E256::get(result);
+            let res2 = if index == 0 { l & r } else { l & res };
+            res2.put(result);
+        }
+        512 => {
+            let l = E512::get(lhs);
+            let r = E512::get(rhs);
+            let res = E512::get(result);
+            let res2 = if index == 0 { l & r } else { l & res };
+            res2.put(result);
+        }
+        1024 => {
+            let l = E1024::get(lhs);
+            let r = E1024::get(rhs);
+            let res = E1024::get(result);
+            let res2 = if index == 0 { l & r } else { l & res };
+            res2.put(result);
         }
         _ => {
             panic!("Invalid sew");
@@ -102,20 +220,64 @@ fn test_vredop_and_vv() {
 
 fn expected_op_or(lhs: &[u8], rhs: &[u8], result: &mut [u8], index: usize) {
     assert!(lhs.len() == rhs.len() && rhs.len() == result.len());
-    match lhs.len() {
+    let sew = lhs.len() * 8;
+    match sew {
         8 => {
+            let l = u8::from_le_bytes(lhs.try_into().unwrap());
+            let r = u8::from_le_bytes(rhs.try_into().unwrap());
+            let res = u8::from_le_bytes(result.try_into().unwrap());
+            let res2 = if index == 0 { l | r } else { l | res };
+            result.copy_from_slice(res2.to_le_bytes().as_slice());
+        }
+        16 => {
+            let l = u16::from_le_bytes(lhs.try_into().unwrap());
+            let r = u16::from_le_bytes(rhs.try_into().unwrap());
+            let res = u16::from_le_bytes(result.try_into().unwrap());
+            let res2 = if index == 0 { l | r } else { l | res };
+            result.copy_from_slice(res2.to_le_bytes().as_slice());
+        }
+        32 => {
+            let l = u32::from_le_bytes(lhs.try_into().unwrap());
+            let r = u32::from_le_bytes(rhs.try_into().unwrap());
+            let res = u32::from_le_bytes(result.try_into().unwrap());
+            let res2 = if index == 0 { l | r } else { l | res };
+            result.copy_from_slice(res2.to_le_bytes().as_slice());
+        }
+        64 => {
             let l = u64::from_le_bytes(lhs.try_into().unwrap());
             let r = u64::from_le_bytes(rhs.try_into().unwrap());
             let res = u64::from_le_bytes(result.try_into().unwrap());
             let res2 = if index == 0 { l | r } else { l | res };
             result.copy_from_slice(res2.to_le_bytes().as_slice());
         }
-        32 => {
-            let l = U256::from_little_endian(lhs);
-            let r = U256::from_little_endian(rhs);
-            let res = U256::from_little_endian(result);
+
+        128 => {
+            let l = E128::get(lhs);
+            let r = E128::get(rhs);
+            let res = E128::get(result);
             let res2 = if index == 0 { l | r } else { l | res };
-            res2.to_little_endian(result);
+            res2.put(result);
+        }
+        256 => {
+            let l = E256::get(lhs);
+            let r = E256::get(rhs);
+            let res = E256::get(result);
+            let res2 = if index == 0 { l | r } else { l | res };
+            res2.put(result);
+        }
+        512 => {
+            let l = E512::get(lhs);
+            let r = E512::get(rhs);
+            let res = E512::get(result);
+            let res2 = if index == 0 { l | r } else { l | res };
+            res2.put(result);
+        }
+        1024 => {
+            let l = E1024::get(lhs);
+            let r = E1024::get(rhs);
+            let res = E1024::get(result);
+            let res2 = if index == 0 { l | r } else { l | res };
+            res2.put(result);
         }
         _ => {
             panic!("Invalid sew");
@@ -141,20 +303,64 @@ fn test_vredop_or_vv() {
 
 fn expected_op_xor(lhs: &[u8], rhs: &[u8], result: &mut [u8], index: usize) {
     assert!(lhs.len() == rhs.len() && rhs.len() == result.len());
-    match lhs.len() {
+    let sew = lhs.len() * 8;
+    match sew {
         8 => {
+            let l = u8::from_le_bytes(lhs.try_into().unwrap());
+            let r = u8::from_le_bytes(rhs.try_into().unwrap());
+            let res = u8::from_le_bytes(result.try_into().unwrap());
+            let res2 = if index == 0 { l ^ r } else { l ^ res };
+            result.copy_from_slice(res2.to_le_bytes().as_slice());
+        }
+        16 => {
+            let l = u16::from_le_bytes(lhs.try_into().unwrap());
+            let r = u16::from_le_bytes(rhs.try_into().unwrap());
+            let res = u16::from_le_bytes(result.try_into().unwrap());
+            let res2 = if index == 0 { l ^ r } else { l ^ res };
+            result.copy_from_slice(res2.to_le_bytes().as_slice());
+        }
+        32 => {
+            let l = u32::from_le_bytes(lhs.try_into().unwrap());
+            let r = u32::from_le_bytes(rhs.try_into().unwrap());
+            let res = u32::from_le_bytes(result.try_into().unwrap());
+            let res2 = if index == 0 { l ^ r } else { l ^ res };
+            result.copy_from_slice(res2.to_le_bytes().as_slice());
+        }
+        64 => {
             let l = u64::from_le_bytes(lhs.try_into().unwrap());
             let r = u64::from_le_bytes(rhs.try_into().unwrap());
             let res = u64::from_le_bytes(result.try_into().unwrap());
             let res2 = if index == 0 { l ^ r } else { l ^ res };
             result.copy_from_slice(res2.to_le_bytes().as_slice());
         }
-        32 => {
-            let l = U256::from_little_endian(lhs);
-            let r = U256::from_little_endian(rhs);
-            let res = U256::from_little_endian(result);
+
+        128 => {
+            let l = E128::get(lhs);
+            let r = E128::get(rhs);
+            let res = E128::get(result);
             let res2 = if index == 0 { l ^ r } else { l ^ res };
-            res2.to_little_endian(result);
+            res2.put(result);
+        }
+        256 => {
+            let l = E256::get(lhs);
+            let r = E256::get(rhs);
+            let res = E256::get(result);
+            let res2 = if index == 0 { l ^ r } else { l ^ res };
+            res2.put(result);
+        }
+        512 => {
+            let l = E512::get(lhs);
+            let r = E512::get(rhs);
+            let res = E512::get(result);
+            let res2 = if index == 0 { l ^ r } else { l ^ res };
+            res2.put(result);
+        }
+        1024 => {
+            let l = E1024::get(lhs);
+            let r = E1024::get(rhs);
+            let res = E1024::get(result);
+            let res2 = if index == 0 { l ^ r } else { l ^ res };
+            res2.put(result);
         }
         _ => {
             panic!("Invalid sew");
@@ -180,8 +386,66 @@ fn test_vredop_xor_vv() {
 
 fn expected_op_minu(lhs: &[u8], rhs: &[u8], result: &mut [u8], index: usize) {
     assert!(lhs.len() == rhs.len() && rhs.len() == result.len());
-    match lhs.len() {
+    let sew = lhs.len() * 8;
+    match sew {
         8 => {
+            let l = u8::from_le_bytes(lhs.try_into().unwrap());
+            let r = u8::from_le_bytes(rhs.try_into().unwrap());
+            let res = u8::from_le_bytes(result.try_into().unwrap());
+            let res2 = if index == 0 {
+                if l < r {
+                    l
+                } else {
+                    r
+                }
+            } else {
+                if l < res {
+                    l
+                } else {
+                    res
+                }
+            };
+            result.copy_from_slice(res2.to_le_bytes().as_slice());
+        }
+        16 => {
+            let l = u16::from_le_bytes(lhs.try_into().unwrap());
+            let r = u16::from_le_bytes(rhs.try_into().unwrap());
+            let res = u16::from_le_bytes(result.try_into().unwrap());
+            let res2 = if index == 0 {
+                if l < r {
+                    l
+                } else {
+                    r
+                }
+            } else {
+                if l < res {
+                    l
+                } else {
+                    res
+                }
+            };
+            result.copy_from_slice(res2.to_le_bytes().as_slice());
+        }
+        32 => {
+            let l = u32::from_le_bytes(lhs.try_into().unwrap());
+            let r = u32::from_le_bytes(rhs.try_into().unwrap());
+            let res = u32::from_le_bytes(result.try_into().unwrap());
+            let res2 = if index == 0 {
+                if l < r {
+                    l
+                } else {
+                    r
+                }
+            } else {
+                if l < res {
+                    l
+                } else {
+                    res
+                }
+            };
+            result.copy_from_slice(res2.to_le_bytes().as_slice());
+        }
+        64 => {
             let l = u64::from_le_bytes(lhs.try_into().unwrap());
             let r = u64::from_le_bytes(rhs.try_into().unwrap());
             let res = u64::from_le_bytes(result.try_into().unwrap());
@@ -200,10 +464,11 @@ fn expected_op_minu(lhs: &[u8], rhs: &[u8], result: &mut [u8], index: usize) {
             };
             result.copy_from_slice(res2.to_le_bytes().as_slice());
         }
-        32 => {
-            let l = U256::from_little_endian(lhs);
-            let r = U256::from_little_endian(rhs);
-            let res = U256::from_little_endian(result);
+
+        128 => {
+            let l = E128::get(lhs);
+            let r = E128::get(rhs);
+            let res = E128::get(result);
             let res2 = if index == 0 {
                 if l < r {
                     l
@@ -217,7 +482,64 @@ fn expected_op_minu(lhs: &[u8], rhs: &[u8], result: &mut [u8], index: usize) {
                     res
                 }
             };
-            res2.to_little_endian(result);
+            res2.put(result);
+        }
+        256 => {
+            let l = E256::get(lhs);
+            let r = E256::get(rhs);
+            let res = E256::get(result);
+            let res2 = if index == 0 {
+                if l < r {
+                    l
+                } else {
+                    r
+                }
+            } else {
+                if l < res {
+                    l
+                } else {
+                    res
+                }
+            };
+            res2.put(result);
+        }
+        512 => {
+            let l = E512::get(lhs);
+            let r = E512::get(rhs);
+            let res = E512::get(result);
+            let res2 = if index == 0 {
+                if l < r {
+                    l
+                } else {
+                    r
+                }
+            } else {
+                if l < res {
+                    l
+                } else {
+                    res
+                }
+            };
+            res2.put(result);
+        }
+        1024 => {
+            let l = E1024::get(lhs);
+            let r = E1024::get(rhs);
+            let res = E1024::get(result);
+            let res2 = if index == 0 {
+                if l < r {
+                    l
+                } else {
+                    r
+                }
+            } else {
+                if l < res {
+                    l
+                } else {
+                    res
+                }
+            };
+            res2.put(result);
         }
         _ => {
             panic!("Invalid sew");
@@ -243,8 +565,66 @@ fn test_vredop_minu_vv() {
 
 fn expected_op_min(lhs: &[u8], rhs: &[u8], result: &mut [u8], index: usize) {
     assert!(lhs.len() == rhs.len() && rhs.len() == result.len());
-    match lhs.len() {
+    let sew = lhs.len() * 8;
+    match sew {
         8 => {
+            let l = i8::from_le_bytes(lhs.try_into().unwrap());
+            let r = i8::from_le_bytes(rhs.try_into().unwrap());
+            let res = i8::from_le_bytes(result.try_into().unwrap());
+            let res2 = if index == 0 {
+                if l < r {
+                    l
+                } else {
+                    r
+                }
+            } else {
+                if l < res {
+                    l
+                } else {
+                    res
+                }
+            };
+            result.copy_from_slice(res2.to_le_bytes().as_slice());
+        }
+        16 => {
+            let l = i16::from_le_bytes(lhs.try_into().unwrap());
+            let r = i16::from_le_bytes(rhs.try_into().unwrap());
+            let res = i16::from_le_bytes(result.try_into().unwrap());
+            let res2 = if index == 0 {
+                if l < r {
+                    l
+                } else {
+                    r
+                }
+            } else {
+                if l < res {
+                    l
+                } else {
+                    res
+                }
+            };
+            result.copy_from_slice(res2.to_le_bytes().as_slice());
+        }
+        32 => {
+            let l = i32::from_le_bytes(lhs.try_into().unwrap());
+            let r = i32::from_le_bytes(rhs.try_into().unwrap());
+            let res = i32::from_le_bytes(result.try_into().unwrap());
+            let res2 = if index == 0 {
+                if l < r {
+                    l
+                } else {
+                    r
+                }
+            } else {
+                if l < res {
+                    l
+                } else {
+                    res
+                }
+            };
+            result.copy_from_slice(res2.to_le_bytes().as_slice());
+        }
+        64 => {
             let l = i64::from_le_bytes(lhs.try_into().unwrap());
             let r = i64::from_le_bytes(rhs.try_into().unwrap());
             let res = i64::from_le_bytes(result.try_into().unwrap());
@@ -263,15 +643,67 @@ fn expected_op_min(lhs: &[u8], rhs: &[u8], result: &mut [u8], index: usize) {
             };
             result.copy_from_slice(res2.to_le_bytes().as_slice());
         }
-        32 => {
+
+        128 => {
+            let l = E128::get(lhs);
+            let r = E128::get(rhs);
+            let res = E128::get(&result);
             if index == 0 {
-                if less_i256(lhs, rhs) {
+                if l.cmp_s(&r).is_le() {
                     result.copy_from_slice(lhs);
                 } else {
                     result.copy_from_slice(rhs);
                 }
             } else {
-                if less_i256(lhs, result) {
+                if l.cmp_s(&res).is_le() {
+                    result.copy_from_slice(lhs);
+                }
+            };
+        }
+        256 => {
+            let l = E256::get(lhs);
+            let r = E256::get(rhs);
+            let res = E256::get(&result);
+            if index == 0 {
+                if l.cmp_s(&r).is_le() {
+                    result.copy_from_slice(lhs);
+                } else {
+                    result.copy_from_slice(rhs);
+                }
+            } else {
+                if l.cmp_s(&res).is_le() {
+                    result.copy_from_slice(lhs);
+                }
+            };
+        }
+        512 => {
+            let l = E512::get(lhs);
+            let r = E512::get(rhs);
+            let res = E512::get(&result);
+            if index == 0 {
+                if l.cmp_s(&r).is_le() {
+                    result.copy_from_slice(lhs);
+                } else {
+                    result.copy_from_slice(rhs);
+                }
+            } else {
+                if l.cmp_s(&res).is_le() {
+                    result.copy_from_slice(lhs);
+                }
+            };
+        }
+        1024 => {
+            let l = E1024::get(lhs);
+            let r = E1024::get(rhs);
+            let res = E1024::get(&result);
+            if index == 0 {
+                if l.cmp_s(&r).is_le() {
+                    result.copy_from_slice(lhs);
+                } else {
+                    result.copy_from_slice(rhs);
+                }
+            } else {
+                if l.cmp_s(&res).is_le() {
                     result.copy_from_slice(lhs);
                 }
             };
@@ -300,8 +732,66 @@ fn test_vredop_min_vv() {
 
 fn expected_op_maxu(lhs: &[u8], rhs: &[u8], result: &mut [u8], index: usize) {
     assert!(lhs.len() == rhs.len() && rhs.len() == result.len());
-    match lhs.len() {
+    let sew = lhs.len() * 8;
+    match sew {
         8 => {
+            let l = u8::from_le_bytes(lhs.try_into().unwrap());
+            let r = u8::from_le_bytes(rhs.try_into().unwrap());
+            let res = u8::from_le_bytes(result.try_into().unwrap());
+            let res2 = if index == 0 {
+                if l > r {
+                    l
+                } else {
+                    r
+                }
+            } else {
+                if l > res {
+                    l
+                } else {
+                    res
+                }
+            };
+            result.copy_from_slice(res2.to_le_bytes().as_slice());
+        }
+        16 => {
+            let l = u16::from_le_bytes(lhs.try_into().unwrap());
+            let r = u16::from_le_bytes(rhs.try_into().unwrap());
+            let res = u16::from_le_bytes(result.try_into().unwrap());
+            let res2 = if index == 0 {
+                if l > r {
+                    l
+                } else {
+                    r
+                }
+            } else {
+                if l > res {
+                    l
+                } else {
+                    res
+                }
+            };
+            result.copy_from_slice(res2.to_le_bytes().as_slice());
+        }
+        32 => {
+            let l = u32::from_le_bytes(lhs.try_into().unwrap());
+            let r = u32::from_le_bytes(rhs.try_into().unwrap());
+            let res = u32::from_le_bytes(result.try_into().unwrap());
+            let res2 = if index == 0 {
+                if l > r {
+                    l
+                } else {
+                    r
+                }
+            } else {
+                if l > res {
+                    l
+                } else {
+                    res
+                }
+            };
+            result.copy_from_slice(res2.to_le_bytes().as_slice());
+        }
+        64 => {
             let l = u64::from_le_bytes(lhs.try_into().unwrap());
             let r = u64::from_le_bytes(rhs.try_into().unwrap());
             let res = u64::from_le_bytes(result.try_into().unwrap());
@@ -320,10 +810,11 @@ fn expected_op_maxu(lhs: &[u8], rhs: &[u8], result: &mut [u8], index: usize) {
             };
             result.copy_from_slice(res2.to_le_bytes().as_slice());
         }
-        32 => {
-            let l = U256::from_little_endian(lhs);
-            let r = U256::from_little_endian(rhs);
-            let res = U256::from_little_endian(result);
+
+        128 => {
+            let l = E128::get(lhs);
+            let r = E128::get(rhs);
+            let res = E128::get(result);
             let res2 = if index == 0 {
                 if l > r {
                     l
@@ -337,7 +828,64 @@ fn expected_op_maxu(lhs: &[u8], rhs: &[u8], result: &mut [u8], index: usize) {
                     res
                 }
             };
-            res2.to_little_endian(result);
+            res2.put(result);
+        }
+        256 => {
+            let l = E256::get(lhs);
+            let r = E256::get(rhs);
+            let res = E256::get(result);
+            let res2 = if index == 0 {
+                if l > r {
+                    l
+                } else {
+                    r
+                }
+            } else {
+                if l > res {
+                    l
+                } else {
+                    res
+                }
+            };
+            res2.put(result);
+        }
+        512 => {
+            let l = E512::get(lhs);
+            let r = E512::get(rhs);
+            let res = E512::get(result);
+            let res2 = if index == 0 {
+                if l > r {
+                    l
+                } else {
+                    r
+                }
+            } else {
+                if l > res {
+                    l
+                } else {
+                    res
+                }
+            };
+            res2.put(result);
+        }
+        1024 => {
+            let l = E1024::get(lhs);
+            let r = E1024::get(rhs);
+            let res = E1024::get(result);
+            let res2 = if index == 0 {
+                if l > r {
+                    l
+                } else {
+                    r
+                }
+            } else {
+                if l > res {
+                    l
+                } else {
+                    res
+                }
+            };
+            res2.put(result);
         }
         _ => {
             panic!("Invalid sew");
@@ -363,8 +911,66 @@ fn test_vredop_maxu_vv() {
 
 fn expected_op_max(lhs: &[u8], rhs: &[u8], result: &mut [u8], index: usize) {
     assert!(lhs.len() == rhs.len() && rhs.len() == result.len());
-    match lhs.len() {
+    let sew = lhs.len() * 8;
+    match sew {
         8 => {
+            let l = i8::from_le_bytes(lhs.try_into().unwrap());
+            let r = i8::from_le_bytes(rhs.try_into().unwrap());
+            let res = i8::from_le_bytes(result.try_into().unwrap());
+            let res2 = if index == 0 {
+                if l > r {
+                    l
+                } else {
+                    r
+                }
+            } else {
+                if l > res {
+                    l
+                } else {
+                    res
+                }
+            };
+            result.copy_from_slice(res2.to_le_bytes().as_slice());
+        }
+        16 => {
+            let l = i16::from_le_bytes(lhs.try_into().unwrap());
+            let r = i16::from_le_bytes(rhs.try_into().unwrap());
+            let res = i16::from_le_bytes(result.try_into().unwrap());
+            let res2 = if index == 0 {
+                if l > r {
+                    l
+                } else {
+                    r
+                }
+            } else {
+                if l > res {
+                    l
+                } else {
+                    res
+                }
+            };
+            result.copy_from_slice(res2.to_le_bytes().as_slice());
+        }
+        32 => {
+            let l = i32::from_le_bytes(lhs.try_into().unwrap());
+            let r = i32::from_le_bytes(rhs.try_into().unwrap());
+            let res = i32::from_le_bytes(result.try_into().unwrap());
+            let res2 = if index == 0 {
+                if l > r {
+                    l
+                } else {
+                    r
+                }
+            } else {
+                if l > res {
+                    l
+                } else {
+                    res
+                }
+            };
+            result.copy_from_slice(res2.to_le_bytes().as_slice());
+        }
+        64 => {
             let l = i64::from_le_bytes(lhs.try_into().unwrap());
             let r = i64::from_le_bytes(rhs.try_into().unwrap());
             let res = i64::from_le_bytes(result.try_into().unwrap());
@@ -383,15 +989,67 @@ fn expected_op_max(lhs: &[u8], rhs: &[u8], result: &mut [u8], index: usize) {
             };
             result.copy_from_slice(res2.to_le_bytes().as_slice());
         }
-        32 => {
+
+        128 => {
+            let l = E128::get(lhs);
+            let r = E128::get(rhs);
+            let res = E128::get(&result);
             if index == 0 {
-                if greater_i256(lhs, rhs) {
+                if l.cmp_s(&r).is_ge() {
                     result.copy_from_slice(lhs);
                 } else {
                     result.copy_from_slice(rhs);
                 }
             } else {
-                if greater_i256(lhs, result) {
+                if l.cmp_s(&res).is_ge() {
+                    result.copy_from_slice(lhs);
+                }
+            };
+        }
+        256 => {
+            let l = E256::get(lhs);
+            let r = E256::get(rhs);
+            let res = E256::get(&result);
+            if index == 0 {
+                if l.cmp_s(&r).is_ge() {
+                    result.copy_from_slice(lhs);
+                } else {
+                    result.copy_from_slice(rhs);
+                }
+            } else {
+                if l.cmp_s(&res).is_ge() {
+                    result.copy_from_slice(lhs);
+                }
+            };
+        }
+        512 => {
+            let l = E512::get(lhs);
+            let r = E512::get(rhs);
+            let res = E512::get(&result);
+            if index == 0 {
+                if l.cmp_s(&r).is_ge() {
+                    result.copy_from_slice(lhs);
+                } else {
+                    result.copy_from_slice(rhs);
+                }
+            } else {
+                if l.cmp_s(&res).is_ge() {
+                    result.copy_from_slice(lhs);
+                }
+            };
+        }
+        1024 => {
+            let l = E1024::get(lhs);
+            let r = E1024::get(rhs);
+            let res = E1024::get(&result);
+            if index == 0 {
+                if l.cmp_s(&r).is_ge() {
+                    result.copy_from_slice(lhs);
+                } else {
+                    result.copy_from_slice(rhs);
+                }
+            } else {
+                if l.cmp_s(&res).is_ge() {
                     result.copy_from_slice(lhs);
                 }
             };

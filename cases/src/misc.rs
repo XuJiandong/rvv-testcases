@@ -2,58 +2,10 @@ use core::convert::TryInto;
 
 use alloc::vec;
 use alloc::vec::Vec;
-use eint::{Eint, E1024, E128, E16, E256, E32, E512, E64, E8};
-use rvv_simulator_runtime::Uint;
+use eint::{Eint, E1024, E128, E16, E2048, E256, E32, E512, E64, E8};
 
 static mut VERBOSE: bool = false;
-
-pub type U256 = Uint<4>;
-pub type U512 = Uint<8>;
-pub type U1024 = Uint<16>;
-
-pub trait Widening {
-    type WideningType;
-    fn sign_extend(&self) -> Self::WideningType;
-}
-
-impl Widening for u64 {
-    type WideningType = U256;
-    fn sign_extend(&self) -> Self::WideningType {
-        if (self & 0x8000000000000000) != 0 {
-            let r = u128::MAX;
-            let r2 = (*self as i64) as u128;
-            (U256::from(r) << 128) + U256::from(r2)
-        } else {
-            self.clone().into()
-        }
-    }
-}
-
-impl Widening for U256 {
-    type WideningType = U512;
-    fn sign_extend(&self) -> Self::WideningType {
-        if self.bit(255) {
-            let r: U512 = U256::MAX.into();
-            let r2: U512 = self.clone().into();
-            (r << 256) + r2
-        } else {
-            self.clone().into()
-        }
-    }
-}
-
-impl Widening for U512 {
-    type WideningType = U1024;
-    fn sign_extend(&self) -> Self::WideningType {
-        if self.bit(511) {
-            let r: U1024 = U512::MAX.into();
-            let r2: U1024 = self.clone().into();
-            (r << 512) + r2
-        } else {
-            self.clone().into()
-        }
-    }
-}
+static mut RUN_FILL_CASE: bool = false;
 
 pub fn create_vtype(sew: u64, lmul: i64) -> u64 {
     let lmul_bits = match lmul {
@@ -187,6 +139,16 @@ pub fn set_verbose(b: bool) {
     }
 }
 
+pub fn is_full() -> bool {
+    unsafe { RUN_FILL_CASE }
+}
+
+pub fn set_full(b: bool) {
+    unsafe {
+        RUN_FILL_CASE = b;
+    }
+}
+
 pub trait SliceUtils<'a> {
     fn get_element(&'a self, sew: usize, index: usize) -> &'a [u8];
     fn read_u8(&self, eew: usize, index: usize) -> E8;
@@ -313,65 +275,6 @@ impl<'a> MutSliceUtils<'a> for &'a mut [u8] {
     }
 }
 
-pub fn compress_into_bits(data: &[u8]) -> [u8; 256] {
-    let mut res = [0u8; 256];
-    for i in 0..data.len() {
-        set_bit_in_slice(&mut res, i, data[i]);
-    }
-    res
-}
-
-pub fn greater_i256(l: &[u8], r: &[u8]) -> bool {
-    if l == r {
-        return false;
-    }
-
-    let l_s = get_bit_in_slice(l, 255);
-    let r_s = get_bit_in_slice(r, 255);
-
-    if l_s != r_s {
-        if l_s == 0 {
-            true
-        } else {
-            false
-        }
-    } else {
-        let l = U256::from_little_endian(l);
-        let r = U256::from_little_endian(r);
-        l > r
-    }
-}
-
-pub fn less_i256(l: &[u8], r: &[u8]) -> bool {
-    if l == r {
-        return false;
-    }
-
-    let l_s = get_bit_in_slice(l, 255);
-    let r_s = get_bit_in_slice(r, 255);
-
-    if l_s != r_s {
-        if l_s == 0 {
-            false
-        } else {
-            true
-        }
-    } else {
-        let l = U256::from_little_endian(l);
-        let r = U256::from_little_endian(r);
-        l < r
-    }
-}
-
-pub fn add_i512(a: &[u8; 64], b: &[u8; 64]) -> [u8; 64] {
-    let mut r = [0u8; 64];
-
-    let rr = U512::from_little_endian(a).wrapping_add(U512::from_little_endian(b));
-    rr.to_little_endian(&mut r);
-
-    r
-}
-
 #[macro_export]
 macro_rules! conver_with_single {
     ($func_name: ident, $name: ident, $half:ident) => {
@@ -385,8 +288,45 @@ macro_rules! conver_with_single {
     };
 }
 
+conver_with_single!(conver_to_i2048, E2048, E1024);
+conver_with_single!(conver_to_i1024, E1024, E512);
 conver_with_single!(conver_to_i512, E512, E256);
 conver_with_single!(conver_to_i256, E256, E128);
+
+pub fn conver_to_i128(d: E64) -> E128 {
+    let d = d.u64() as i64 as i128;
+    return E128::from(d);
+}
+
+#[inline]
+pub fn to_u8(d: &[u8]) -> u8 {
+    d[0]
+}
+
+#[inline]
+pub fn to_i8(d: &[u8]) -> i8 {
+    d[0] as i8
+}
+
+#[inline]
+pub fn to_u16(d: &[u8]) -> u16 {
+    u16::from_le_bytes(d.try_into().unwrap())
+}
+
+#[inline]
+pub fn to_i16(d: &[u8]) -> i16 {
+    i16::from_le_bytes(d.try_into().unwrap())
+}
+
+#[inline]
+pub fn to_u32(d: &[u8]) -> u32 {
+    u32::from_le_bytes(d.try_into().unwrap())
+}
+
+#[inline]
+pub fn to_i32(d: &[u8]) -> i32 {
+    i32::from_le_bytes(d.try_into().unwrap())
+}
 
 #[inline]
 pub fn to_u64(d: &[u8]) -> u64 {
@@ -396,4 +336,34 @@ pub fn to_u64(d: &[u8]) -> u64 {
 #[inline]
 pub fn to_i64(d: &[u8]) -> i64 {
     i64::from_le_bytes(d.try_into().unwrap())
+}
+
+#[inline]
+pub fn to_u128(d: &[u8]) -> u128 {
+    u128::from_le_bytes(d.try_into().unwrap())
+}
+
+#[inline]
+pub fn to_i128(d: &[u8]) -> i128 {
+    i128::from_le_bytes(d.try_into().unwrap())
+}
+
+#[inline]
+pub fn to_128(d: &[u8]) -> E128 {
+    E128::get(d)
+}
+
+#[inline]
+pub fn to_256(d: &[u8]) -> E256 {
+    E256::get(d)
+}
+
+#[inline]
+pub fn to_512(d: &[u8]) -> E512 {
+    E512::get(d)
+}
+
+#[inline]
+pub fn to_1024(d: &[u8]) -> E1024 {
+    E1024::get(d)
 }

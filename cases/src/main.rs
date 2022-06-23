@@ -54,28 +54,40 @@ use ckb_std::syscalls::debug;
 use core::arch::asm;
 use core::slice::from_raw_parts;
 use core::stringify;
-use rvv_testcases::misc::set_verbose;
+use rvv_testcases::misc::{is_full, is_verbose, set_full, set_verbose};
+use rvv_testcases::rng::{customize_seed, get_seed};
 use rvv_testcases::{log, test_case};
 
 ckb_std::entry!(program_entry);
 default_alloc!();
 
 fn program_entry(argc: u64, argv: *const *const u8) -> i8 {
-    let test_pattern = if argc > 0 {
-        let args = unsafe { from_raw_parts(argv, argc as usize) };
-        let s = unsafe { CStr::from_ptr(args[0]) };
-        Some(s.to_str().unwrap())
-    } else {
-        None
-    };
-    if argc > 1 {
-        let args = unsafe { from_raw_parts(argv, argc as usize) };
-        let s = unsafe { CStr::from_ptr(args[1]) };
-        if s.to_str().unwrap() == "verbose" {
-            log!("verbose on");
-            set_verbose(true)
+    let mut test_pattern = Option::<&str>::None;
+
+    let args = unsafe { from_raw_parts(argv, argc as usize) };
+    for i in 0..argc as usize {
+        let data = unsafe { CStr::from_ptr(args[i]) }.to_str().unwrap();
+        if data.find("--case").is_some() {
+            let pos = data.find("--case=").unwrap() + 7;
+            test_pattern = Some(&data[pos..data.len()]);
+        } else if data.find("--verbose").is_some() {
+            set_verbose(true);
+        } else if data.find("--full").is_some() {
+            set_full(true);
+        } else if data.find("--seed=").is_some() {
+            let pos = data.find("--seed=").unwrap() + 7;
+            customize_seed(data[pos..data.len()].parse::<u64>().unwrap())
         }
     }
+
+    log!(
+        "--StartTesting, case: {:?}, verbose: {}, fill: {}, seed: {}",
+        test_pattern,
+        is_verbose(),
+        is_full(),
+        get_seed()
+    );
+
     test_case!(vsetvl_cases::test_vsetvl, test_pattern);
 
     test_case!(misc_cases::test_add, test_pattern);

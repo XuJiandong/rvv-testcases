@@ -1,25 +1,23 @@
 use core::arch::asm;
 use core::convert::TryInto;
+use eint::{Eint, E1024, E256, E512};
 use rvv_asm::rvv_asm;
-use rvv_testcases::{
-    misc::{U1024, U256, U512},
-    runner::{run_template_v_vv, MaskType},
-};
+use rvv_testcases::runner::{run_template_v_vv, MaskType};
 
 fn expected_op_sub(lhs: &[u8], rhs: &[u8], result: &mut [u8]) {
     assert!(lhs.len() == rhs.len() && rhs.len() == result.len());
     match lhs.len() {
         1 => {
-            result[0] = lhs[0] + rhs[0];
+            result[0] = lhs[0].wrapping_sub(rhs[0]);
         }
         2 => {
             let r = u16::from_le_bytes(lhs.try_into().unwrap())
-                - u16::from_le_bytes(rhs.try_into().unwrap());
+                .wrapping_sub(u16::from_le_bytes(rhs.try_into().unwrap()));
             result.copy_from_slice(&r.to_le_bytes());
         }
         4 => {
             let r = u32::from_le_bytes(lhs.try_into().unwrap())
-                - u32::from_le_bytes(rhs.try_into().unwrap());
+                .wrapping_sub(u32::from_le_bytes(rhs.try_into().unwrap()));
             result.copy_from_slice(&r.to_le_bytes());
         }
         8 => {
@@ -33,19 +31,16 @@ fn expected_op_sub(lhs: &[u8], rhs: &[u8], result: &mut [u8]) {
             result.copy_from_slice(&r.to_le_bytes());
         }
         32 => {
-            let (r, _) =
-                U256::from_little_endian(lhs).overflowing_sub(U256::from_little_endian(rhs));
-            r.to_little_endian(result);
+            let (r, _) = E256::get(lhs).overflowing_sub_u(E256::get(rhs));
+            r.put(result);
         }
         64 => {
-            let (r, _) =
-                U512::from_little_endian(lhs).overflowing_sub(U512::from_little_endian(rhs));
-            r.to_little_endian(result);
+            let (r, _) = E512::get(lhs).overflowing_sub_u(E512::get(rhs));
+            r.put(result);
         }
         128 => {
-            let (r, _) =
-                U1024::from_little_endian(lhs).overflowing_sub(U1024::from_little_endian(rhs));
-            r.to_little_endian(result);
+            let (r, _) = E1024::get(lhs).overflowing_sub_u(E1024::get(rhs));
+            r.put(result);
         }
         _ => {
             panic!("Invalid sew");

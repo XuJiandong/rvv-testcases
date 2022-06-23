@@ -1,5 +1,5 @@
 use core::{arch::asm, convert::TryInto};
-use eint::{Eint, E256};
+use eint::{Eint, E1024, E128, E256, E512};
 use rvv_asm::rvv_asm;
 use rvv_testcases::runner::{
     run_template_m_vi, run_template_m_vim, run_template_m_vv, run_template_m_vvm,
@@ -13,8 +13,36 @@ use rvv_testcases::runner::{
 fn expected_op_adc_vvm(lhs: &[u8], rhs: &[u8], result: &mut [u8], mask: bool) {
     assert_eq!(lhs.len(), rhs.len());
     assert_eq!(rhs.len(), result.len());
-    match lhs.len() {
+    let sew = lhs.len() * 8;
+    match sew {
         8 => {
+            let l = i8::from_le_bytes(lhs.try_into().unwrap());
+            let r = i8::from_le_bytes(rhs.try_into().unwrap());
+
+            let (res, _) = l.overflowing_add(r);
+            let (res, _) = res.overflowing_add(mask as i8);
+
+            result.copy_from_slice(&res.to_le_bytes());
+        }
+        16 => {
+            let l = i16::from_le_bytes(lhs.try_into().unwrap());
+            let r = i16::from_le_bytes(rhs.try_into().unwrap());
+
+            let (res, _) = l.overflowing_add(r);
+            let (res, _) = res.overflowing_add(mask as i16);
+
+            result.copy_from_slice(&res.to_le_bytes());
+        }
+        32 => {
+            let l = i32::from_le_bytes(lhs.try_into().unwrap());
+            let r = i32::from_le_bytes(rhs.try_into().unwrap());
+
+            let (res, _) = l.overflowing_add(r);
+            let (res, _) = res.overflowing_add(mask as i32);
+
+            result.copy_from_slice(&res.to_le_bytes());
+        }
+        64 => {
             let l = i64::from_le_bytes(lhs.try_into().unwrap());
             let r = i64::from_le_bytes(rhs.try_into().unwrap());
 
@@ -23,10 +51,35 @@ fn expected_op_adc_vvm(lhs: &[u8], rhs: &[u8], result: &mut [u8], mask: bool) {
 
             result.copy_from_slice(&res.to_le_bytes());
         }
-        32 => {
+
+        128 => {
+            let l = E128::get(lhs);
+            let r = E128::get(rhs);
+            let mask = E128::from(mask);
+            let (res, _) = l.overflowing_add_u(r);
+            let (res, _) = res.overflowing_add_u(mask);
+            res.put(result);
+        }
+        256 => {
             let l = E256::get(lhs);
             let r = E256::get(rhs);
             let mask = E256::from(mask);
+            let (res, _) = l.overflowing_add_u(r);
+            let (res, _) = res.overflowing_add_u(mask);
+            res.put(result);
+        }
+        512 => {
+            let l = E512::get(lhs);
+            let r = E512::get(rhs);
+            let mask = E512::from(mask);
+            let (res, _) = l.overflowing_add_u(r);
+            let (res, _) = res.overflowing_add_u(mask);
+            res.put(result);
+        }
+        1024 => {
+            let l = E1024::get(lhs);
+            let r = E1024::get(rhs);
+            let mask = E1024::from(mask);
             let (res, _) = l.overflowing_add_u(r);
             let (res, _) = res.overflowing_add_u(mask);
             res.put(result);
@@ -47,8 +100,33 @@ fn test_vadc_vvm() {
 }
 
 fn expected_op_adc_vxm(lhs: &[u8], x: u64, result: &mut [u8], mask: bool) {
-    match lhs.len() {
+    let sew = lhs.len() * 8;
+    match sew {
         8 => {
+            let l = i8::from_le_bytes(lhs.try_into().unwrap());
+
+            let (res, _) = l.overflowing_add(x as i8);
+            let (res, _) = res.overflowing_add(mask as i8);
+
+            result.copy_from_slice(&res.to_le_bytes());
+        }
+        16 => {
+            let l = i16::from_le_bytes(lhs.try_into().unwrap());
+
+            let (res, _) = l.overflowing_add(x as i16);
+            let (res, _) = res.overflowing_add(mask as i16);
+
+            result.copy_from_slice(&res.to_le_bytes());
+        }
+        32 => {
+            let l = i32::from_le_bytes(lhs.try_into().unwrap());
+
+            let (res, _) = l.overflowing_add(x as i32);
+            let (res, _) = res.overflowing_add(mask as i32);
+
+            result.copy_from_slice(&res.to_le_bytes());
+        }
+        64 => {
             let l = i64::from_le_bytes(lhs.try_into().unwrap());
 
             let (res, _) = l.overflowing_add(x as i64);
@@ -56,10 +134,35 @@ fn expected_op_adc_vxm(lhs: &[u8], x: u64, result: &mut [u8], mask: bool) {
 
             result.copy_from_slice(&res.to_le_bytes());
         }
-        32 => {
+
+        128 => {
+            let l = E128::get(lhs);
+            let r = E128::from(x as i64);
+            let mask = E128::from(mask);
+            let (res, _) = l.overflowing_add_u(r);
+            let (res, _) = res.overflowing_add_u(mask);
+            res.put(result);
+        }
+        256 => {
             let l = E256::get(lhs);
             let r = E256::from(x as i64);
             let mask = E256::from(mask);
+            let (res, _) = l.overflowing_add_u(r);
+            let (res, _) = res.overflowing_add_u(mask);
+            res.put(result);
+        }
+        512 => {
+            let l = E512::get(lhs);
+            let r = E512::from(x as i64);
+            let mask = E512::from(mask);
+            let (res, _) = l.overflowing_add_u(r);
+            let (res, _) = res.overflowing_add_u(mask);
+            res.put(result);
+        }
+        1024 => {
+            let l = E1024::get(lhs);
+            let r = E1024::from(x as i64);
+            let mask = E1024::from(mask);
             let (res, _) = l.overflowing_add_u(r);
             let (res, _) = res.overflowing_add_u(mask);
             res.put(result);
@@ -193,8 +296,36 @@ fn test_vadc_vim() {
 }
 
 fn expected_op_madc_vvm(lhs: &[u8], rhs: &[u8], result: &mut bool, mask: bool) {
-    match lhs.len() {
+    let sew = lhs.len() * 8;
+    match sew {
         8 => {
+            let l = u8::from_le_bytes(lhs.try_into().unwrap());
+            let r = u8::from_le_bytes(rhs.try_into().unwrap());
+
+            let (res, carry1) = l.overflowing_add(r);
+            let (_, carry2) = res.overflowing_add(mask as u8);
+
+            *result = carry1 | carry2;
+        }
+        16 => {
+            let l = u16::from_le_bytes(lhs.try_into().unwrap());
+            let r = u16::from_le_bytes(rhs.try_into().unwrap());
+
+            let (res, carry1) = l.overflowing_add(r);
+            let (_, carry2) = res.overflowing_add(mask as u16);
+
+            *result = carry1 | carry2;
+        }
+        32 => {
+            let l = u32::from_le_bytes(lhs.try_into().unwrap());
+            let r = u32::from_le_bytes(rhs.try_into().unwrap());
+
+            let (res, carry1) = l.overflowing_add(r);
+            let (_, carry2) = res.overflowing_add(mask as u32);
+
+            *result = carry1 | carry2;
+        }
+        64 => {
             let l = u64::from_le_bytes(lhs.try_into().unwrap());
             let r = u64::from_le_bytes(rhs.try_into().unwrap());
 
@@ -203,10 +334,38 @@ fn expected_op_madc_vvm(lhs: &[u8], rhs: &[u8], result: &mut bool, mask: bool) {
 
             *result = carry1 | carry2;
         }
-        32 => {
+
+        128 => {
+            let l = E128::get(lhs);
+            let r = E128::get(rhs);
+            let mask = E128::from(mask);
+            let (res, carry1) = l.overflowing_add_u(r);
+            let (_, carry2) = res.overflowing_add_u(mask);
+
+            *result = carry1 | carry2;
+        }
+        256 => {
             let l = E256::get(lhs);
             let r = E256::get(rhs);
             let mask = E256::from(mask);
+            let (res, carry1) = l.overflowing_add_u(r);
+            let (_, carry2) = res.overflowing_add_u(mask);
+
+            *result = carry1 | carry2;
+        }
+        512 => {
+            let l = E512::get(lhs);
+            let r = E512::get(rhs);
+            let mask = E512::from(mask);
+            let (res, carry1) = l.overflowing_add_u(r);
+            let (_, carry2) = res.overflowing_add_u(mask);
+
+            *result = carry1 | carry2;
+        }
+        1024 => {
+            let l = E1024::get(lhs);
+            let r = E1024::get(rhs);
+            let mask = E1024::from(mask);
             let (res, carry1) = l.overflowing_add_u(r);
             let (_, carry2) = res.overflowing_add_u(mask);
 
@@ -228,19 +387,72 @@ fn test_vmadc_vvm() {
 }
 
 fn expected_op_madc_vxm(lhs: &[u8], x: u64, result: &mut bool, mask: bool) {
-    match lhs.len() {
+    let sew = lhs.len() * 8;
+    match sew {
         8 => {
-            let l = u64::from_le_bytes(lhs.try_into().unwrap());
+            let l = u8::from_le_bytes(lhs.try_into().unwrap());
 
-            let (res, carry1) = l.overflowing_add(x);
-            let (_, carry2) = res.overflowing_add(mask as u64);
+            let (res, carry1) = l.overflowing_add(x as u8);
+            let (_, carry2) = res.overflowing_add(mask as u8);
+
+            *result = carry1 | carry2;
+        }
+        16 => {
+            let l = u16::from_le_bytes(lhs.try_into().unwrap());
+
+            let (res, carry1) = l.overflowing_add(x as u16);
+            let (_, carry2) = res.overflowing_add(mask as u16);
 
             *result = carry1 | carry2;
         }
         32 => {
+            let l = u32::from_le_bytes(lhs.try_into().unwrap());
+
+            let (res, carry1) = l.overflowing_add(x as u32);
+            let (_, carry2) = res.overflowing_add(mask as u32);
+
+            *result = carry1 | carry2;
+        }
+        64 => {
+            let l = u64::from_le_bytes(lhs.try_into().unwrap());
+
+            let (res, carry1) = l.overflowing_add(x as u64);
+            let (_, carry2) = res.overflowing_add(mask as u64);
+
+            *result = carry1 | carry2;
+        }
+
+        128 => {
+            let l = E128::get(lhs);
+            let r = E128::from(x as i64);
+            let mask = E128::from(mask);
+            let (res, carry1) = l.overflowing_add_u(r);
+            let (_, carry2) = res.overflowing_add_u(mask);
+
+            *result = carry1 | carry2;
+        }
+        256 => {
             let l = E256::get(lhs);
             let r = E256::from(x as i64);
             let mask = E256::from(mask);
+            let (res, carry1) = l.overflowing_add_u(r);
+            let (_, carry2) = res.overflowing_add_u(mask);
+
+            *result = carry1 | carry2;
+        }
+        512 => {
+            let l = E512::get(lhs);
+            let r = E512::from(x as i64);
+            let mask = E512::from(mask);
+            let (res, carry1) = l.overflowing_add_u(r);
+            let (_, carry2) = res.overflowing_add_u(mask);
+
+            *result = carry1 | carry2;
+        }
+        1024 => {
+            let l = E1024::get(lhs);
+            let r = E1024::from(x as i64);
+            let mask = E1024::from(mask);
             let (res, carry1) = l.overflowing_add_u(r);
             let (_, carry2) = res.overflowing_add_u(mask);
 
@@ -519,8 +731,36 @@ fn test_vmadc_vi() {
 fn expected_op_sbc_vvm(lhs: &[u8], rhs: &[u8], result: &mut [u8], mask: bool) {
     assert_eq!(lhs.len(), rhs.len());
     assert_eq!(rhs.len(), result.len());
-    match lhs.len() {
+    let sew = lhs.len() * 8;
+    match sew {
         8 => {
+            let l = i8::from_le_bytes(lhs.try_into().unwrap());
+            let r = i8::from_le_bytes(rhs.try_into().unwrap());
+
+            let (res, _) = l.overflowing_sub(r);
+            let (res, _) = res.overflowing_sub(mask as i8);
+
+            result.copy_from_slice(&res.to_le_bytes());
+        }
+        16 => {
+            let l = i16::from_le_bytes(lhs.try_into().unwrap());
+            let r = i16::from_le_bytes(rhs.try_into().unwrap());
+
+            let (res, _) = l.overflowing_sub(r);
+            let (res, _) = res.overflowing_sub(mask as i16);
+
+            result.copy_from_slice(&res.to_le_bytes());
+        }
+        32 => {
+            let l = i32::from_le_bytes(lhs.try_into().unwrap());
+            let r = i32::from_le_bytes(rhs.try_into().unwrap());
+
+            let (res, _) = l.overflowing_sub(r);
+            let (res, _) = res.overflowing_sub(mask as i32);
+
+            result.copy_from_slice(&res.to_le_bytes());
+        }
+        64 => {
             let l = i64::from_le_bytes(lhs.try_into().unwrap());
             let r = i64::from_le_bytes(rhs.try_into().unwrap());
 
@@ -529,10 +769,35 @@ fn expected_op_sbc_vvm(lhs: &[u8], rhs: &[u8], result: &mut [u8], mask: bool) {
 
             result.copy_from_slice(&res.to_le_bytes());
         }
-        32 => {
+
+        128 => {
+            let l = E128::get(lhs);
+            let r = E128::get(rhs);
+            let mask = E128::from(mask);
+            let (res, _) = l.overflowing_sub_u(r);
+            let (res, _) = res.overflowing_sub_u(mask);
+            res.put(result);
+        }
+        256 => {
             let l = E256::get(lhs);
             let r = E256::get(rhs);
             let mask = E256::from(mask);
+            let (res, _) = l.overflowing_sub_u(r);
+            let (res, _) = res.overflowing_sub_u(mask);
+            res.put(result);
+        }
+        512 => {
+            let l = E512::get(lhs);
+            let r = E512::get(rhs);
+            let mask = E512::from(mask);
+            let (res, _) = l.overflowing_sub_u(r);
+            let (res, _) = res.overflowing_sub_u(mask);
+            res.put(result);
+        }
+        1024 => {
+            let l = E1024::get(lhs);
+            let r = E1024::get(rhs);
+            let mask = E1024::from(mask);
             let (res, _) = l.overflowing_sub_u(r);
             let (res, _) = res.overflowing_sub_u(mask);
             res.put(result);
@@ -553,8 +818,33 @@ fn test_vsbc_vvm() {
 }
 
 fn expected_op_sbc_vxm(lhs: &[u8], x: u64, result: &mut [u8], mask: bool) {
-    match lhs.len() {
+    let sew = lhs.len() * 8;
+    match sew {
         8 => {
+            let l = i8::from_le_bytes(lhs.try_into().unwrap());
+
+            let (res, _) = l.overflowing_sub(x as i8);
+            let (res, _) = res.overflowing_sub(mask as i8);
+
+            result.copy_from_slice(&res.to_le_bytes());
+        }
+        16 => {
+            let l = i16::from_le_bytes(lhs.try_into().unwrap());
+
+            let (res, _) = l.overflowing_sub(x as i16);
+            let (res, _) = res.overflowing_sub(mask as i16);
+
+            result.copy_from_slice(&res.to_le_bytes());
+        }
+        32 => {
+            let l = i32::from_le_bytes(lhs.try_into().unwrap());
+
+            let (res, _) = l.overflowing_sub(x as i32);
+            let (res, _) = res.overflowing_sub(mask as i32);
+
+            result.copy_from_slice(&res.to_le_bytes());
+        }
+        64 => {
             let l = i64::from_le_bytes(lhs.try_into().unwrap());
 
             let (res, _) = l.overflowing_sub(x as i64);
@@ -562,10 +852,35 @@ fn expected_op_sbc_vxm(lhs: &[u8], x: u64, result: &mut [u8], mask: bool) {
 
             result.copy_from_slice(&res.to_le_bytes());
         }
-        32 => {
+
+        128 => {
+            let l = E128::get(lhs);
+            let r = E128::from(x as i64);
+            let mask = E128::from(mask);
+            let (res, _) = l.overflowing_sub_u(r);
+            let (res, _) = res.overflowing_sub_u(mask);
+            res.put(result);
+        }
+        256 => {
             let l = E256::get(lhs);
             let r = E256::from(x as i64);
             let mask = E256::from(mask);
+            let (res, _) = l.overflowing_sub_u(r);
+            let (res, _) = res.overflowing_sub_u(mask);
+            res.put(result);
+        }
+        512 => {
+            let l = E512::get(lhs);
+            let r = E512::from(x as i64);
+            let mask = E512::from(mask);
+            let (res, _) = l.overflowing_sub_u(r);
+            let (res, _) = res.overflowing_sub_u(mask);
+            res.put(result);
+        }
+        1024 => {
+            let l = E1024::get(lhs);
+            let r = E1024::from(x as i64);
+            let mask = E1024::from(mask);
             let (res, _) = l.overflowing_sub_u(r);
             let (res, _) = res.overflowing_sub_u(mask);
             res.put(result);
@@ -586,20 +901,76 @@ fn test_vsbc_vxm() {
 }
 
 fn expected_op_msbc_vvm(lhs: &[u8], rhs: &[u8], result: &mut bool, mask: bool) {
-    match lhs.len() {
+    let sew = lhs.len() * 8;
+    match sew {
         8 => {
-            let l = u64::from_le_bytes(lhs.try_into().unwrap());
-            let r = u64::from_le_bytes(rhs.try_into().unwrap());
+            let l = u8::from_le_bytes(lhs.try_into().unwrap());
+            let r = u8::from_le_bytes(rhs.try_into().unwrap());
 
-            let (res, carry1) = l.overflowing_sub(r);
-            let (_, carry2) = res.overflowing_sub(mask as u64);
+            let (res, carry1) = l.overflowing_sub(r as u8);
+            let (_, carry2) = res.overflowing_sub(mask as u8);
+
+            *result = carry1 | carry2;
+        }
+        16 => {
+            let l = u16::from_le_bytes(lhs.try_into().unwrap());
+            let r = u16::from_le_bytes(rhs.try_into().unwrap());
+
+            let (res, carry1) = l.overflowing_sub(r as u16);
+            let (_, carry2) = res.overflowing_sub(mask as u16);
 
             *result = carry1 | carry2;
         }
         32 => {
+            let l = u32::from_le_bytes(lhs.try_into().unwrap());
+            let r = u32::from_le_bytes(rhs.try_into().unwrap());
+
+            let (res, carry1) = l.overflowing_sub(r as u32);
+            let (_, carry2) = res.overflowing_sub(mask as u32);
+
+            *result = carry1 | carry2;
+        }
+        64 => {
+            let l = u64::from_le_bytes(lhs.try_into().unwrap());
+            let r = u64::from_le_bytes(rhs.try_into().unwrap());
+
+            let (res, carry1) = l.overflowing_sub(r as u64);
+            let (_, carry2) = res.overflowing_sub(mask as u64);
+
+            *result = carry1 | carry2;
+        }
+
+        128 => {
+            let l = E128::get(lhs);
+            let r = E128::get(rhs);
+            let mask = E128::from(mask);
+            let (res, carry1) = l.overflowing_sub_u(r);
+            let (_, carry2) = res.overflowing_sub_u(mask);
+
+            *result = carry1 | carry2;
+        }
+        256 => {
             let l = E256::get(lhs);
             let r = E256::get(rhs);
             let mask = E256::from(mask);
+            let (res, carry1) = l.overflowing_sub_u(r);
+            let (_, carry2) = res.overflowing_sub_u(mask);
+
+            *result = carry1 | carry2;
+        }
+        512 => {
+            let l = E512::get(lhs);
+            let r = E512::get(rhs);
+            let mask = E512::from(mask);
+            let (res, carry1) = l.overflowing_sub_u(r);
+            let (_, carry2) = res.overflowing_sub_u(mask);
+
+            *result = carry1 | carry2;
+        }
+        1024 => {
+            let l = E1024::get(lhs);
+            let r = E1024::get(rhs);
+            let mask = E1024::from(mask);
             let (res, carry1) = l.overflowing_sub_u(r);
             let (_, carry2) = res.overflowing_sub_u(mask);
 
@@ -621,19 +992,72 @@ fn test_vmsbc_vvm() {
 }
 
 fn expected_op_msbc_vxm(lhs: &[u8], x: u64, result: &mut bool, mask: bool) {
-    match lhs.len() {
+    let sew = lhs.len() * 8;
+    match sew {
         8 => {
-            let l = u64::from_le_bytes(lhs.try_into().unwrap());
+            let l = u8::from_le_bytes(lhs.try_into().unwrap());
 
-            let (res, carry1) = l.overflowing_sub(x);
-            let (_, carry2) = res.overflowing_sub(mask as u64);
+            let (res, carry1) = l.overflowing_sub(x as u8);
+            let (_, carry2) = res.overflowing_sub(mask as u8);
+
+            *result = carry1 | carry2;
+        }
+        16 => {
+            let l = u16::from_le_bytes(lhs.try_into().unwrap());
+
+            let (res, carry1) = l.overflowing_sub(x as u16);
+            let (_, carry2) = res.overflowing_sub(mask as u16);
 
             *result = carry1 | carry2;
         }
         32 => {
+            let l = u32::from_le_bytes(lhs.try_into().unwrap());
+
+            let (res, carry1) = l.overflowing_sub(x as u32);
+            let (_, carry2) = res.overflowing_sub(mask as u32);
+
+            *result = carry1 | carry2;
+        }
+        64 => {
+            let l = u64::from_le_bytes(lhs.try_into().unwrap());
+
+            let (res, carry1) = l.overflowing_sub(x as u64);
+            let (_, carry2) = res.overflowing_sub(mask as u64);
+
+            *result = carry1 | carry2;
+        }
+
+        128 => {
+            let l = E128::get(lhs);
+            let r = E128::from(x as i64);
+            let mask = E128::from(mask);
+            let (res, carry1) = l.overflowing_sub_u(r);
+            let (_, carry2) = res.overflowing_sub_u(mask);
+
+            *result = carry1 | carry2;
+        }
+        256 => {
             let l = E256::get(lhs);
             let r = E256::from(x as i64);
             let mask = E256::from(mask);
+            let (res, carry1) = l.overflowing_sub_u(r);
+            let (_, carry2) = res.overflowing_sub_u(mask);
+
+            *result = carry1 | carry2;
+        }
+        512 => {
+            let l = E512::get(lhs);
+            let r = E512::from(x as i64);
+            let mask = E512::from(mask);
+            let (res, carry1) = l.overflowing_sub_u(r);
+            let (_, carry2) = res.overflowing_sub_u(mask);
+
+            *result = carry1 | carry2;
+        }
+        1024 => {
+            let l = E1024::get(lhs);
+            let r = E1024::from(x as i64);
+            let mask = E1024::from(mask);
             let (res, carry1) = l.overflowing_sub_u(r);
             let (_, carry2) = res.overflowing_sub_u(mask);
 

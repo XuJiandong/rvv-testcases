@@ -13,7 +13,7 @@ use crate::intrinsic::{
 use crate::misc::{avl_iterator, VLEN};
 
 use super::log;
-use super::misc::{get_bit_in_slice, is_verbose, set_bit_in_slice};
+use super::misc::{get_bit_in_slice, is_full, is_verbose, set_bit_in_slice};
 use super::rng::BestNumberRng;
 
 pub enum WideningCategory {
@@ -44,7 +44,7 @@ where
     let mut vs2 = [0u8; VLEN / 8];
 
     let mut rng = BestNumberRng::default();
-    rng.fill(&mut mask_v0[..]);
+    rng.fill_mask(&mut mask_v0[..]);
     rng.fill(&mut vs2[..]);
 
     let vl = vsetvl(8, 256, 1) as usize;
@@ -245,8 +245,6 @@ impl RVVTestData {
     }
 
     fn rng_fill(&mut self) {
-        let mut rng = BestNumberRng::default();
-
         // mask
         let mask_len = {
             let len = (self.avl / 8 + 1) as usize;
@@ -257,22 +255,32 @@ impl RVVTestData {
             }
         };
         self.mask.resize(mask_len, 0xFF);
-        rng.fill(self.mask.as_mut_slice());
 
-        // lhs
         let lhs_len = self.lhs_type.get_buf_len(self.sew_bytes, self.avl as usize);
         self.lhs.resize(lhs_len, 0);
-        rng.fill(self.lhs.as_mut_slice());
 
-        // rhs
         let rhs_len = self.rhs_type.get_buf_len(self.sew_bytes, self.avl as usize);
         self.rhs.resize(rhs_len, 0);
-        rng.fill(self.rhs.as_mut_slice());
 
-        // res
         let res_len = self.res_type.get_buf_len(self.sew_bytes, self.avl as usize);
         self.res_before.resize(res_len, 0);
-        rng.fill(self.res_before.as_mut_slice());
+
+        let mut rng = BestNumberRng::default();
+
+        rng.fill_mask(self.mask.as_mut_slice());
+        rng.fill_bytes_with_sew(
+            self.lhs.as_mut_slice(),
+            Self::get_sew(self.sew, self.lhs_type),
+        );
+        rng.fill_bytes_with_sew(
+            self.rhs.as_mut_slice(),
+            Self::get_sew(self.sew, self.rhs_type),
+        );
+        rng.fill_bytes_with_sew(
+            self.res_before.as_mut_slice(),
+            Self::get_sew(self.sew, self.res_type),
+        );
+
         self.res_rvv = self.res_before.clone();
         self.res_exp = self.res_before.clone();
     }
@@ -851,17 +859,25 @@ fn run_template_ext(
     let imm_begin = get_imm_begin(left_type, right_type);
     let mut imm = imm_begin;
 
-    let sews = &[64, 256];
-    let lmuls = &[-8, -4, -2, 1, 2, 4, 8];
+    let sews = if is_full() {
+        [8, 16, 32, 64, 128, 256, 512, 1024].to_vec()
+    } else {
+        [64, 256].to_vec()
+    };
+    let lmuls = if is_full() {
+        [-8, -4, -2, 1, 2, 4, 8].to_vec()
+    } else {
+        [-8, 1, 8].to_vec()
+    };
 
     for sew in sews {
-        for lmul in lmuls {
-            for avl in avl_iterator(sew.clone(), *lmul, 2) {
-                if vsetvl(avl, *sew, *lmul) == 0 {
+        for lmul in lmuls.clone() {
+            for avl in avl_iterator(sew.clone(), lmul, 2) {
+                if vsetvl(avl, sew, lmul) == 0 {
                     continue;
                 }
 
-                if !before_op.clone()(*sew as f64, RVVTestData::get_lmul(*lmul), avl) {
+                if !before_op.clone()(sew as f64, RVVTestData::get_lmul(lmul), avl) {
                     continue;
                 }
 
@@ -904,7 +920,6 @@ fn run_template_ext(
             }
         }
     }
-    //log!("{}", desc);
 }
 
 fn befor_op_default(_: f64, _: f64, _: u64) -> bool {
@@ -1439,7 +1454,10 @@ pub fn run_template_v_n(
     enable_mask: bool,
     desc: &str,
 ) {
-    fn before_op_2(_: f64, lmul: f64, _: u64) -> bool {
+    fn before_op_2(sew: f64, lmul: f64, _: u64) -> bool {
+        if sew <= 8.0 {
+            return false;
+        }
         let v = 0.5;
         let emul = lmul * v;
         if emul >= 0.125 && emul <= 8.0 {
@@ -1448,7 +1466,10 @@ pub fn run_template_v_n(
             false
         }
     }
-    fn before_op_4(_: f64, lmul: f64, _: u64) -> bool {
+    fn before_op_4(sew: f64, lmul: f64, _: u64) -> bool {
+        if sew <= 16.0 {
+            return false;
+        }
         let v = 0.25;
         let emul = lmul * v;
         if emul >= 0.125 && emul <= 8.0 {
@@ -1457,7 +1478,10 @@ pub fn run_template_v_n(
             false
         }
     }
-    fn before_op_8(_: f64, lmul: f64, _: u64) -> bool {
+    fn before_op_8(sew: f64, lmul: f64, _: u64) -> bool {
+        if sew <= 32.0 {
+            return false;
+        }
         let v = 0.125;
         let emul = lmul * v;
         if emul >= 0.125 && emul <= 8.0 {

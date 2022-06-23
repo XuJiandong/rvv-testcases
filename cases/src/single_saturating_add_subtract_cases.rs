@@ -1,15 +1,15 @@
 use core::{arch::asm, convert::TryInto};
-use eint::{Eint, E128, E256};
+use eint::{Eint, E1024, E128, E256, E512, E64};
 use rvv_asm::rvv_asm;
 use rvv_testcases::{
-    misc::conver_to_i256,
+    misc::{conver_to_i1024, conver_to_i128, conver_to_i256, conver_to_i512},
     runner::{run_template_v_vi, run_template_v_vv, run_template_v_vx, MaskType},
 };
 
 fn expected_op_saddu(lhs: &[u8], x: u64, result: &mut [u8]) {
     assert_eq!(lhs.len(), result.len());
-    match lhs.len() {
-        1 => {
+    match lhs.len() * 8 {
+        8 => {
             let l = lhs[0] as u8;
             let r = x as u8;
             let (res, overflow) = l.overflowing_add(r);
@@ -19,7 +19,7 @@ fn expected_op_saddu(lhs: &[u8], x: u64, result: &mut [u8]) {
                 result.copy_from_slice(&res.to_le_bytes());
             }
         }
-        2 => {
+        16 => {
             let (res, overflow) =
                 u16::from_le_bytes(lhs.try_into().unwrap()).overflowing_add(x as u16);
             if overflow {
@@ -28,7 +28,7 @@ fn expected_op_saddu(lhs: &[u8], x: u64, result: &mut [u8]) {
                 result.copy_from_slice(&res.to_le_bytes());
             }
         }
-        4 => {
+        32 => {
             let (res, overflow) =
                 u32::from_le_bytes(lhs.try_into().unwrap()).overflowing_add(x as u32);
             if overflow {
@@ -37,7 +37,7 @@ fn expected_op_saddu(lhs: &[u8], x: u64, result: &mut [u8]) {
                 result.copy_from_slice(&res.to_le_bytes());
             }
         }
-        8 => {
+        64 => {
             let (res, overflow) =
                 u64::from_le_bytes(lhs.try_into().unwrap()).overflowing_add(x as u64);
             if overflow {
@@ -46,19 +46,34 @@ fn expected_op_saddu(lhs: &[u8], x: u64, result: &mut [u8]) {
                 result.copy_from_slice(&res.to_le_bytes());
             }
         }
-        16 => {
-            let (res, overflow) =
-                u128::from_le_bytes(lhs.try_into().unwrap()).overflowing_add(x as u128);
+        128 => {
+            let (res, overflow) = E128::get(lhs).overflowing_add_u(E128::from(x));
             if overflow {
-                result.copy_from_slice(&u128::MAX.to_le_bytes());
+                E128::MAX_U.put(result);
             } else {
-                result.copy_from_slice(&res.to_le_bytes());
+                res.put(result);
             }
         }
-        32 => {
+        256 => {
             let (res, overflow) = E256::get(lhs).overflowing_add_u(E256::from(x));
             if overflow {
                 E256::MAX_U.put(result);
+            } else {
+                res.put(result);
+            }
+        }
+        512 => {
+            let (res, overflow) = E512::get(lhs).overflowing_add_u(E512::from(x));
+            if overflow {
+                E512::MAX_U.put(result);
+            } else {
+                res.put(result);
+            }
+        }
+        1024 => {
+            let (res, overflow) = E1024::get(lhs).overflowing_add_u(E1024::from(x));
+            if overflow {
+                E1024::MAX_U.put(result);
             } else {
                 res.put(result);
             }
@@ -89,8 +104,8 @@ fn test_vsaddu_vx() {
 
 fn expected_op_saddu_vv(lhs: &[u8], rhs: &[u8], result: &mut [u8]) {
     assert!(lhs.len() == rhs.len() && rhs.len() == result.len());
-    match lhs.len() {
-        1 => {
+    match lhs.len() * 8 {
+        8 => {
             let l = lhs[0] as u8;
             let r = rhs[0] as u8;
             let (res, overflow) = l.overflowing_add(r);
@@ -100,7 +115,7 @@ fn expected_op_saddu_vv(lhs: &[u8], rhs: &[u8], result: &mut [u8]) {
                 result.copy_from_slice(&res.to_le_bytes());
             }
         }
-        2 => {
+        16 => {
             let (res, overflow) = u16::from_le_bytes(lhs.try_into().unwrap())
                 .overflowing_add(u16::from_le_bytes(rhs.try_into().unwrap()));
             if overflow {
@@ -109,7 +124,7 @@ fn expected_op_saddu_vv(lhs: &[u8], rhs: &[u8], result: &mut [u8]) {
                 result.copy_from_slice(&res.to_le_bytes());
             }
         }
-        4 => {
+        32 => {
             let (res, overflow) = u32::from_le_bytes(lhs.try_into().unwrap())
                 .overflowing_add(u32::from_le_bytes(rhs.try_into().unwrap()));
             if overflow {
@@ -118,7 +133,7 @@ fn expected_op_saddu_vv(lhs: &[u8], rhs: &[u8], result: &mut [u8]) {
                 result.copy_from_slice(&res.to_le_bytes());
             }
         }
-        8 => {
+        64 => {
             let (res, overflow) = u64::from_le_bytes(lhs.try_into().unwrap())
                 .overflowing_add(u64::from_le_bytes(rhs.try_into().unwrap()));
             if overflow {
@@ -127,19 +142,34 @@ fn expected_op_saddu_vv(lhs: &[u8], rhs: &[u8], result: &mut [u8]) {
                 result.copy_from_slice(&res.to_le_bytes());
             }
         }
-        16 => {
-            let (res, overflow) = u128::from_le_bytes(lhs.try_into().unwrap())
-                .overflowing_add(u128::from_le_bytes(rhs.try_into().unwrap()));
+        128 => {
+            let (res, overflow) = E128::get(lhs).overflowing_add_u(E128::get(rhs));
             if overflow {
-                result.copy_from_slice(&u128::MAX.to_le_bytes());
+                E128::MAX_U.put(result);
             } else {
-                result.copy_from_slice(&res.to_le_bytes());
+                res.put(result);
             }
         }
-        32 => {
+        256 => {
             let (res, overflow) = E256::get(lhs).overflowing_add_u(E256::get(rhs));
             if overflow {
                 E256::MAX_U.put(result);
+            } else {
+                res.put(result);
+            }
+        }
+        512 => {
+            let (res, overflow) = E512::get(lhs).overflowing_add_u(E512::get(rhs));
+            if overflow {
+                E512::MAX_U.put(result);
+            } else {
+                res.put(result);
+            }
+        }
+        1024 => {
+            let (res, overflow) = E1024::get(lhs).overflowing_add_u(E1024::get(rhs));
+            if overflow {
+                E1024::MAX_U.put(result);
             } else {
                 res.put(result);
             }
@@ -168,12 +198,39 @@ fn test_vsaddu_vv() {
 }
 
 fn expected_op_saddu_vi(lhs: &[u8], imm: i64, result: &mut [u8]) {
-    match lhs.len() {
-        32 => {
+    match lhs.len() * 8 {
+        128 => {
             let (res, overflow) =
-                E256::get(lhs).overflowing_add_u(conver_to_i256(E128::from(imm as i128)));
+                E128::get(lhs).overflowing_add_u(conver_to_i128(E64::from(imm as i64)));
+            if overflow {
+                E128::MAX_U.put(result);
+            } else {
+                res.put(result);
+            }
+        }
+        256 => {
+            let (res, overflow) =
+                E256::get(lhs).overflowing_add_u(conver_to_i256(E128::from(imm as i64)));
             if overflow {
                 E256::MAX_U.put(result);
+            } else {
+                res.put(result);
+            }
+        }
+        512 => {
+            let (res, overflow) =
+                E512::get(lhs).overflowing_add_u(conver_to_i512(E256::from(imm as i64)));
+            if overflow {
+                E512::MAX_U.put(result);
+            } else {
+                res.put(result);
+            }
+        }
+        1024 => {
+            let (res, overflow) =
+                E1024::get(lhs).overflowing_add_u(conver_to_i1024(E512::from(imm as i64)));
+            if overflow {
+                E1024::MAX_U.put(result);
             } else {
                 res.put(result);
             }
@@ -497,9 +554,9 @@ fn test_vsaddu_vi() {
 
 fn expected_op_sadd(lhs: &[u8], x: u64, result: &mut [u8]) {
     assert_eq!(lhs.len(), result.len());
-    match lhs.len() {
-        1 => {
-            let l = lhs[0] as i16;
+    match lhs.len() * 8 {
+        8 => {
+            let l = lhs[0] as i8 as i16;
             let res = l.wrapping_add((x as i8) as i16);
             if res > i8::MAX as i16 {
                 result[0] = i8::MAX as u8;
@@ -509,7 +566,7 @@ fn expected_op_sadd(lhs: &[u8], x: u64, result: &mut [u8]) {
                 result[0] = res as u8;
             }
         }
-        2 => {
+        16 => {
             let l = i16::from_le_bytes(lhs.try_into().unwrap()) as i32;
             let res = l.wrapping_add((x as i16) as i32);
             if res > i16::MAX as i32 {
@@ -521,7 +578,7 @@ fn expected_op_sadd(lhs: &[u8], x: u64, result: &mut [u8]) {
                 result.copy_from_slice(&res.to_le_bytes());
             }
         }
-        4 => {
+        32 => {
             let l = i32::from_le_bytes(lhs.try_into().unwrap()) as i64;
             let res = l.wrapping_add((x as i32) as i64);
             if res > i32::MAX as i64 {
@@ -533,7 +590,7 @@ fn expected_op_sadd(lhs: &[u8], x: u64, result: &mut [u8]) {
                 result.copy_from_slice(&res.to_le_bytes());
             }
         }
-        8 => {
+        64 => {
             let l = i64::from_le_bytes(lhs.try_into().unwrap()) as i128;
             let res = l.wrapping_add((x as i64) as i128);
             if res > i64::MAX as i128 {
@@ -545,15 +602,27 @@ fn expected_op_sadd(lhs: &[u8], x: u64, result: &mut [u8]) {
                 result.copy_from_slice(&res.to_le_bytes());
             }
         }
-        16 => {
+        128 => {
             let l = E128::get(lhs);
             let r = E128::from(x as i64);
             let (res, _) = l.saturating_add_s(r);
             res.put(result);
         }
-        32 => {
+        256 => {
             let l = E256::get(lhs);
             let r = E256::from(x as i64);
+            let (res, _) = l.saturating_add_s(r);
+            res.put(result);
+        }
+        512 => {
+            let l = E512::get(lhs);
+            let r = E512::from(x as i64);
+            let (res, _) = l.saturating_add_s(r);
+            res.put(result);
+        }
+        1024 => {
+            let l = E1024::get(lhs);
+            let r = E1024::from(x as i64);
             let (res, _) = l.saturating_add_s(r);
             res.put(result);
         }
@@ -583,9 +652,9 @@ fn test_vsadd_vx() {
 
 fn expected_op_sadd_vv(lhs: &[u8], rhs: &[u8], result: &mut [u8]) {
     assert!(lhs.len() == rhs.len() && rhs.len() == result.len());
-    match lhs.len() {
-        1 => {
-            let l = lhs[0] as i16;
+    match lhs.len() * 8 {
+        8 => {
+            let l = lhs[0] as i8 as i16;
             let res = l.wrapping_add((rhs[0] as i8) as i16);
             if res > i8::MAX as i16 {
                 result[0] = i8::MAX as u8;
@@ -595,7 +664,7 @@ fn expected_op_sadd_vv(lhs: &[u8], rhs: &[u8], result: &mut [u8]) {
                 result[0] = res as u8;
             }
         }
-        2 => {
+        16 => {
             let l = i16::from_le_bytes(lhs.try_into().unwrap()) as i32;
             let res = l.wrapping_add(i16::from_le_bytes(rhs.try_into().unwrap()) as i32);
             if res > i16::MAX as i32 {
@@ -607,7 +676,7 @@ fn expected_op_sadd_vv(lhs: &[u8], rhs: &[u8], result: &mut [u8]) {
                 result.copy_from_slice(&res.to_le_bytes());
             }
         }
-        4 => {
+        32 => {
             let l = i32::from_le_bytes(lhs.try_into().unwrap()) as i64;
             let res = l.wrapping_add(i32::from_le_bytes(rhs.try_into().unwrap()) as i64);
             if res > i32::MAX as i64 {
@@ -619,7 +688,7 @@ fn expected_op_sadd_vv(lhs: &[u8], rhs: &[u8], result: &mut [u8]) {
                 result.copy_from_slice(&res.to_le_bytes());
             }
         }
-        8 => {
+        64 => {
             let l = i64::from_le_bytes(lhs.try_into().unwrap()) as i128;
             let res = l.wrapping_add(i64::from_le_bytes(rhs.try_into().unwrap()) as i128);
             if res > i64::MAX as i128 {
@@ -631,15 +700,27 @@ fn expected_op_sadd_vv(lhs: &[u8], rhs: &[u8], result: &mut [u8]) {
                 result.copy_from_slice(&res.to_le_bytes());
             }
         }
-        16 => {
+        128 => {
             let l = E128::get(lhs);
             let r = E128::get(rhs);
             let (res, _) = l.saturating_add_s(r);
             res.put(result);
         }
-        32 => {
+        256 => {
             let l = E256::get(lhs);
             let r = E256::get(rhs);
+            let (res, _) = l.saturating_add_s(r);
+            res.put(result);
+        }
+        512 => {
+            let l = E512::get(lhs);
+            let r = E512::get(rhs);
+            let (res, _) = l.saturating_add_s(r);
+            res.put(result);
+        }
+        1024 => {
+            let l = E1024::get(lhs);
+            let r = E1024::get(rhs);
             let (res, _) = l.saturating_add_s(r);
             res.put(result);
         }
@@ -982,8 +1063,8 @@ fn test_vsadd_vi() {
 
 fn expected_op_ssubu(lhs: &[u8], x: u64, result: &mut [u8]) {
     assert_eq!(lhs.len(), result.len());
-    match lhs.len() {
-        1 => {
+    match lhs.len() * 8 {
+        8 => {
             let l = lhs[0] as u8;
             let r = x as u8;
             let (res, overflow) = l.overflowing_sub(r);
@@ -993,7 +1074,7 @@ fn expected_op_ssubu(lhs: &[u8], x: u64, result: &mut [u8]) {
                 result.copy_from_slice(&res.to_le_bytes());
             }
         }
-        2 => {
+        16 => {
             let (res, overflow) =
                 u16::from_le_bytes(lhs.try_into().unwrap()).overflowing_sub(x as u16);
             if overflow {
@@ -1002,7 +1083,7 @@ fn expected_op_ssubu(lhs: &[u8], x: u64, result: &mut [u8]) {
                 result.copy_from_slice(&res.to_le_bytes());
             }
         }
-        4 => {
+        32 => {
             let (res, overflow) =
                 u32::from_le_bytes(lhs.try_into().unwrap()).overflowing_sub(x as u32);
             if overflow {
@@ -1011,7 +1092,7 @@ fn expected_op_ssubu(lhs: &[u8], x: u64, result: &mut [u8]) {
                 result.copy_from_slice(&res.to_le_bytes());
             }
         }
-        8 => {
+        64 => {
             let (res, overflow) =
                 u64::from_le_bytes(lhs.try_into().unwrap()).overflowing_sub(x as u64);
             if overflow {
@@ -1020,19 +1101,34 @@ fn expected_op_ssubu(lhs: &[u8], x: u64, result: &mut [u8]) {
                 result.copy_from_slice(&res.to_le_bytes());
             }
         }
-        16 => {
-            let (res, overflow) =
-                u128::from_le_bytes(lhs.try_into().unwrap()).overflowing_sub(x as u128);
+        128 => {
+            let (res, overflow) = E128::get(lhs).overflowing_sub_u(E128::from(x));
             if overflow {
-                result.copy_from_slice(&u128::MIN.to_le_bytes());
+                E128::MIN_U.put(result);
             } else {
-                result.copy_from_slice(&res.to_le_bytes());
+                res.put(result);
             }
         }
-        32 => {
+        256 => {
             let (res, overflow) = E256::get(lhs).overflowing_sub_u(E256::from(x));
             if overflow {
                 E256::MIN_U.put(result);
+            } else {
+                res.put(result);
+            }
+        }
+        512 => {
+            let (res, overflow) = E512::get(lhs).overflowing_sub_u(E512::from(x));
+            if overflow {
+                E512::MIN_U.put(result);
+            } else {
+                res.put(result);
+            }
+        }
+        1024 => {
+            let (res, overflow) = E1024::get(lhs).overflowing_sub_u(E1024::from(x));
+            if overflow {
+                E1024::MIN_U.put(result);
             } else {
                 res.put(result);
             }
@@ -1062,8 +1158,8 @@ fn test_vssubu_vx() {
 
 fn expected_op_ssubu_vv(lhs: &[u8], rhs: &[u8], result: &mut [u8]) {
     assert!(lhs.len() == rhs.len() && rhs.len() == result.len());
-    match lhs.len() {
-        1 => {
+    match lhs.len() * 8 {
+        8 => {
             let l = lhs[0] as u8;
             let r = rhs[0] as u8;
             let (res, overflow) = l.overflowing_sub(r);
@@ -1073,7 +1169,7 @@ fn expected_op_ssubu_vv(lhs: &[u8], rhs: &[u8], result: &mut [u8]) {
                 result.copy_from_slice(&res.to_le_bytes());
             }
         }
-        2 => {
+        16 => {
             let (res, overflow) = u16::from_le_bytes(lhs.try_into().unwrap())
                 .overflowing_sub(u16::from_le_bytes(rhs.try_into().unwrap()));
             if overflow {
@@ -1082,7 +1178,7 @@ fn expected_op_ssubu_vv(lhs: &[u8], rhs: &[u8], result: &mut [u8]) {
                 result.copy_from_slice(&res.to_le_bytes());
             }
         }
-        4 => {
+        32 => {
             let (res, overflow) = u32::from_le_bytes(lhs.try_into().unwrap())
                 .overflowing_sub(u32::from_le_bytes(rhs.try_into().unwrap()));
             if overflow {
@@ -1091,7 +1187,7 @@ fn expected_op_ssubu_vv(lhs: &[u8], rhs: &[u8], result: &mut [u8]) {
                 result.copy_from_slice(&res.to_le_bytes());
             }
         }
-        8 => {
+        64 => {
             let (res, overflow) = u64::from_le_bytes(lhs.try_into().unwrap())
                 .overflowing_sub(u64::from_le_bytes(rhs.try_into().unwrap()));
             if overflow {
@@ -1100,19 +1196,34 @@ fn expected_op_ssubu_vv(lhs: &[u8], rhs: &[u8], result: &mut [u8]) {
                 result.copy_from_slice(&res.to_le_bytes());
             }
         }
-        16 => {
-            let (res, overflow) = u128::from_le_bytes(lhs.try_into().unwrap())
-                .overflowing_sub(u128::from_le_bytes(rhs.try_into().unwrap()));
+        128 => {
+            let (res, overflow) = E128::get(lhs).overflowing_sub_u(E128::get(rhs));
             if overflow {
-                result.copy_from_slice(&u128::MIN.to_le_bytes());
+                E128::MIN_U.put(result);
             } else {
-                result.copy_from_slice(&res.to_le_bytes());
+                res.put(result);
             }
         }
-        32 => {
+        256 => {
             let (res, overflow) = E256::get(lhs).overflowing_sub_u(E256::get(rhs));
             if overflow {
                 E256::MIN_U.put(result);
+            } else {
+                res.put(result);
+            }
+        }
+        512 => {
+            let (res, overflow) = E512::get(lhs).overflowing_sub_u(E512::get(rhs));
+            if overflow {
+                E512::MIN_U.put(result);
+            } else {
+                res.put(result);
+            }
+        }
+        1024 => {
+            let (res, overflow) = E1024::get(lhs).overflowing_sub_u(E1024::get(rhs));
+            if overflow {
+                E1024::MIN_U.put(result);
             } else {
                 res.put(result);
             }
@@ -1141,9 +1252,9 @@ fn test_vssubu_vv() {
 
 fn expected_op_ssub(lhs: &[u8], x: u64, result: &mut [u8]) {
     assert_eq!(lhs.len(), result.len());
-    match lhs.len() {
-        1 => {
-            let l = lhs[0] as i16;
+    match lhs.len() * 8 {
+        8 => {
+            let l = lhs[0] as i8 as i16;
             let res = l.wrapping_sub((x as i8) as i16);
             if res > i8::MAX as i16 {
                 result[0] = i8::MAX as u8;
@@ -1153,7 +1264,7 @@ fn expected_op_ssub(lhs: &[u8], x: u64, result: &mut [u8]) {
                 result[0] = res as u8;
             }
         }
-        2 => {
+        16 => {
             let l = i16::from_le_bytes(lhs.try_into().unwrap()) as i32;
             let res = l.wrapping_sub((x as i16) as i32);
             if res > i16::MAX as i32 {
@@ -1165,7 +1276,7 @@ fn expected_op_ssub(lhs: &[u8], x: u64, result: &mut [u8]) {
                 result.copy_from_slice(&res.to_le_bytes());
             }
         }
-        4 => {
+        32 => {
             let l = i32::from_le_bytes(lhs.try_into().unwrap()) as i64;
             let res = l.wrapping_sub((x as i32) as i64);
             if res > i32::MAX as i64 {
@@ -1177,7 +1288,7 @@ fn expected_op_ssub(lhs: &[u8], x: u64, result: &mut [u8]) {
                 result.copy_from_slice(&res.to_le_bytes());
             }
         }
-        8 => {
+        64 => {
             let l = i64::from_le_bytes(lhs.try_into().unwrap()) as i128;
             let res = l.wrapping_sub((x as i64) as i128);
             if res > i64::MAX as i128 {
@@ -1189,15 +1300,27 @@ fn expected_op_ssub(lhs: &[u8], x: u64, result: &mut [u8]) {
                 result.copy_from_slice(&res.to_le_bytes());
             }
         }
-        16 => {
+        128 => {
             let l = E128::get(lhs);
             let r = E128::from(x as i64);
             let (res, _) = l.saturating_sub_s(r);
             res.put(result);
         }
-        32 => {
+        256 => {
             let l = E256::get(lhs);
             let r = E256::from(x as i64);
+            let (res, _) = l.saturating_sub_s(r);
+            res.put(result);
+        }
+        512 => {
+            let l = E512::get(lhs);
+            let r = E512::from(x as i64);
+            let (res, _) = l.saturating_sub_s(r);
+            res.put(result);
+        }
+        1024 => {
+            let l = E1024::get(lhs);
+            let r = E1024::from(x as i64);
             let (res, _) = l.saturating_sub_s(r);
             res.put(result);
         }
@@ -1226,9 +1349,9 @@ fn test_vssub_vx() {
 
 fn expected_op_ssub_vv(lhs: &[u8], rhs: &[u8], result: &mut [u8]) {
     assert!(lhs.len() == rhs.len() && rhs.len() == result.len());
-    match lhs.len() {
-        1 => {
-            let l = lhs[0] as i16;
+    match lhs.len() * 8 {
+        8 => {
+            let l = lhs[0] as i8 as i16;
             let res = l.wrapping_sub((rhs[0] as i8) as i16);
             if res > i8::MAX as i16 {
                 result[0] = i8::MAX as u8;
@@ -1238,7 +1361,7 @@ fn expected_op_ssub_vv(lhs: &[u8], rhs: &[u8], result: &mut [u8]) {
                 result[0] = res as u8;
             }
         }
-        2 => {
+        16 => {
             let l = i16::from_le_bytes(lhs.try_into().unwrap()) as i32;
             let res = l.wrapping_sub(i16::from_le_bytes(rhs.try_into().unwrap()) as i32);
             if res > i16::MAX as i32 {
@@ -1250,7 +1373,7 @@ fn expected_op_ssub_vv(lhs: &[u8], rhs: &[u8], result: &mut [u8]) {
                 result.copy_from_slice(&res.to_le_bytes());
             }
         }
-        4 => {
+        32 => {
             let l = i32::from_le_bytes(lhs.try_into().unwrap()) as i64;
             let res = l.wrapping_sub(i32::from_le_bytes(rhs.try_into().unwrap()) as i64);
             if res > i32::MAX as i64 {
@@ -1262,7 +1385,7 @@ fn expected_op_ssub_vv(lhs: &[u8], rhs: &[u8], result: &mut [u8]) {
                 result.copy_from_slice(&res.to_le_bytes());
             }
         }
-        8 => {
+        64 => {
             let l = i64::from_le_bytes(lhs.try_into().unwrap()) as i128;
             let res = l.wrapping_sub(i64::from_le_bytes(rhs.try_into().unwrap()) as i128);
             if res > i64::MAX as i128 {
@@ -1274,15 +1397,27 @@ fn expected_op_ssub_vv(lhs: &[u8], rhs: &[u8], result: &mut [u8]) {
                 result.copy_from_slice(&res.to_le_bytes());
             }
         }
-        16 => {
+        128 => {
             let l = E128::get(lhs);
             let r = E128::get(rhs);
             let (res, _) = l.saturating_sub_s(r);
             res.put(result);
         }
-        32 => {
+        256 => {
             let l = E256::get(lhs);
             let r = E256::get(rhs);
+            let (res, _) = l.saturating_sub_s(r);
+            res.put(result);
+        }
+        512 => {
+            let l = E512::get(lhs);
+            let r = E512::get(rhs);
+            let (res, _) = l.saturating_sub_s(r);
+            res.put(result);
+        }
+        1024 => {
+            let l = E1024::get(lhs);
+            let r = E1024::get(rhs);
             let (res, _) = l.saturating_sub_s(r);
             res.put(result);
         }

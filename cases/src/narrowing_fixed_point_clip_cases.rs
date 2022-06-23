@@ -1,16 +1,46 @@
 use core::{arch::asm, convert::TryInto};
-use eint::{Eint, E256, E512};
+use eint::{Eint, E1024, E128, E2048, E256, E512};
 use rvv_asm::rvv_asm;
 use rvv_testcases::{
-    misc::conver_to_i512,
+    misc::{conver_to_i1024, conver_to_i2048, conver_to_i256, conver_to_i512},
     runner::{run_template_v_wi, run_template_v_wv, run_template_v_wx, MaskType},
 };
 
 fn expected_op_vnclipu(lhs: &[u8], x: u64, result: &mut [u8]) {
     assert_eq!(lhs.len(), result.len() * 2);
 
-    match result.len() {
+    let sew = result.len() * 8;
+    match sew {
         8 => {
+            let l = u16::from_le_bytes(lhs.try_into().unwrap());
+
+            let res = l.wrapping_shr(x as u32);
+            let res2 = if (res >> 8) != 0 { u8::MAX } else { res as u8 };
+            result.copy_from_slice(&res2.to_le_bytes());
+        }
+        16 => {
+            let l = u32::from_le_bytes(lhs.try_into().unwrap());
+
+            let res = l.wrapping_shr(x as u32);
+            let res2 = if (res >> 16) != 0 {
+                u16::MAX
+            } else {
+                res as u16
+            };
+            result.copy_from_slice(&res2.to_le_bytes());
+        }
+        32 => {
+            let l = u64::from_le_bytes(lhs.try_into().unwrap());
+
+            let res = l.wrapping_shr(x as u32);
+            let res2 = if (res >> 32) != 0 {
+                u32::MAX
+            } else {
+                res as u32
+            };
+            result.copy_from_slice(&res2.to_le_bytes());
+        }
+        64 => {
             let l = u128::from_le_bytes(lhs.try_into().unwrap());
 
             let res = l.wrapping_shr(x as u32);
@@ -21,12 +51,46 @@ fn expected_op_vnclipu(lhs: &[u8], x: u64, result: &mut [u8]) {
             };
             result.copy_from_slice(&res2.to_le_bytes());
         }
-        32 => {
+
+        128 => {
+            let l = E256::get(lhs);
+            let res = l.wrapping_shr(x as u32);
+
+            let res2 = if res > E256::from(E128::MAX_U) {
+                E128::MAX_U
+            } else {
+                res.0
+            };
+            res2.put(result);
+        }
+        256 => {
             let l = E512::get(lhs);
             let res = l.wrapping_shr(x as u32);
 
             let res2 = if res > E512::from(E256::MAX_U) {
                 E256::MAX_U
+            } else {
+                res.0
+            };
+            res2.put(result);
+        }
+        512 => {
+            let l = E1024::get(lhs);
+            let res = l.wrapping_shr(x as u32);
+
+            let res2 = if res > E1024::from(E512::MAX_U) {
+                E512::MAX_U
+            } else {
+                res.0
+            };
+            res2.put(result);
+        }
+        1024 => {
+            let l = E2048::get(lhs);
+            let res = l.wrapping_shr(x as u32);
+
+            let res2 = if res > E2048::from(E1024::MAX_U) {
+                E1024::MAX_U
             } else {
                 res.0
             };
@@ -39,9 +103,15 @@ fn expected_op_vnclipu(lhs: &[u8], x: u64, result: &mut [u8]) {
 }
 fn test_vnclipu_wv() {
     fn exp_op(lhs: &[u8], rhs: &[u8], result: &mut [u8]) {
-        let x = match rhs.len() {
-            8 => u64::from_le_bytes(rhs.try_into().unwrap()),
-            32 => E256::get(rhs).u64(),
+        let x = match rhs.len() * 8 {
+            8 => u8::from_le_bytes(rhs.try_into().unwrap()) as u64,
+            16 => u16::from_le_bytes(rhs.try_into().unwrap()) as u64,
+            32 => u32::from_le_bytes(rhs.try_into().unwrap()) as u64,
+            64 => u64::from_le_bytes(rhs.try_into().unwrap()) as u64,
+            128 => E128::get(rhs).u64(),
+            256 => E256::get(rhs).u64(),
+            512 => E512::get(rhs).u64(),
+            1024 => E1024::get(rhs).u64(),
             _ => {
                 panic!("unsupported length: {}", rhs.len());
             }
@@ -391,8 +461,48 @@ fn test_vnclipu_wi() {
 fn expected_op_vnclip(lhs: &[u8], x: u64, result: &mut [u8]) {
     assert_eq!(lhs.len(), result.len() * 2);
 
-    match result.len() {
+    let sew = result.len() * 8;
+    match sew {
         8 => {
+            let l = i16::from_le_bytes(lhs.try_into().unwrap());
+            let res = l.wrapping_shr(x as u32);
+
+            let res2 = if res < i8::MIN as i16 {
+                i8::MIN as u8
+            } else if res > i8::MAX as i16 {
+                i8::MAX as u8
+            } else {
+                res as u8
+            };
+            result.copy_from_slice(&res2.to_le_bytes());
+        }
+        16 => {
+            let l = i32::from_le_bytes(lhs.try_into().unwrap());
+            let res = l.wrapping_shr(x as u32);
+
+            let res2 = if res < i16::MIN as i32 {
+                i16::MIN as u16
+            } else if res > i16::MAX as i32 {
+                i16::MAX as u16
+            } else {
+                res as u16
+            };
+            result.copy_from_slice(&res2.to_le_bytes());
+        }
+        32 => {
+            let l = i64::from_le_bytes(lhs.try_into().unwrap());
+            let res = l.wrapping_shr(x as u32);
+
+            let res2 = if res < i32::MIN as i64 {
+                i32::MIN as u32
+            } else if res > i32::MAX as i64 {
+                i32::MAX as u32
+            } else {
+                res as u32
+            };
+            result.copy_from_slice(&res2.to_le_bytes());
+        }
+        64 => {
             let l = i128::from_le_bytes(lhs.try_into().unwrap());
             let res = l.wrapping_shr(x as u32);
 
@@ -405,7 +515,21 @@ fn expected_op_vnclip(lhs: &[u8], x: u64, result: &mut [u8]) {
             };
             result.copy_from_slice(&res2.to_le_bytes());
         }
-        32 => {
+
+        128 => {
+            let l = E256::get(lhs);
+            let res = l.wrapping_sra(x as u32);
+
+            let res2 = if res.cmp_s(&conver_to_i256(E128::MIN_S)).is_lt() {
+                E128::MIN_S
+            } else if res.cmp_s(&conver_to_i256(E128::MAX_S)).is_gt() {
+                E128::MAX_S
+            } else {
+                res.0
+            };
+            res2.put(result);
+        }
+        256 => {
             let l = E512::get(lhs);
             let res = l.wrapping_sra(x as u32);
 
@@ -418,6 +542,32 @@ fn expected_op_vnclip(lhs: &[u8], x: u64, result: &mut [u8]) {
             };
             res2.put(result);
         }
+        512 => {
+            let l = E1024::get(lhs);
+            let res = l.wrapping_sra(x as u32);
+
+            let res2 = if res.cmp_s(&conver_to_i1024(E512::MIN_S)).is_lt() {
+                E512::MIN_S
+            } else if res.cmp_s(&conver_to_i1024(E512::MAX_S)).is_gt() {
+                E512::MAX_S
+            } else {
+                res.0
+            };
+            res2.put(result);
+        }
+        1024 => {
+            let l = E2048::get(lhs);
+            let res = l.wrapping_sra(x as u32);
+
+            let res2 = if res.cmp_s(&conver_to_i2048(E1024::MIN_S)).is_lt() {
+                E1024::MIN_S
+            } else if res.cmp_s(&conver_to_i2048(E1024::MAX_S)).is_gt() {
+                E1024::MAX_S
+            } else {
+                res.0
+            };
+            res2.put(result);
+        }
         n => {
             panic!("Invalid sew: {}", n);
         }
@@ -425,9 +575,15 @@ fn expected_op_vnclip(lhs: &[u8], x: u64, result: &mut [u8]) {
 }
 fn test_vnclip_wv() {
     fn exp_op(lhs: &[u8], rhs: &[u8], result: &mut [u8]) {
-        let x = match rhs.len() {
-            8 => u64::from_le_bytes(rhs.try_into().unwrap()),
-            32 => E256::get(rhs).u64(),
+        let x = match rhs.len() * 8 {
+            8 => u8::from_le_bytes(rhs.try_into().unwrap()) as u64,
+            16 => u16::from_le_bytes(rhs.try_into().unwrap()) as u64,
+            32 => u32::from_le_bytes(rhs.try_into().unwrap()) as u64,
+            64 => u64::from_le_bytes(rhs.try_into().unwrap()) as u64,
+            128 => E128::get(rhs).u64(),
+            256 => E256::get(rhs).u64(),
+            512 => E512::get(rhs).u64(),
+            1024 => E1024::get(rhs).u64(),
             _ => {
                 panic!("unsupported length: {}", rhs.len());
             }

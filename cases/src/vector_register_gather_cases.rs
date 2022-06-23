@@ -3,8 +3,8 @@ use core::arch::asm;
 use core::convert::TryInto;
 use rvv_asm::rvv_asm;
 
-use eint::{Eint, E256};
-use rvv_testcases::runner::{run_template, RVVTestData, InstructionArgsType, MaskType};
+use eint::{Eint, E1024, E128, E256, E512};
+use rvv_testcases::runner::{run_template, InstructionArgsType, MaskType, RVVTestData};
 
 // use rvv_testcases::log;
 // use ckb_std::syscalls::debug;
@@ -34,9 +34,25 @@ fn expected_op_vrgather(rvv_data: &mut RVVTestData) {
 fn test_vrgather_vv() {
     fn expected_op(rvv_data: &mut RVVTestData) {
         let rhs = rvv_data.get_right();
-        let x = match rhs.len() {
-            8 => u64::from_le_bytes(rhs.try_into().unwrap()),
-            32 => {
+        let x = match rhs.len() * 8 {
+            8 => u8::from_le_bytes(rhs.try_into().unwrap()) as u64,
+
+            16 => u16::from_le_bytes(rhs.try_into().unwrap()) as u64,
+
+            32 => u32::from_le_bytes(rhs.try_into().unwrap()) as u64,
+
+            64 => u64::from_le_bytes(rhs.try_into().unwrap()) as u64,
+
+            128 => {
+                let r = E128::get(&rhs);
+                if r >= E128::from(0xffff) {
+                    0xffffu64
+                } else {
+                    r.u64()
+                }
+            }
+
+            256 => {
                 let r = E256::get(&rhs);
                 if r >= E256::from(0xffff) {
                     0xffffu64
@@ -44,6 +60,25 @@ fn test_vrgather_vv() {
                     r.u64()
                 }
             }
+
+            512 => {
+                let r = E512::get(&rhs);
+                if r >= E512::from(0xffff) {
+                    0xffffu64
+                } else {
+                    r.u64()
+                }
+            }
+
+            1024 => {
+                let r = E1024::get(&rhs);
+                if r >= E1024::from(0xffff) {
+                    0xffffu64
+                } else {
+                    r.u64()
+                }
+            }
+
             _ => panic!("Abort"),
         } as usize;
 
@@ -105,7 +140,6 @@ fn test_vrgather16_vv() {
             );
             rvv_data.set_result_exp(&data);
             //log!("-- index: {}, count: {}, x: {}, data: {:0>2X?}", rvv_data.index, rvv_data.count, x, data);
-
         }
     }
     fn rvv_op(_: &[u8], _: &[u8], mask_type: MaskType) {

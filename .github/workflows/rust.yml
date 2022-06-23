@@ -7,9 +7,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v1
+    -name: Check code fmt
+      run: cd cases && cargo fmt --all -- --check
     - name: Install asm64
       run: cd cases && make install-tool2
     - name: Build cases
       run: cd cases && make all-via-docker
     - name: Run cases
-      run: cd cases && make asm64-run
+      run: cd cases && make asm64-run args=--full
+    - name: Run rand with seed case
+      run: cd cases && make asm64-run args="--seed=$RANDOM$RANDOM$RANDOM$RANDOM --full"
