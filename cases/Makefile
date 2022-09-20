@@ -1,9 +1,9 @@
 
 CKB_DEBUGGER ?= ckb-debugger-rvv
-ASM64 ?= asm64
+ASM64 ?= ckb-vm-runner
 BUILD ?= release
 PORT := 9999
-BUILDER_DOCKER := thewawar/ckb-capsule:2021-12-25
+BUILDER_DOCKER := thewawar/ckb-capsule:2022-08-01
 DOCKER_ARGS = --rm -e BUILD=$(BUILD) -eOWNER=`id -u`:`id -g` -v `pwd`:/code -v ${HOME}/.cargo/git:/root/.cargo/git -v ${HOME}/.cargo/registry:/root/.cargo/registry -w/code ${BUILDER_DOCKER}
 
 all-via-docker:
@@ -59,4 +59,4 @@ install-tool:
 	cargo install --branch rvv --git https://github.com/mohanson/ckb-standalone-debugger.git
 
 install-tool2:
-	cargo install --example asm64 --branch rvv --git https://github.com/nervosnetwork/ckb-vm.git --features asm ckb-vm
+	cargo install --example ${ASM64} --branch rvv --git https://github.com/nervosnetwork/ckb-vm.git --features asm ckb-vm
